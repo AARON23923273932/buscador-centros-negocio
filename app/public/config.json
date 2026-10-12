@@ -1,0 +1,66 @@
+{
+  "_ayuda": "Configuración de la app. Este archivo (app/public/config.json) es la ÚNICA copia que se edita: npm run build lo copia a dist/. Las claves que empiezan con _ son comentarios. Explicación completa: GUIA-CONFIGURACION-MICROSOFT.md",
+
+  "_modo": "demo = sin login, lee el Excel de ejemplo (datos ficticios). microsoft = login con cuenta de la empresa.",
+  "modo": "microsoft",
+
+  "_titulo": "Textos de la cabecera de la página.",
+  "titulo": "Buscador de centros de negocio",
+  "subtitulo": "Centros de negocio y sus órdenes de compra / servicio",
+
+  "microsoft": {
+    "_clientId": "Id. de aplicación (cliente) de la app \"Buscador de centros de negocio\" registrada en Entra ID (12/10/2026).",
+    "clientId": "f8547d9b-6819-40b6-80d7-8ae62bd0630a",
+    "_tenantId": "Id. de directorio (inquilino) JAICOS CORP S.A.C. (incluye aic.pe y jaicoscorp.com). OBLIGATORIO en modo microsoft: la app se registra como inquilino único.",
+    "tenantId": "7dd6aede-c85a-4093-9916-6427e8fe790d",
+    "_tenantsPermitidos": "Lista de Id. de directorio aceptados. Vacía = no se revisa. Es solo una revisión en el navegador (comodidad), igual que los dominios.",
+    "tenantsPermitidos": ["7dd6aede-c85a-4093-9916-6427e8fe790d"],
+    "_redirectUri": "Vacío = <dirección de la app>/redirect.html (debe estar registrada en Entra ID).",
+    "redirectUri": "",
+    "_postLogoutRedirectUri": "A dónde vuelve la persona al cerrar sesión. Vacío = <dirección de la app>/ (debe estar registrada en Entra ID).",
+    "postLogoutRedirectUri": "",
+    "_dominiosPermitidos": "Solo pueden entrar cuentas cuyo nombre de inicio de sesión termine en estos dominios. Confirmados el 12/10/2026 (ambos en el tenant JAICOS CORP S.A.C.).",
+    "dominiosPermitidos": ["aic.pe", "jaicoscorp.com"],
+    "_scopes": "Permisos delegados (solo lectura): User.Read se pide al iniciar sesión (entrar y ver tu nombre); Files.Read.All se pide al leer el Excel (lee los archivos que la persona ya puede abrir en SharePoint/OneDrive). Files.Read.All debe estar en Entra ID > la app > Permisos de API y, si la empresa no deja que cada usuario apruebe permisos, un administrador debe dar el consentimiento ANTES de publicar (guía, paso 2).",
+    "scopes": ["User.Read", "Files.Read.All"],
+    "_guardarSesion": "localStorage = recuerda la sesión entre pestañas; sessionStorage = se olvida al cerrar la pestaña.",
+    "guardarSesion": "localStorage"
+  },
+
+  "datos": {
+    "_fuente": "archivo-local = Excel de ejemplo junto a la app (solo demo). graph = Excel real en SharePoint/OneDrive (conectado el 12/10/2026).",
+    "fuente": "graph",
+    "_rutaLocal": "Solo con fuente archivo-local: ruta del Excel de ejemplo dentro de la app.",
+    "rutaLocal": "datos/centros-ejemplo.xlsx",
+    "_urlCompartida": "Enlace del Excel real centros-negocio-aic.xlsx (SharePoint de jaicoscorp, sitio raíz), copiado de la barra del navegador al abrirlo en Excel Online (12/10/2026). Se acepta también el de Compartir > Copiar vínculo. Si Graph no lo abre como enlace, la app busca el archivo en las bibliotecas del sitio por su identificador (sourcedoc) y su nombre (file).",
+    "urlCompartida": "https://jaicoscorp.sharepoint.com/:x:/r/_layouts/15/Doc.aspx?sourcedoc=%7BE20FAA1A-1E42-416B-BA9F-A6FCF00E07C8%7D&file=centros-negocio-aic.xlsx&action=default&mobileredirect=true&wdwpf=doclib-c",
+    "_driveId": "Opcional: driveId + itemId del Excel (si se llenan, se usan en vez del enlace). La app los muestra en Columnas detectadas en el Excel al final de la página cuando el Excel cargó; si no carga, se sacan con el Probador de Graph (guía, paso 4.3, forma A).",
+    "driveId": "",
+    "itemId": "",
+    "_hoja": "Nombre de la hoja del Excel. Vacío = la primera hoja visible (no oculta).",
+    "hoja": "",
+    "_filaEncabezado": "Número de la fila donde están los títulos (1, 2, ...). null = la app la detecta sola.",
+    "filaEncabezado": null,
+    "_rellenarHaciaAbajo": "Si una fila tiene orden pero no tiene código ni descripción del centro (el centro se escribió una sola vez, arriba), se copian estos campos de la fila de arriba. [] = no copiar (por confirmar con el Excel real).",
+    "rellenarHaciaAbajo": ["codigoCentro", "descripcionCentro", "cliente"]
+  },
+
+  "_columnas": "Posibles nombres de cada columna en el Excel (sin importar mayúsculas, tildes ni puntos: O.C. = OC). Agrega aquí los nombres reales cuando se conozca el Excel (por confirmar).",
+  "columnas": {
+    "codigoCentro": ["codigo", "codigo centro", "codigo de centro", "codigo del centro", "codigo centro de negocio", "codigo del centro de negocio", "cod centro", "cod cn", "codigo cn", "centro de negocio", "centro de costo", "cn"],
+    "descripcionCentro": ["descripcion", "descripcion centro", "descripcion del centro", "descripcion centro de negocio", "descripcion del centro de negocio", "nombre del centro", "nombre centro de negocio", "proyecto", "desc", "detalle"],
+    "cliente": ["cliente", "nombre cliente", "nombre del cliente", "razon social", "razon social cliente"],
+    "ordenCompra": ["orden de compra", "orden de servicio", "orden de compra servicio", "orden", "n orden", "nro orden", "num orden", "numero de orden", "n de orden", "oc", "os", "oc os", "n oc", "nro oc", "n de oc", "nro de oc", "numero oc", "numero de oc", "orden compra", "orden servicio", "nro oc os", "n oc os"],
+    "tipoOrden": ["tipo de orden", "tipo orden", "tipo", "tipo de documento", "tipo oc os"],
+    "estado": ["estado", "estado de la orden", "estado orden", "estado oc", "estado os", "estado de oc", "estado del centro", "estado centro de negocio", "situacion", "status"]
+  },
+  "_camposObligatorios": "Si el Excel no tiene una de estas columnas, la app muestra un aviso. Si el Excel real no tiene, por ejemplo, cliente, quítalo de esta lista para no ver el aviso. tipoOrden y estado no son obligatorios: si faltan, su filtro no aparece.",
+  "camposObligatorios": ["codigoCentro", "descripcionCentro", "cliente", "ordenCompra"],
+  "_columnasOcultas": "Columnas del Excel que NO se muestran, NO se buscan y NO se exportan: las que tengan una de estas palabras en el título (ej. Monto, Monto total, Moneda, Monto (S/)). Nunca se ocultan las que la app usa como código, descripción, cliente, orden, tipo o estado. [] = mostrar todas.",
+  "columnasOcultas": ["moneda", "monto"],
+
+  "_autoActualizarMinutos": "Cada cuántos minutos se vuelve a revisar el Excel solo (0 = nunca).",
+  "autoActualizarMinutos": 10,
+  "_filasPorPagina": "25, 50, 100 o 250.",
+  "filasPorPagina": 50
+}

@@ -1,0 +1,3 @@
+# Sitio estático ya compilado: Netlify NO debe compilar nada, solo publicar esta carpeta.
+[build]
+  publish = "."

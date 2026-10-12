@@ -1,0 +1,22 @@
+{
+  "routes": [
+    {
+      "route": "/config.json",
+      "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
+    },
+    {
+      "route": "/index.html",
+      "headers": { "Cache-Control": "no-cache" }
+    }
+  ],
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": "frame-ancestors 'self'",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+  },
+  "mimeTypes": {
+    ".json": "application/json",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  }
+}

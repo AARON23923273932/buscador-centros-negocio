@@ -1,0 +1,18 @@
+# Dependencias y archivos generados
+node_modules/
+app/dist/
+app/test-results/
+app/playwright-report/
+
+# Copia lista para Netlify (se genera con: npm run preparar-publicacion)
+publicar/
+
+# Capturas de pruebas
+capturas/
+
+# Datos recibidos (pueden ser reales: no se suben)
+datos/*
+!datos/.gitkeep
+
+# Archivos temporales de Office
+~$*

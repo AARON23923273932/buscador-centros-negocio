@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>Iniciando sesión…</title>
+    <!--
+      Página "puente" de inicio de sesión (MSAL v5).
+      Microsoft devuelve al usuario aquí (esta es la "redirect URI" que se registra en Entra ID).
+      Esta página le pasa la respuesta a la app principal y la vuelve a abrir.
+      No tiene datos ni lógica de la app.
+    -->
+    <style>
+      body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; background: #f6f7f9; color: #1d2433; }
+      @media (prefers-color-scheme: dark) { body { background: #12151b; color: #e6e9ef; } }
+      a { color: inherit; }
+    </style>
+  </head>
+  <body>
+    <p id="mensaje" role="status">Completando el inicio de sesión…</p>
+    <script type="module" src="/src/redirect.js"></script>
+  </body>
+</html>
