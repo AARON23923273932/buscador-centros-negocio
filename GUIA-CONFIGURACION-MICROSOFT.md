@@ -376,9 +376,9 @@ Cualquier servicio que publique **archivos estáticos con HTTPS** sirve: un serv
 | **Permisos del Excel en SharePoint** + permisos **delegados** | Cada persona solo puede leer el Excel si se lo compartieron. | ✅ Sí: es la protección principal de los datos. |
 | Revisión del **dominio** y de **`tenantsPermitidos`** en la app | Muestra "Tu cuenta no tiene acceso" y borra la sesión local. | ⚠️ Solo comodidad: corre en el navegador del usuario y alguien con conocimientos podría saltársela. Por eso existen las capas de arriba. |
 | **CSP** + "escapar" los datos | Si una celda del Excel trajera código, no se ejecuta. | ✅ Protege a los usuarios de datos raros en el Excel. |
-| Solo el bot puede **editar** el Excel (paso 4.2) | Nadie más puede reemplazarlo por un archivo "trampa". | ✅ Necesario mientras se use SheetJS 0.18.5 (ver abajo). |
+| Solo el bot puede **editar** el Excel (paso 4.2) | Nadie más puede reemplazarlo por un archivo "trampa". | ✅ Buena práctica (protege contra archivos "trampa"). |
 
 Otros puntos:
 - `clientId`, `tenantId`, `driveId`, `itemId` y el enlace del Excel **no son secretos** (están en `config.json`, que cualquiera puede ver). Lo que protege los datos son los permisos de Microsoft 365.
 - La app **no tiene** contraseñas ni "secretos de cliente" y **no pide permisos de escritura**.
-- **Requisito antes de producción:** la librería que lee Excel (SheetJS `xlsx` 0.18.5, la que está en npm) tiene dos avisos de seguridad de nivel **alto** (`npm audit`: "prototype pollution" y "ReDoS") que se activan al abrir un Excel **hecho a propósito para atacar**. Como la app abre el Excel de SharePoint en el navegador de cada usuario, cualquiera con permiso de edición sobre ese archivo podría aprovecharlo. Hay que **actualizarla a la versión 0.20.x** (se descarga del sitio oficial `https://cdn.sheetjs.com/`, no de npm) y, mientras tanto, dejar el permiso de edición **solo a la cuenta del bot** (paso 4.2).
+- La librería que lee Excel es **SheetJS 0.20.3**, instalada desde el sitio oficial `https://cdn.sheetjs.com/` (13/10/2026). La versión de npm (0.18.5) tenía dos avisos de seguridad de nivel **alto** con archivos "trampa"; con la 0.20.3 `npm audit` no reporta nada. Igual conviene dejar el permiso de edición del Excel **solo a la cuenta del bot** (paso 4.2).

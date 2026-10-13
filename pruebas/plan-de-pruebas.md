@@ -97,7 +97,7 @@ Necesitas: etapa 3 hecha + que **tu cuenta pueda abrir** el Excel original en Sh
 
 ## Etapa 6 — Antes de entregar (lo hago yo + decisión de dónde publicar)
 
-- [ ] 6.1 Actualizar SheetJS a 0.20.x (aviso de seguridad) — **yo, con tu permiso** para descargarla de cdn.sheetjs.com.
+- [x] 6.1 Actualizar SheetJS a 0.20.x (aviso de seguridad) — hecho: 0.20.3 desde cdn.sheetjs.com (13/10/2026).
 - [ ] 6.2 Correr de nuevo todas las pruebas automáticas — **yo**.
 - [x] 6.3 Publicada en internet con HTTPS en **Netlify**: https://aic-centros-negocio.netlify.app (se sube a mano: `npm.cmd run preparar-publicacion` y arrastrar `publicar/`, [guía, paso 6](../GUIA-CONFIGURACION-MICROSOFT.md#paso-6-publicar-la-app-hosting)). *(12/10/2026)*
 - [ ] 6.4 Antes de subir la versión con el Excel real: que el administrador haya hecho el **paso 2** de la guía (`Files.Read.All` en la lista + consentimiento). Después, cerrar el Excel de ejemplo, `npm.cmd run preparar-publicacion`, subir `publicar/` y repetir 4.2–4.6 en https://aic-centros-negocio.netlify.app.

@@ -11,7 +11,7 @@
   - **Primera prueba con el Excel real:** iniciar sesión con una cuenta normal (no administradora). Las columnas reales se revisan en **"Columnas detectadas en el Excel"** (al final de la página), que también muestra el `driveId` e `itemId` encontrados.
 - **No se muestran la moneda ni el monto:** las columnas cuyo título tenga "moneda" o "monto" (ej. *Monto*, *Monto total*, *Moneda*) no se ven, no se buscan y no se exportan (`columnasOcultas` en `config.json`).
 - **Filtro "Estado"** (desplegable, igual que Cliente y Tipo de orden): aparece si el Excel tiene una columna de estado con valores (*Estado*, *Estado de la orden*, *Situación*, *Status*…).
-- ⚠️ **Se publica todavía con SheetJS 0.18.5 (riesgo asumido, pendiente):** la actualización a 0.20.x que pide la sección 7 **no está hecha** (hay que descargarla de `cdn.sheetjs.com`, con tu permiso). Mientras tanto, **solo la cuenta del bot** debe poder editar el Excel real (guía, paso 4.2).
+- ✅ **SheetJS actualizada a 0.20.3** (13/10/2026, desde el sitio oficial `cdn.sheetjs.com`): `npm audit` ya no reporta avisos. Igual se recomienda que **solo la cuenta del bot** pueda editar el Excel real (guía, paso 4.2).
 - **Para publicar un cambio:** cerrar el Excel de ejemplo si está abierto → `cd app` → `npm.cmd run preparar-publicacion` → en Netlify → **Deploys**, arrastrar la carpeta [`publicar/`](publicar/). (Si el Excel de ejemplo está abierto, Excel crea `~$centros-ejemplo.xlsx` con tu nombre de usuario; la compilación y el script lo dejan afuera y lo avisan.)
 - **Para ver la demo en tu PC:** `npm.cmd run dev:demo` (sección 3). `config.json` ya tiene los valores de producción, así que `npm run dev` pide iniciar sesión y lee el Excel real.
 
@@ -164,13 +164,13 @@ Todavía **no tenemos el Excel real** (por confirmar sus columnas). Por eso la a
 | **Leer el Excel en vivo** en vez de copiar los datos | Así siempre se ve lo último que dejó el bot, sin otro proceso que sincronice. |
 | **Permisos delegados `User.Read` + `Files.Read.All`** | Solo lectura y siempre limitado a lo que el usuario ya puede ver. Al iniciar sesión solo se pide `User.Read`: si falta que un administrador apruebe `Files.Read.All`, la persona igual entra y la app le explica qué pedir. Detalle en la guía. |
 | **`redirect.html` como página de retorno** | Es lo que recomienda MSAL versión 5 (la instalada): una página "puente" mínima para el retorno del inicio de sesión. |
-| **SheetJS (`xlsx` 0.18.5)** para leer y exportar Excel | Es la versión publicada en npm. Tiene 2 avisos de seguridad conocidos al abrir archivos **maliciosos** (ver abajo). |
+| **SheetJS (`xlsx` 0.20.3)** para leer y exportar Excel | Versión oficial del sitio de SheetJS (`cdn.sheetjs.com`; la de npm, 0.18.5, está desactualizada y tiene 2 avisos de seguridad). |
 | **Política de seguridad (CSP)** al compilar | Si una celda del Excel trajera código, el navegador no lo ejecuta. Además, todo dato del Excel se "escapa" antes de mostrarse (hay pruebas que lo verifican). |
 | **Sesión guardada en el navegador (`localStorage`)** | Para no pedir inicio de sesión en cada pestaña. Se puede cambiar a `sessionStorage` en `config.json` si se prefiere que se cierre al cerrar la pestaña. |
 
-**Sobre el aviso de seguridad de `xlsx` 0.18.5:** `npm audit` reporta 2 problemas de nivel **alto** ("prototype pollution" y "ReDoS") que se activan con un Excel **hecho a propósito para atacar**. El Excel lo genera el bot, pero la app lo abre en el navegador de cada usuario: **cualquier cuenta con permiso de edición** sobre ese archivo en SharePoint podría reemplazarlo por uno "trampa". Por eso:
-- **Antes de publicar en producción es obligatorio** actualizar a SheetJS 0.20.x. Esa versión no está en npm: se instala desde el sitio oficial (`https://cdn.sheetjs.com/`).
-- Mientras tanto (y siempre), **solo la cuenta del bot** debe tener permiso de edición sobre el Excel (guía, paso 4.2).
+**Sobre SheetJS:** la versión de npm (0.18.5) tiene 2 avisos de seguridad de nivel **alto** ("prototype pollution" y "ReDoS") que se activan con un Excel **hecho a propósito para atacar**. Por eso la app usa la **0.20.3**, instalada desde el sitio oficial:
+- Para actualizarla en el futuro: `npm.cmd install --save-exact https://cdn.sheetjs.com/xlsx-<versión>/xlsx-<versión>.tgz` (ver la versión vigente en `https://cdn.sheetjs.com/xlsx-latest/package/package.json`) y correr las pruebas.
+- Igual (buena práctica), **solo la cuenta del bot** debe tener permiso de edición sobre el Excel (guía, paso 4.2).
 
 ## 8. Qué falta / (por confirmar)
 
@@ -185,7 +185,7 @@ Todavía **no tenemos el Excel real** (por confirmar sus columnas). Por eso la a
 - [x] **Hosting**: Netlify, https://aic-centros-negocio.netlify.app (se sube a mano la carpeta `publicar/`). *(12/10/2026)*
 - [ ] **"Actualizarse"**: confirmar que significa "mostrar siempre lo último del Excel" y no "editar desde la app". *(por confirmar)*
 - [ ] ¿Qué columnas son más importantes para el equipo (para el orden de la tabla y los filtros)? *(por confirmar)*
-- [ ] **Obligatorio antes de producción:** actualizar SheetJS a 0.20.x (desde `https://cdn.sheetjs.com/`) y dejar el permiso de edición del Excel solo a la cuenta del bot. *(Hoy se publica con 0.18.5 asumiendo el riesgo: ver "Estado actual".)*
+- [x] **SheetJS actualizada a 0.20.3** (13/10/2026). Pendiente recomendado: dejar el permiso de edición del Excel solo a la cuenta del bot.
 - [ ] **Formato del Excel real**: ¿el código/descripción del centro va en **cada fila**, en **celdas combinadas** o **una sola vez** (con las filas de abajo vacías)? ¿El bot escribe valores o fórmulas? Revisar "Columnas detectadas" y la vista "Por centro". *(por confirmar)*
 - [ ] **Nombre de inicio de sesión (UPN)**: ¿termina en `@aic.pe` / `@jaicoscorp.com` para todo el personal? Lo confirma el administrador de Microsoft 365. *(por confirmar)*
 - [ ] **Permiso para leer el Excel**: probar con una cuenta normal; si a todos les sale "sin permiso" o "No se encontró el Excel", sacar el `driveId` + `itemId` con el **Probador de Graph** (guía 4.3, forma A) y copiarlos en `config.json`. ("Columnas detectadas en el Excel" muestra esos dos valores solo cuando el Excel **sí** cargó: sirve para fijarlos de antemano, no cuando falla.) *(por confirmar)*
@@ -196,5 +196,5 @@ Todavía **no tenemos el Excel real** (por confirmar sus columnas). Por eso la a
 2. **Permiso `Files.Read.All`** (guía, paso 2): confirmar que está en **Permisos de API** y, si la empresa lo exige, que un administrador dio el **consentimiento**. Hacerlo **antes** del paso 6. *(por confirmar)*
 3. Se da permiso de lectura al personal sobre el Excel (guía, paso 4.2).
 4. ✅ En `app/public/config.json` (la única copia que se edita; **no** `dist/config.json` ni `publicar/config.json`): `"modo": "microsoft"`, `clientId`, `tenantId`, `"fuente": "graph"`, `urlCompartida` y `scopes` con `Files.Read.All` (guía, paso 5).
-5. Actualizar SheetJS a 0.20.x (ver sección 7). *Pendiente: hoy se publica con 0.18.5.*
+5. ~~Actualizar SheetJS a 0.20.x~~ ✅ hecho (0.20.3, 13/10/2026).
 6. Con el Excel de ejemplo cerrado: `npm.cmd run preparar-publicacion` → Netlify → **Deploys** → arrastrar la carpeta `publicar/` (guía, paso 6).
