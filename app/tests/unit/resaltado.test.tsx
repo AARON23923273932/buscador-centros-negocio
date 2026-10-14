@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Resaltado } from '../../src/componentes/Resaltado.tsx';
 
-const html = (texto: unknown, terminos: string[]) => renderToStaticMarkup(<Resaltado texto={texto} terminos={terminos} />);
+const html = (texto: string, terminos: string[]) => renderToStaticMarkup(<Resaltado texto={texto} terminos={terminos} />);
 
 describe('escapado y resaltado (componente Resaltado)', () => {
   it('escapa caracteres peligrosos', () => {
@@ -33,6 +33,6 @@ describe('escapado y resaltado (componente Resaltado)', () => {
   });
   it('sin términos solo escapa', () => {
     expect(html('a & b', [])).toBe('a &amp; b');
-    expect(html(null, ['x'])).toBe('');
+    expect(html('', ['x'])).toBe(''); // (segmentosResaltado con null/undefined: filtros.test.ts)
   });
 });

@@ -2,7 +2,7 @@
 // memo(): no se vuelve a dibujar si sus props no cambian (ej. mientras se escribe en el buscador).
 import { memo } from 'react';
 import { claseColumna } from '../logica/tabla.ts';
-import type { Columna, Fila } from '../logica/tipos.ts';
+import type { Columna, Direccion, Fila } from '../logica/tipos.ts';
 import { EncabezadoOrdenable, FilasDatos, FilaSinResultados, type AlCopiar } from './Celdas.tsx';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   filas: readonly Fila[];
   terminosDe: (columna: Columna) => readonly string[];
   ordenarPor: string;
-  direccion: string;
+  direccion: Direccion;
   /** false = el Excel no tiene filas (cambia el mensaje cuando no hay resultados). */
   hayDatos?: boolean;
   alOrdenar?: (clave: string) => void;

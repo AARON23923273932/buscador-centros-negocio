@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { numero } from './formato.ts';
-import type { Columna, Pagina, Vista } from './tipos.ts';
+import type { Columna, Direccion, Pagina, Vista } from './tipos.ts';
 
 /** Indicador de orden (▲ ▼) y valor de aria-sort para un encabezado. */
 export interface EstadoOrden {
@@ -13,7 +13,7 @@ export interface EstadoOrden {
   activo: boolean;
 }
 
-export function estadoOrden(clave: string, ordenarPor: string, direccion: string): EstadoOrden {
+export function estadoOrden(clave: string, ordenarPor: string, direccion: Direccion): EstadoOrden {
   if (clave !== ordenarPor) return { aria: 'none', icono: '↕', activo: false };
   return direccion === 'desc'
     ? { aria: 'descending', icono: '▼', activo: true }

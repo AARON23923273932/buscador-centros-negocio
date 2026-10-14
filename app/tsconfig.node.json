@@ -3,9 +3,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "types": ["node"],
-    // Las pruebas y vite.config.ts importan los scripts .mjs de scripts/ (se leen sus tipos, no se revisan).
+    // Los scripts .mjs de scripts/ también se revisan: sus tipos van en comentarios JSDoc (@param, @returns…).
     "allowJs": true,
-    "checkJs": false
+    "checkJs": true,
+    // Las pruebas leen posiciones que ya conocen (ej. filas[0] de un Excel armado en la prueba):
+    // aquí no se exige revisar si existen (la app, en tsconfig.json, sí lo exige).
+    "noUncheckedIndexedAccess": false
   },
-  "include": ["tests", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+  "include": ["tests", "scripts", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
 }

@@ -8,7 +8,7 @@ import { copiarSinTemporales } from './archivos-temporales.mjs';
 const app = resolve(import.meta.dirname, '..');
 const destino = resolve(app, '..', 'publicar');
 
-execSync('npm run build', { cwd: app, stdio: 'inherit', shell: true });
+execSync('npm run build', { cwd: app, stdio: 'inherit' }); // execSync siempre usa la terminal (cmd.exe en Windows)
 rmSync(destino, { recursive: true, force: true });
 // Sin los archivos temporales de Office (~$…): llevan el nombre del usuario de Windows.
 const omitidos = copiarSinTemporales(resolve(app, 'dist'), destino);

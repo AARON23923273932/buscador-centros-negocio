@@ -7,9 +7,10 @@
 // validarConfig() revisa que cada dato tenga la forma correcta y explica en
 // español qué arreglar (se muestra en la pantalla "Falta configurar la aplicación").
 //
-// Ojo: config.json lo escribe una persona, así que puede traer cualquier cosa. El tipo
-// "Config" describe la forma CORRECTA; recién se puede confiar en ella cuando
-// validarConfig() devuelve una lista vacía.
+// Ojo: config.json lo escribe una persona, así que puede traer cualquier cosa. Por eso hay dos tipos:
+//   ConfigSinValidar = lo que devuelve cargarConfig(): las claves de Config, pero cada valor "unknown"
+//   Config           = la forma CORRECTA; solo la entrega revisarConfig() cuando no hay errores.
+// Así TypeScript no deja usar la configuración antes de revisarla.
 // =============================================================================
 
 import { CAMPOS } from './filtros.ts';
@@ -40,7 +41,7 @@ export interface ConfigDatos {
   rellenarHaciaAbajo: Campo[];
 }
 
-/** Configuración completa (ya mezclada con los valores por defecto y validada). */
+/** Configuración completa (ya mezclada con los valores por defecto y revisada con revisarConfig). */
 export interface Config {
   modo: 'demo' | 'microsoft';
   titulo: string;
@@ -169,16 +170,22 @@ export const CONFIG_POR_DEFECTO: Config = {
   filasPorPagina: 50,
 };
 
+/** Mismas claves que T, pero cada valor puede ser cualquier cosa (todavía no se revisó). */
+export type SinValidar<T> = { [K in keyof T]: unknown };
+
+/** config.json mezclado con los valores por defecto, TODAVÍA SIN REVISAR (ver revisarConfig). */
+export type ConfigSinValidar = SinValidar<Config>;
+
 const esObjeto = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 /**
  * Mezcla "profunda": toma la base y la sobreescribe con lo que venga en "extra".
  * Las listas se reemplazan completas. Las claves que empiezan con "_" se ignoran.
- * (El resultado tiene el tipo de la base, pero sus valores pueden venir mal escritos: ver validarConfig.)
+ * El resultado tiene las claves de la base, pero sus valores pueden venir mal escritos (por eso SinValidar).
  */
-export function mezclarConfig<T>(base: T, extra: unknown): T {
-  const resultado = structuredClone(base) as Record<string, unknown>;
-  if (!esObjeto(extra)) return resultado as T;
+export function mezclarConfig<T extends object>(base: T, extra: unknown): SinValidar<T> {
+  const resultado = structuredClone(base) as Record<string, unknown>; // (la copia vista como "clave → valor")
+  if (!esObjeto(extra)) return resultado as SinValidar<T>;
   for (const [clave, valor] of Object.entries(extra)) {
     if (clave.startsWith('_')) continue;
     const actual = resultado[clave];
@@ -188,7 +195,8 @@ export function mezclarConfig<T>(base: T, extra: unknown): T {
       resultado[clave] = structuredClone(valor);
     }
   }
-  return resultado as T;
+  // Tiene todas las claves de la base (es una copia de ella) y valores "unknown": la forma de SinValidar<T>.
+  return resultado as SinValidar<T>;
 }
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -200,7 +208,7 @@ const mostrar = (v: unknown): string => (v === undefined ? 'nada' : JSON.stringi
 const LISTA_CAMPOS = CAMPOS.join(', ');
 
 /** Revisa la configuración y devuelve una lista de problemas (en español). Vacía = todo bien. */
-export function validarConfig(config: Config): string[] {
+export function validarConfig(config: ConfigSinValidar): string[] {
   // Se revisa como "cualquier cosa": config.json puede traer valores del tipo equivocado.
   const cfg: Record<string, unknown> = { ...config };
   const errores: string[] = [];
@@ -247,6 +255,20 @@ export function validarConfig(config: Config): string[] {
     errores.push(`"filasPorPagina" debe ser ${TAMANOS_PAGINA.join(', ')} (se encontró ${mostrar(cfg.filasPorPagina)}).`);
   }
   return errores;
+}
+
+/** Resultado de revisarConfig: la configuración ya con su tipo correcto, o la lista de problemas. */
+export type RevisionConfig = { valida: true; config: Config } | { valida: false; errores: string[] };
+
+/**
+ * Revisa la configuración: si no tiene problemas, la devuelve como Config (la forma correcta).
+ * Es el ÚNICO lugar donde una ConfigSinValidar pasa a ser Config.
+ * (En modo "demo" la sección "microsoft" no se revisa porque no se usa.)
+ */
+export function revisarConfig(config: ConfigSinValidar): RevisionConfig {
+  const errores = validarConfig(config);
+  // Sin errores, cada valor tiene la forma que exige Config: es justo lo que comprueba validarConfig().
+  return errores.length ? { valida: false, errores } : { valida: true, config: config as Config };
 }
 
 /** Revisión de la sección "microsoft" (solo en modo "microsoft"). */
@@ -332,8 +354,11 @@ function validarDatos(d: Record<string, unknown>, modo: unknown): string[] {
   return errores;
 }
 
-/** Descarga y mezcla config.json. Lanza un Error con mensaje claro si algo falla. */
-export async function cargarConfig(url = 'config.json', fetchFn: FetchFn = globalThis.fetch): Promise<Config> {
+/**
+ * Descarga y mezcla config.json (todavía sin revisar: ver revisarConfig).
+ * Lanza un Error con mensaje claro si no se puede leer.
+ */
+export async function cargarConfig(url = 'config.json', fetchFn: FetchFn = globalThis.fetch): Promise<ConfigSinValidar> {
   let respuesta: Response;
   try {
     respuesta = await fetchFn(url, { cache: 'no-store' });

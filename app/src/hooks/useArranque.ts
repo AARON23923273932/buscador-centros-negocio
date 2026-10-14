@@ -9,15 +9,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Sesion } from '../logica/auth.ts';
-import { cargarConfig, validarConfig, type Config } from '../logica/config.ts';
+import { cargarConfig, revisarConfig, type Config, type ConfigSinValidar } from '../logica/config.ts';
 
 export type Arranque =
   /** Leyendo config.json o preparando el inicio de sesión. */
   | { fase: 'cargando'; config: Config | null }
   /** No se pudo leer config.json. */
   | { fase: 'sin-config'; error: string }
-  /** config.json tiene datos que faltan o están mal escritos. */
-  | { fase: 'config-invalida'; config: Config; errores: string[] }
+  /** config.json tiene datos que faltan o están mal escritos (por eso la configuración queda sin validar). */
+  | { fase: 'config-invalida'; config: ConfigSinValidar; errores: string[] }
   /** No se pudo preparar MSAL (ej. sin internet). */
   | { fase: 'sin-login'; config: Config }
   /** Hay que iniciar sesión con Microsoft. */
@@ -43,19 +43,20 @@ export function useArranque(): Arranque {
 }
 
 async function arrancar(setArranque: (a: Arranque) => void): Promise<void> {
-  let config: Config;
+  let sinValidar: ConfigSinValidar;
   try {
-    config = await cargarConfig(new URL('config.json', document.baseURI).href);
+    sinValidar = await cargarConfig(new URL('config.json', document.baseURI).href);
   } catch (e) {
     setArranque({ fase: 'sin-config', error: e instanceof Error ? e.message : String(e) });
     return;
   }
 
-  const errores = validarConfig(config);
-  if (errores.length) {
-    setArranque({ fase: 'config-invalida', config, errores });
+  const revision = revisarConfig(sinValidar);
+  if (!revision.valida) {
+    setArranque({ fase: 'config-invalida', config: sinValidar, errores: revision.errores });
     return;
   }
+  const { config } = revision;
   if (config.modo !== 'microsoft') {
     setArranque({ fase: 'app', config, sesion: null });
     return;

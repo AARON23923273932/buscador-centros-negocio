@@ -1,7 +1,7 @@
 // Piezas comunes de las dos tablas: título que ordena, contenido de una celda, filas de datos
 // y el mensaje "No hay resultados".
 import { memo } from 'react';
-import type { Celda, Columna, Fila } from '../logica/tipos.ts';
+import type { Celda, Columna, Direccion, Fila } from '../logica/tipos.ts';
 import { claseColumna, estadoOrden } from '../logica/tabla.ts';
 import { IconoCopiar } from './Iconos.tsx';
 import { Resaltado } from './Resaltado.tsx';
@@ -21,7 +21,7 @@ export function EncabezadoOrdenable({
   clave: string;
   titulo: string;
   ordenarPor: string;
-  direccion: string;
+  direccion: Direccion;
   clase?: string;
   alOrdenar?: (clave: string) => void;
 }) {

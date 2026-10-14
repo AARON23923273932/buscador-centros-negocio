@@ -3,7 +3,7 @@
 import { Fragment, memo, type MouseEvent } from 'react';
 import { numero } from '../logica/formato.ts';
 import { claseColumna } from '../logica/tabla.ts';
-import type { Columna, Grupo } from '../logica/tipos.ts';
+import type { Columna, Direccion, Grupo } from '../logica/tipos.ts';
 import { ContenidoCelda, EncabezadoOrdenable, FilasDatos, FilaSinResultados, type AlCopiar } from './Celdas.tsx';
 import { IconoFlecha } from './Iconos.tsx';
 import { Resaltado } from './Resaltado.tsx';
@@ -18,7 +18,7 @@ interface Props {
   /** Centros abiertos (por su clave). */
   expandidos: ReadonlySet<string>;
   ordenarPor: string;
-  direccion: string;
+  direccion: Direccion;
   hayDatos?: boolean;
   alOrdenar?: (clave: string) => void;
   alAlternar?: (clave: string) => void;
@@ -44,7 +44,8 @@ export const TablaCentros = memo(function TablaCentros({
 
   /** Clic en la fila del centro (en la flecha o en cualquier parte que no sea otro botón): abre/cierra. */
   const alHacerClic = (ev: MouseEvent<HTMLTableRowElement>, clave: string) => {
-    const objetivo = ev.target as Element;
+    const objetivo = ev.target;
+    if (!(objetivo instanceof Element)) return;
     if (objetivo.closest('.btn-expandir') || !objetivo.closest('button, a, input, select')) alAlternar?.(clave);
   };
 

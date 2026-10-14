@@ -8,6 +8,7 @@
 // filas vacías, celdas combinadas, fechas guardadas como número, números
 // guardados como texto, ceros a la izquierda, espacios de más y tildes.
 // Ningún dato corresponde a clientes ni proyectos reales.
+// (Los tipos van en comentarios JSDoc: "npm run typecheck" también revisa estos scripts.)
 // =============================================================================
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -24,7 +25,8 @@ const azar = () => {
   semilla = (semilla * 1103515245 + 12345) % 2147483648;
   return semilla / 2147483648;
 };
-const elegir = (lista) => lista[Math.floor(azar() * lista.length)];
+/** @type {<T>(lista: readonly T[]) => T} */
+const elegir = (lista) => /** @type {(typeof lista)[number]} */ (lista[Math.floor(azar() * lista.length)]);
 
 const CLIENTES = [
   'Cliente Demo A S.A.C.',
@@ -63,11 +65,23 @@ const ENCABEZADOS = [
   'Estado',
 ];
 
-// Fecha de Excel = días desde el 30/12/1899.
+/**
+ * Fecha de Excel = días desde el 30/12/1899.
+ * @param {number} anio
+ * @param {number} mes
+ * @param {number} dia
+ */
 const serialExcel = (anio, mes, dia) => (Date.UTC(anio, mes - 1, dia) - Date.UTC(1899, 11, 30)) / 86400000;
 
+/** @type {import('xlsx/xlsx.mjs').WorkSheet} */
 const hoja = {};
+/** @type {import('xlsx/xlsx.mjs').Range[]} */
 const combinadas = [];
+/**
+ * @param {number} r  fila (0 = la primera)
+ * @param {number} c  columna (0 = A)
+ * @param {import('xlsx/xlsx.mjs').CellObject} celda
+ */
 const poner = (r, c, celda) => {
   hoja[XLSX.utils.encode_cell({ r, c })] = celda;
 };

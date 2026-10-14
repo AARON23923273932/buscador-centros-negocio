@@ -166,11 +166,10 @@ export function terminosDeColumna(
 }
 
 /** "Datos actualizados a las 14:05 · Excel modificado el 08/10/2026 a las 16:45 · se actualiza solo cada 10 min" */
-export function textoActualizado(ultimaConsulta: Date | null, modificado: Date | null | undefined, minutos: unknown): string {
+export function textoActualizado(ultimaConsulta: Date | null, modificado: Date | null | undefined, minutos: number): string {
   const partes: string[] = [];
   if (ultimaConsulta) partes.push(`Datos actualizados a las ${hora(ultimaConsulta)}`);
   if (modificado) partes.push(`Excel modificado el ${fecha(modificado)} a las ${hora(modificado)}`);
-  const min = Number(minutos);
-  if (min > 0) partes.push(`se actualiza solo cada ${min} min`);
+  if (minutos > 0) partes.push(`se actualiza solo cada ${minutos} min`);
   return partes.join(' · ');
 }

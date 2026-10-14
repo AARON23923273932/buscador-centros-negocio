@@ -56,10 +56,11 @@ function celdaExportable(celda: Partial<Celda> | undefined): ValorExportado {
 function hojaDesdeMatriz(valores: ValorExportado[][], textos: readonly (readonly unknown[])[] = valores): WorkSheet {
   const hoja = XLSX.utils.aoa_to_sheet(valores);
   hoja['!cols'] = anchos(textos);
-  if (valores.length > 0 && valores[0].length > 0) {
+  const titulos = valores[0];
+  if (titulos && titulos.length > 0) {
     // Deja el filtro de Excel activado en la fila de títulos.
     hoja['!autofilter'] = {
-      ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: valores.length - 1, c: valores[0].length - 1 } }),
+      ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: valores.length - 1, c: titulos.length - 1 } }),
     };
   }
   return hoja;

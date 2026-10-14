@@ -6,7 +6,7 @@
 import { Fragment } from 'react';
 import { segmentosResaltado } from '../logica/filtros.ts';
 
-export function Resaltado({ texto, terminos }: { texto: unknown; terminos?: readonly string[] | null }) {
+export function Resaltado({ texto, terminos }: { texto: string; terminos?: readonly string[] | null }) {
   return (
     <>
       {segmentosResaltado(texto, terminos).map((s, i) =>

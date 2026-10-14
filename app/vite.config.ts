@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => ({
     agregarCsp(),
     sinTemporalesDeOffice(),
     // "npm run dev:demo" / "npm run preview:demo": modo demo sin tocar public/config.json (ver scripts/config-demo.mjs).
-    ...(mode === 'demo' ? [pluginConfigDemo(resolve(import.meta.dirname, 'public/config.json')) as Plugin] : []),
+    ...(mode === 'demo' ? [pluginConfigDemo(resolve(import.meta.dirname, 'public/config.json'))] : []),
   ],
   build: {
     outDir: 'dist',

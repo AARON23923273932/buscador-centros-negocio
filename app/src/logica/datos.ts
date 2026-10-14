@@ -18,6 +18,7 @@ import * as XLSX from 'xlsx/xlsx.mjs';
 import type { CellObject, WorkBook, WorkSheet } from 'xlsx/xlsx.mjs';
 import { CAMPOS, NOMBRES_CAMPOS, normalizarTexto, prepararFila } from './filtros.ts';
 import { ErrorDatos, descargarDesdeGraph } from './graph.ts';
+import { en } from './listas.ts';
 import type { ConfigDatos } from './config.ts';
 import type { ArchivoExcel, Campo, Celda, Columna, FetchFn, MapaCampos, ResultadoLectura } from './tipos.ts';
 
@@ -113,11 +114,13 @@ function partesFechaTexto(texto: string): PartesFecha | null {
   let horas: (string | undefined)[];
   let m = FECHA_DIA_PRIMERO.exec(texto);
   if (m) {
+    // (Los grupos 1 a 4 siempre están cuando la expresión coincide.)
+    const [, d = '', separador, me = '', a = ''] = m;
     // Año de 2 dígitos solo con "/" ("15/03/26"); "10-01-02" se parece más a un código.
-    if (m[4].length === 2 && m[2] !== '/') return null;
-    dia = Number(m[1]);
-    mes = Number(m[3]);
-    anio = m[4].length === 2 ? 2000 + Number(m[4]) : Number(m[4]);
+    if (a.length === 2 && separador !== '/') return null;
+    dia = Number(d);
+    mes = Number(me);
+    anio = a.length === 2 ? 2000 + Number(a) : Number(a);
     horas = m.slice(5, 8);
   } else {
     m = FECHA_ISO.exec(texto);
@@ -127,7 +130,7 @@ function partesFechaTexto(texto: string): PartesFecha | null {
     dia = Number(m[3]);
     horas = m.slice(4, 7);
   }
-  const [hora, minuto, segundo] = horas.map((x) => Number(x || 0));
+  const [hora = 0, minuto = 0, segundo = 0] = horas.map((x) => Number(x || 0));
   if (anio < ANIO_MIN || anio > ANIO_MAX || mes < 1 || mes > 12 || dia < 1 || dia > diasDelMes(anio, mes)) return null;
   if (hora > 23 || minuto > 59 || segundo > 59) return null;
   return { anio, mes, dia, hora, minuto, segundo, conHora: horas[0] !== undefined };
@@ -185,8 +188,7 @@ function esFormatoFecha(formato: unknown): boolean {
  * "dd/mm/yyyy hh:mm" -> las dos. Se ignoran textos entre comillas, colores y "AM/PM".
  */
 export function partesFormato(formato: unknown): { tieneFecha: boolean; tieneHora: boolean; tieneSegundos: boolean } {
-  const s = String(formato || '')
-    .split(';')[0]
+  const s = (String(formato || '').split(';')[0] ?? '')
     .replace(/"[^"]*"/g, '')
     .replace(/\\./g, '')
     .replace(/\[(h+|m+|s+)\]/gi, '$1')
@@ -384,8 +386,8 @@ export function mapearColumnas(
       for (const campo of CAMPOS) {
         if (campo in mapa) continue;
         buscar: for (const alias of aliasNorm[campo]) {
-          for (let i = 0; i < normales.length; i++) {
-            if (!usados.has(i) && permitida(i) && normales[i] && regla(normales[i], alias, campo)) {
+          for (const [i, titulo] of normales.entries()) {
+            if (!usados.has(i) && permitida(i) && titulo && regla(titulo, alias, campo)) {
               mapa[campo] = i;
               usados.add(i);
               break buscar;
@@ -451,17 +453,17 @@ function limitesReales(hoja: WorkSheet): Rango | null {
 export function detectarFilaEncabezado(filasTexto: readonly string[][], aliasPorCampo: AliasPorCampo | null | undefined, maxFilas = 30): number {
   let mejor = -1;
   let mejorPuntaje = 0;
-  const limite = Math.min(filasTexto.length, maxFilas);
-  for (let i = 0; i < limite; i++) {
-    const puntaje = Object.keys(mapearColumnas(filasTexto[i], aliasPorCampo)).length;
+  const primeras = filasTexto.slice(0, maxFilas);
+  for (const [i, fila] of primeras.entries()) {
+    const puntaje = Object.keys(mapearColumnas(fila, aliasPorCampo)).length;
     if (puntaje > mejorPuntaje) {
       mejor = i;
       mejorPuntaje = puntaje;
     }
   }
   if (mejorPuntaje >= 2) return mejor;
-  for (let i = 0; i < limite; i++) {
-    const llenas = filasTexto[i].filter((t) => t !== '');
+  for (const [i, fila] of primeras.entries()) {
+    const llenas = fila.filter((t) => t !== '');
     if (llenas.length >= 2 && llenas.every((t) => numeroDesdeTexto(t) === null)) return i;
   }
   return 0;
@@ -479,7 +481,8 @@ function elegirHoja(libro: WorkBook, pedida: unknown): string {
   }
   const info = libro.Workbook?.Sheets || [];
   const oculta = (n: string, i: number) => Number((info.find((s) => s?.name === n) || info[i])?.Hidden || 0) !== 0;
-  return libro.SheetNames.find((n, i) => !oculta(n, i)) ?? libro.SheetNames[0];
+  // (leerLibro ya comprobó que el Excel tiene al menos una hoja.)
+  return libro.SheetNames.find((n, i) => !oculta(n, i)) ?? en(libro.SheetNames, 0);
 }
 
 /** Opciones de leerLibro (salen de config.json). */
@@ -522,8 +525,9 @@ export function leerLibro(contenido: ArrayBuffer | Uint8Array, opciones: Opcione
   const aliasPorCampo = opciones.columnas || {};
   const obligatorios = opciones.camposObligatorios || [];
 
-  const rango = limitesReales(hoja);
-  if (!rango) {
+  // Una hoja que figura en la lista pero sin contenido (ej. una hoja de gráfico) se trata como vacía.
+  const rango = hoja ? limitesReales(hoja) : null;
+  if (!hoja || !rango) {
     return resultadoVacio(hojaNombre, libro.SheetNames, obligatorios);
   }
 
@@ -606,7 +610,7 @@ export function leerLibro(contenido: ArrayBuffer | Uint8Array, opciones: Opcione
       filasVacias++;
       continue;
     }
-    const celdas = convertidas.map((x, i) => completarConCombinada(x, r, indicesCol[i], opcionesCol[i]));
+    const celdas = convertidas.map((x, i) => completarConCombinada(x, r, en(indicesCol, i), en(opcionesCol, i)));
     // Si el bot volvió a pegar la fila de títulos, se salta.
     if (celdas.every((x, i) => x.t === titulosCrudos[i])) {
       encabezadosRepetidos++;
@@ -622,7 +626,7 @@ export function leerLibro(contenido: ArrayBuffer | Uint8Array, opciones: Opcione
   // Columnas: se descartan las ocultas y las que no tienen título NI datos.
   const conservar = indicesCol
     .map((_, i) => i)
-    .filter((i) => visible(i) && (titulosCrudos[i] !== '' || filasCrudas.some((f) => f.celdas[i].t !== '')));
+    .filter((i) => visible(i) && (titulosCrudos[i] !== '' || filasCrudas.some((f) => en(f.celdas, i).t !== '')));
   const posicion = new Map(conservar.map((i, pos) => [i, pos]));
   const mapa: MapaCampos = {};
   for (const [campo, i] of Object.entries(mapaCrudo) as [Campo, number][]) {
@@ -632,7 +636,7 @@ export function leerLibro(contenido: ArrayBuffer | Uint8Array, opciones: Opcione
 
   const vistos = new Map<string, number>();
   const titulos = conservar.map((i) => {
-    let titulo = titulosCrudos[i] || `Columna ${letraColumna(indicesCol[i])}`;
+    let titulo = titulosCrudos[i] || `Columna ${letraColumna(en(indicesCol, i))}`;
     const clave = normalizarEncabezado(titulo);
     const n = (vistos.get(clave) || 0) + 1;
     vistos.set(clave, n);
@@ -644,7 +648,7 @@ export function leerLibro(contenido: ArrayBuffer | Uint8Array, opciones: Opcione
   for (const [campo, pos] of Object.entries(mapa) as [Campo, number][]) campoDeColumna.set(pos, campo);
 
   const filas = filasCrudas.map((f) => {
-    const celdas = conservar.map((i) => f.celdas[i]);
+    const celdas = conservar.map((i) => en(f.celdas, i));
     const campos = {} as Record<Campo, string>;
     for (const campo of CAMPOS) {
       const pos = mapa[campo];
@@ -661,18 +665,19 @@ export function leerLibro(contenido: ArrayBuffer | Uint8Array, opciones: Opcione
     let llenas = 0;
     let numeros = 0;
     for (const fila of filas) {
-      const c = fila.celdas[pos];
+      const c = en(fila.celdas, pos);
       if (c.t !== '') {
         llenas++;
         if (typeof c.v === 'number') numeros++;
       }
     }
+    const titulo = en(titulos, pos);
     return {
       indice: pos,
-      letra: letraColumna(indicesCol[i]),
-      titulo: titulos[pos],
+      letra: letraColumna(en(indicesCol, i)),
+      titulo,
       campo,
-      clave: campo || `col-${normalizarEncabezado(titulos[pos]).replace(/ /g, '-') || pos}`,
+      clave: campo || `col-${normalizarEncabezado(titulo).replace(/ /g, '-') || pos}`,
       tipo: llenas > 0 && numeros / llenas >= 0.8 ? 'numero' : 'texto',
     };
   });
@@ -695,7 +700,7 @@ export function leerLibro(contenido: ArrayBuffer | Uint8Array, opciones: Opcione
     formulasSinCalcular,
     celdasConError,
     // Para "Columnas detectadas en el Excel": qué columnas se ocultaron.
-    columnasOcultas: [...ocultas].map((i) => ({ letra: letraColumna(indicesCol[i]), titulo: titulosCrudos[i] })),
+    columnasOcultas: [...ocultas].map((i) => ({ letra: letraColumna(en(indicesCol, i)), titulo: en(titulosCrudos, i) })),
   };
 }
 
@@ -713,14 +718,15 @@ function rellenarHaciaAbajo(filas: FilaCruda[], mapa: MapaCampos, campos: readon
   let completadas = 0;
   let anterior: FilaCruda | null = null;
   for (const fila of filas) {
-    const sinCentro = delCentro.every((c) => fila.celdas[indice(c)].t === '');
-    const conOrden = fila.celdas[indice('ordenCompra')].t !== '';
+    const sinCentro = delCentro.every((c) => en(fila.celdas, indice(c)).t === '');
+    const conOrden = en(fila.celdas, indice('ordenCompra')).t !== '';
     if (anterior && sinCentro && conOrden) {
       let copio = false;
       for (const campo of rellenar) {
         const i = indice(campo);
-        if (fila.celdas[i].t === '' && anterior.celdas[i].t !== '') {
-          fila.celdas[i] = anterior.celdas[i];
+        const deArriba = en(anterior.celdas, i);
+        if (en(fila.celdas, i).t === '' && deArriba.t !== '') {
+          fila.celdas[i] = deArriba;
           copio = true;
         }
       }

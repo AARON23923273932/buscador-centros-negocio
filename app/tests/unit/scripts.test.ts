@@ -89,8 +89,10 @@ describe('modo demo en la computadora (npm run dev:demo)', () => {
     let responder: Middleware = () => {};
     // "use" devuelve la pila de middlewares (como en Vite): el gancho no debe devolverla.
     const servidor = { middlewares: { use: (fn: Middleware) => ((responder = fn), () => {}) } };
-    expect(plugin.configureServer(servidor)).toBeUndefined();
-    expect(plugin.configurePreviewServer(servidor)).toBeUndefined();
+    // Para Vite un gancho puede ser una función o { handler }; los de este plugin son funciones.
+    const llamar = (gancho: unknown) => (gancho as (s: typeof servidor) => unknown)(servidor);
+    expect(llamar(plugin.configureServer)).toBeUndefined();
+    expect(llamar(plugin.configurePreviewServer)).toBeUndefined();
     const respuesta: RespuestaFalsa = {
       cabeceras: {},
       cuerpo: '',

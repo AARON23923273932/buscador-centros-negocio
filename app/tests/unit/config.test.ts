@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CONFIG_POR_DEFECTO, cargarConfig, mezclarConfig, validarConfig } from '../../src/logica/config.ts';
+import { CONFIG_POR_DEFECTO, cargarConfig, mezclarConfig, revisarConfig, validarConfig } from '../../src/logica/config.ts';
 
 const GUID = '11111111-2222-3333-4444-555555555555';
 
@@ -9,15 +9,14 @@ describe('mezclarConfig', () => {
   it('completa con valores por defecto e ignora comentarios "_"', () => {
     const c = mezclarConfig(CONFIG_POR_DEFECTO, { _ayuda: 'x', titulo: 'Otro', microsoft: { clientId: GUID, _nota: 'y' } });
     expect(c.titulo).toBe('Otro');
-    expect(c.microsoft.clientId).toBe(GUID);
-    expect(c.microsoft.dominiosPermitidos).toEqual(['aic.pe', 'jaicoscorp.com']);
+    expect(c.microsoft).toMatchObject({ clientId: GUID, dominiosPermitidos: ['aic.pe', 'jaicoscorp.com'] });
     // Los comentarios (claves con "_") no pasan a la configuración.
     expect((c as unknown as Record<string, unknown>)._ayuda).toBeUndefined();
     expect((c.microsoft as unknown as Record<string, unknown>)._nota).toBeUndefined();
   });
   it('las listas se reemplazan completas y no se modifica la base', () => {
     const c = mezclarConfig(CONFIG_POR_DEFECTO, { microsoft: { dominiosPermitidos: ['aic.pe'] } });
-    expect(c.microsoft.dominiosPermitidos).toEqual(['aic.pe']);
+    expect(c.microsoft).toMatchObject({ dominiosPermitidos: ['aic.pe'] });
     expect(CONFIG_POR_DEFECTO.microsoft.dominiosPermitidos).toHaveLength(2);
   });
 });
@@ -112,6 +111,24 @@ describe('validarConfig', () => {
     [{ titulo: ['x'] }, /"titulo"/],
   ])('tipo equivocado %j -> mensaje claro', (cambio: object, mensaje: RegExp) => {
     expect(validarConfig(mezclarConfig(CONFIG_POR_DEFECTO, cambio)).join(' ')).toMatch(mensaje);
+  });
+});
+
+describe('revisarConfig (la única forma de pasar de "sin revisar" a Config)', () => {
+  it('sin problemas: entrega la configuración (ya con el tipo Config)', () => {
+    const sinValidar = mezclarConfig(CONFIG_POR_DEFECTO, { titulo: 'Otro', filasPorPagina: 25 });
+    const r = revisarConfig(sinValidar);
+    expect(r.valida).toBe(true);
+    if (r.valida) {
+      // TypeScript ya deja usar los valores con su tipo (string, number…).
+      expect(r.config.titulo.toUpperCase()).toBe('OTRO');
+      expect(r.config.filasPorPagina + 1).toBe(26);
+    }
+  });
+  it('con problemas: solo entrega la lista de errores (no una Config)', () => {
+    const r = revisarConfig(mezclarConfig(CONFIG_POR_DEFECTO, { filasPorPagina: '50', modo: 'otro' }));
+    expect(r).toEqual({ valida: false, errores: expect.arrayContaining([expect.stringMatching(/filasPorPagina/), expect.stringMatching(/"modo"/)]) });
+    expect('config' in r).toBe(false);
   });
 });
 

@@ -25,6 +25,7 @@ import type {
   MapaCampos,
   Pagina,
 } from './tipos.ts';
+import { en } from './listas.ts';
 
 /** Comparador de textos en español: "a" = "á", "2" < "10". */
 const COMPARADOR = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
@@ -180,7 +181,7 @@ export function compararValores(a: unknown, b: unknown): number {
 }
 
 /** Aplica la dirección pero deja siempre los vacíos al final. */
-function compararConDireccion(a: unknown, b: unknown, direccion: string): number {
+function compararConDireccion(a: unknown, b: unknown, direccion: Direccion): number {
   const va = esVacio(a);
   const vb = esVacio(b);
   if (va || vb) return va === vb ? 0 : va ? 1 : -1;
@@ -195,7 +196,7 @@ function compararConDireccion(a: unknown, b: unknown, direccion: string): number
 export function ordenarFilas<F extends FilaBase>(
   filas: readonly F[],
   indiceColumna: number | null | undefined,
-  direccion: Direccion | string = 'asc',
+  direccion: Direccion = 'asc',
 ): F[] {
   if (indiceColumna === null || indiceColumna === undefined || indiceColumna < 0) return filas.slice();
   return filas.slice().sort((x, y) => {
@@ -259,7 +260,7 @@ type ClaveGrupo = (typeof CLAVES_GRUPO)[number];
 const esClaveGrupo = (clave: string): clave is ClaveGrupo => (CLAVES_GRUPO as readonly string[]).includes(clave);
 
 /** Ordena los grupos (vista "Por centro"). */
-export function ordenarGrupos(grupos: readonly Grupo[], clave: string, direccion: Direccion | string = 'asc'): Grupo[] {
+export function ordenarGrupos(grupos: readonly Grupo[], clave: string, direccion: Direccion = 'asc'): Grupo[] {
   if (!esClaveGrupo(clave)) return grupos.slice();
   const valor = (g: Grupo): string | number => {
     if (clave === 'ordenes') return g.ordenes;
@@ -275,8 +276,9 @@ export function ordenarGrupos(grupos: readonly Grupo[], clave: string, direccion
 /**
  * Corta la lista en páginas.
  * Devuelve { items, pagina, totalPaginas, desde, hasta, total } (desde/hasta empiezan en 1).
+ * Una página fuera de rango (o que no es un número entero, ej. NaN) se corrige a la más cercana.
  */
-export function paginar<T>(lista: readonly T[], pagina: unknown = 1, tamano: unknown = 50): Pagina<T> {
+export function paginar<T>(lista: readonly T[], pagina = 1, tamano = 50): Pagina<T> {
   const total = lista.length;
   const porPagina = Math.max(1, Math.floor(Number(tamano)) || 50);
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
@@ -374,7 +376,7 @@ export function segmentosResaltado(texto: unknown, terminos: readonly string[] |
     const caracter = caracterEn(original, i);
     const n = caracter.normalize('NFD').replace(MARCAS_TILDE, '').toLowerCase();
     for (let k = 0; k < n.length; k++) {
-      normal += n[k];
+      normal += n.charAt(k);
       mapa.push(i);
     }
     i += caracter.length;
@@ -385,9 +387,10 @@ export function segmentosResaltado(texto: unknown, terminos: readonly string[] |
   let compacto = '';
   const mapaCompacto: number[] = [];
   for (let k = 0; k < normal.length; k++) {
-    if (/[a-z0-9]/.test(normal[k])) {
-      compacto += normal[k];
-      mapaCompacto.push(mapa[k]);
+    const letra = normal.charAt(k);
+    if (/[a-z0-9]/.test(letra)) {
+      compacto += letra;
+      mapaCompacto.push(en(mapa, k)); // "mapa" tiene una posición por cada letra de "normal"
     }
   }
 
@@ -399,8 +402,8 @@ export function segmentosResaltado(texto: unknown, terminos: readonly string[] |
     while (buscado && desde <= donde.length - buscado.length) {
       const pos = donde.indexOf(buscado, desde);
       if (pos === -1) break;
-      const ini = posiciones[pos];
-      const ultimo = posiciones[pos + buscado.length - 1];
+      const ini = en(posiciones, pos);
+      const ultimo = en(posiciones, pos + buscado.length - 1);
       const fin = ultimo + caracterEn(original, ultimo).length;
       rangos.push([ini, fin]);
       hubo = true;
@@ -414,15 +417,18 @@ export function segmentosResaltado(texto: unknown, terminos: readonly string[] |
       marcar(compacto, mapaCompacto, terminoNormal.replace(/[^a-z0-9]/g, ''));
     }
   }
-  if (rangos.length === 0) return [{ texto: original, marcado: false }];
-
   // Se unen los rangos que se superponen o se tocan.
-  rangos.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const unidos: [number, number][] = [[rangos[0][0], rangos[0][1]]];
-  for (const [ini, fin] of rangos.slice(1)) {
-    const ult = unidos[unidos.length - 1];
-    if (ini <= ult[1]) ult[1] = Math.max(ult[1], fin);
-    else unidos.push([ini, fin]);
+  const [primero, ...resto] = rangos.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (!primero) return [{ texto: original, marcado: false }];
+  let actual: [number, number] = [primero[0], primero[1]];
+  const unidos = [actual];
+  for (const [ini, fin] of resto) {
+    if (ini <= actual[1]) {
+      actual[1] = Math.max(actual[1], fin);
+    } else {
+      actual = [ini, fin];
+      unidos.push(actual);
+    }
   }
 
   const segmentos: Segmento[] = [];

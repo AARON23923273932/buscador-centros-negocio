@@ -160,7 +160,7 @@ export function analizarUrlNavegador(url: unknown): InfoUrlNavegador | null {
   const guid = limpiarGuid(u.searchParams.get('sourcedoc'));
   if (!partes || !GUID.test(guid)) return null;
   // "/:x:/r" es el prefijo de los enlaces "de redirección" de SharePoint: no es parte del sitio.
-  const rutaSitio = partes[1].replace(/^\/:[a-z]:\/r(?=\/|$)/i, '').replace(/\/+$/, '');
+  const rutaSitio = (partes[1] ?? '').replace(/^\/:[a-z]:\/r(?=\/|$)/i, '').replace(/\/+$/, '');
   return {
     host: u.hostname.toLowerCase(),
     rutaSitio,
@@ -460,13 +460,14 @@ export async function buscarExcelEnSharePoint(
     const item = await leerConIdsSharePoint(c.driveId, c.itemId, token, fetchFn, fallas);
     if (limpiarGuid(item?.sharepointIds?.listItemUniqueId) === info.guid) return c;
   }
-  if (candidatos.length === 1) {
+  const [unico] = candidatos;
+  if (unico && candidatos.length === 1) {
     console.warn(
       `Aviso: el Excel "${info.nombre}" se encontró por su nombre, pero su identificador de SharePoint no coincide ` +
         `con el del enlace (${info.guid}). Se usa igual porque es el único con ese nombre.`,
-      candidatos[0],
+      unico,
     );
-    return candidatos[0];
+    return unico;
   }
   // Alguna biblioteca falló (5xx) y en las demás no apareció: el Excel podría estar justo en esa.
   if (fallas.length) throw fallas[0];
