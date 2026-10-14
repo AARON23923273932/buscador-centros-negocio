@@ -5,11 +5,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AvisoError } from '../../src/componentes/Avisos.tsx';
+import { AvisoError, AvisoFlotante } from '../../src/componentes/Avisos.tsx';
 import { BotonTema } from '../../src/componentes/BotonTema.tsx';
 import { Filtros } from '../../src/componentes/Filtros.tsx';
 import { Paginacion } from '../../src/componentes/Paginacion.tsx';
 import { PantallaApp } from '../../src/componentes/PantallaApp.tsx';
+import { useAvisoFlotante } from '../../src/hooks/useAvisoFlotante.ts';
 import { useBusqueda } from '../../src/hooks/useBusqueda.ts';
 import { useTema } from '../../src/hooks/useTema.ts';
 import { CONFIG_POR_DEFECTO, type Config } from '../../src/logica/config.ts';
@@ -162,17 +163,55 @@ describe('Filtros', () => {
   });
 });
 
-describe('AvisoError', () => {
+describe('Avisos (AvisoError y AvisoFlotante)', () => {
   it('oculto sin error; con error muestra el mensaje y sus botones', () => {
     const reintentar = vi.fn();
     const { rerender, container } = render(<AvisoError error={null} />);
     expect((container.firstChild as HTMLElement).hidden).toBe(true);
-    rerender(<AvisoError error={{ mensaje: 'No se encontró el Excel.', acciones: [{ texto: 'Reintentar', accion: reintentar }] }} />);
+    rerender(<AvisoError error={{ mensaje: 'No se encontró el Excel.', acciones: [{ texto: 'Reintentar', accion: reintentar }], id: 1 }} />);
     const aviso = screen.getByRole('alert');
     expect(aviso.hidden).toBe(false);
     expect(aviso.textContent).toBe('No se encontró el Excel. Reintentar');
     fireEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
     expect(reintentar).toHaveBeenCalledOnce();
+  });
+
+  // Los lectores de pantalla leen role="alert"/"status" cuando su contenido CAMBIA en la página. React no
+  // toca la página si el texto es el mismo: por eso cada aviso nuevo debe poner un nodo de texto nuevo.
+  it('el mismo error repetido (otro id) vuelve a poner el texto en la página; los botones no se recrean', () => {
+    const acciones = [{ texto: 'Reintentar', accion: () => {} }];
+    const { rerender } = render(<AvisoError error={{ mensaje: 'Sin conexión.', acciones, id: 1 }} />);
+    const aviso = screen.getByRole('alert');
+    const texto = aviso.querySelector('span');
+    const boton = within(aviso).getByRole('button', { name: 'Reintentar' });
+    rerender(<AvisoError error={{ mensaje: 'Sin conexión.', acciones, id: 2 }} />);
+    expect(aviso.querySelector('span')).not.toBe(texto);
+    expect(aviso.textContent).toBe('Sin conexión. Reintentar');
+    expect(within(aviso).getByRole('button', { name: 'Reintentar' })).toBe(boton);
+  });
+
+  it('el aviso flotante vuelve a poner el texto aunque el mensaje se repita (ej. "Datos actualizados" dos veces)', () => {
+    function ConAviso() {
+      const { aviso, avisar } = useAvisoFlotante();
+      return (
+        <>
+          <button type="button" onClick={() => avisar('Datos actualizados')}>
+            Avisar
+          </button>
+          <AvisoFlotante aviso={aviso} />
+        </>
+      );
+    }
+    render(<ConAviso />);
+    const caja = screen.getByRole('status');
+    expect(caja.textContent).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Avisar' }));
+    const primero = caja.firstChild;
+    expect(caja.textContent).toBe('Datos actualizados');
+    expect(caja.classList.contains('visible')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Avisar' }));
+    expect(caja.textContent).toBe('Datos actualizados');
+    expect(caja.firstChild).not.toBe(primero);
   });
 });
 
@@ -255,5 +294,22 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
     expect(document.getElementById('contenedor-tabla')?.textContent).toBe('No hay datos para mostrar. Revisa el mensaje de arriba.');
     expect(screen.getByRole('button', { name: 'Exportar a Excel' })).toHaveProperty('disabled', true);
     expect(within(aviso).getByRole('button', { name: 'Reintentar' })).toBeTruthy();
+  });
+
+  it('si "Reintentar" vuelve a fallar con el mismo mensaje, el aviso se vuelve a anunciar y el botón conserva el foco', async () => {
+    const pedir = vi.fn(async () => new Response('', { status: 404 }));
+    vi.stubGlobal('fetch', pedir);
+    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    const aviso = await screen.findByRole('alert');
+    await waitFor(() => expect(aviso.textContent).toContain('No se encontró el archivo de Excel (datos/centros-ejemplo.xlsx).'));
+    const texto = aviso.querySelector('span');
+    const reintentar = within(aviso).getByRole('button', { name: 'Reintentar' });
+    reintentar.focus();
+    fireEvent.click(reintentar);
+    await waitFor(() => expect(pedir).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(document.getElementById('contenedor-tabla')?.getAttribute('aria-busy')).toBe('false'));
+    expect(aviso.querySelector('span')).not.toBe(texto); // texto nuevo en la página = el lector lo vuelve a leer
+    expect(aviso.querySelector('span')?.textContent).toBe(texto?.textContent);
+    expect(document.activeElement).toBe(reintentar);
   });
 });

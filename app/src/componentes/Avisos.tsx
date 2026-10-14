@@ -10,7 +10,9 @@ export function AvisoError({ error }: { error: DatosAvisoError | null }) {
     <div id="aviso-error" className="aviso aviso-error" role="alert" hidden={!error}>
       {error && (
         <>
-          <span>{error.mensaje}</span>
+          {/* key = id del aviso: si el mismo error se repite (ej. "Reintentar" vuelve a fallar), el texto se
+              vuelve a poner en la página y el lector de pantalla lo anuncia otra vez. */}
+          <span key={error.id}>{error.mensaje}</span>
           {error.acciones.map((a) => (
             <Fragment key={a.texto}>
               {' '}
@@ -73,11 +75,14 @@ export function AvisoColumnas({ datos }: { datos: ResultadoLectura | null }) {
   );
 }
 
-/** Mensaje corto flotante (ej. "Código copiado"). Siempre está en la página para que los lectores de pantalla lo lean. */
+/**
+ * Mensaje corto flotante (ej. "Código copiado"). Siempre está en la página para que los lectores de pantalla lo lean.
+ * key = id del aviso: un mensaje repetido (ej. "Datos actualizados" dos veces) se vuelve a anunciar.
+ */
 export function AvisoFlotante({ aviso }: { aviso: DatosAvisoFlotante }) {
   return (
     <div id="aviso-flotante" className={`aviso-flotante${aviso.visible ? ' visible' : ''}`} role="status" aria-live="polite">
-      {aviso.texto}
+      {aviso.texto && <span key={aviso.id}>{aviso.texto}</span>}
     </div>
   );
 }

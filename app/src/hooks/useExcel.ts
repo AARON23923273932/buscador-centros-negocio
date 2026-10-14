@@ -33,6 +33,8 @@ export interface InfoArchivo {
 export interface AvisoError {
   mensaje: string;
   acciones: Accion[];
+  /** Distinto en cada error, aunque el mensaje se repita: así el lector de pantalla lo vuelve a anunciar (ver Avisos.tsx). */
+  id: number;
 }
 
 export interface EstadoExcel {
@@ -68,7 +70,7 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Estado
     sinDatos: 'cargando',
     falloSinDatos: false,
     // Si Microsoft devolvió un error al iniciar sesión (ej. falta aprobar un permiso), se muestra arriba.
-    error: sesion?.errorLogin ? { mensaje: sesion.errorLogin, acciones: [] } : null,
+    error: sesion?.errorLogin ? { mensaje: sesion.errorLogin, acciones: [], id: 0 } : null,
   }));
 
   // Lo último que se recibió (la carga es asíncrona y la auto-actualización corre con un temporizador).
@@ -76,11 +78,12 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Estado
   useLayoutEffect(() => {
     actual.current = { config, sesion, avisar, alCargar };
   });
-  const memoria = useRef<{ cargando: boolean; archivo: InfoArchivo | null; hayDatos: boolean; ultimaConsulta: Date | null }>({
+  const memoria = useRef<{ cargando: boolean; archivo: InfoArchivo | null; hayDatos: boolean; ultimaConsulta: Date | null; idError: number }>({
     cargando: false,
     archivo: null,
     hayDatos: false,
     ultimaConsulta: null,
+    idError: 0,
   });
 
   // (El tipo se escribe explícito porque la función se usa a sí misma en el botón "Reintentar".)
@@ -134,7 +137,8 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Estado
       if (motivo === 'manual') actual.current.avisar('Datos actualizados');
     } catch (e) {
       console.error('Error al cargar el Excel:', e);
-      const error = avisoDeError(e, s, () => void cargar('manual'), m.hayDatos ? m.ultimaConsulta : null);
+      m.idError += 1;
+      const error: AvisoError = { ...avisoDeError(e, s, () => void cargar('manual'), m.hayDatos ? m.ultimaConsulta : null), id: m.idError };
       setEstado((prev) => (prev.datos ? { ...prev, error } : { ...prev, error, sinDatos: 'error', falloSinDatos: true }));
     } finally {
       m.cargando = false;
@@ -174,7 +178,7 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Estado
  * Mensaje y botones del aviso rojo cuando no se pudo leer el Excel.
  * @param datosDeLas  hora de los datos que se siguen mostrando (null si no hay datos)
  */
-function avisoDeError(error: unknown, sesion: Sesion | null, reintentar: () => void, datosDeLas: Date | null): AvisoError {
+function avisoDeError(error: unknown, sesion: Sesion | null, reintentar: () => void, datosDeLas: Date | null): Omit<AvisoError, 'id'> {
   const mensaje = error instanceof ErrorDatos ? error.message : 'Ocurrió un error inesperado al leer el Excel. Vuelve a intentar.';
   const acciones: Accion[] = [{ texto: 'Reintentar', accion: reintentar }];
   if (error instanceof ErrorDatos && (error.tipo === 'sesion' || error.tipo === 'consentimiento') && sesion) {
