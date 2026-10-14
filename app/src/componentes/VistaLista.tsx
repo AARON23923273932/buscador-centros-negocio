@@ -148,8 +148,18 @@ export function VistaLista() {
 
   const exportar = async () => {
     if (!datos || !vista?.filas.length) return;
-    const { exportarExcel } = await import('../logica/exportar.ts');
-    const nombre = exportarExcel(datos.columnas, vista.filas, vista.grupos);
+    // La parte que arma el Excel se descarga recién al pulsar el botón. Si mientras la página estaba abierta se
+    // publicó una versión nueva, ese archivo ya no existe en el servidor (Netlify responde la página en su lugar):
+    // se avisa en vez de no hacer nada.
+    let modulo: typeof import('../logica/exportar.ts');
+    try {
+      modulo = await import('../logica/exportar.ts');
+    } catch (e) {
+      console.error(e);
+      avisar('No se pudo exportar: hay una versión nueva de la app. Recarga la página (F5) y vuelve a intentarlo.');
+      return;
+    }
+    const nombre = modulo.exportarExcel(datos.columnas, vista.filas, vista.grupos);
     avisar(`Se descargó ${nombre} (${vista.filas.length.toLocaleString('es-PE')} filas)`);
   };
 

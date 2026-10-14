@@ -321,11 +321,25 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     expect(XLSX.SSF.is_date(celdaFecha.z)).toBe(true);
   });
 
+  test('exportar con la página abierta desde antes de una publicación nueva: avisa que hay que recargar', async ({ page }) => {
+    // La parte que arma el Excel (assets/exportar-….js) se descarga al pulsar el botón. Tras publicar otra versión
+    // ese archivo ya no existe y Netlify responde index.html (código 200, text/html): el botón no debe quedarse
+    // sin hacer nada.
+    await abrir(page);
+    await page.route(/\/assets\/exportar-[^/]+\.js$/, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Buscador</title>' }));
+    let descargas = 0;
+    page.on('download', () => descargas++);
+    await page.getByRole('button', { name: 'Exportar a Excel' }).click();
+    await expect(page.locator('#aviso-flotante')).toContainText('hay una versión nueva de la app. Recarga la página (F5)');
+    expect(descargas).toBe(0);
+  });
+
   test('Monto y Moneda no aparecen (ni se buscan); "Columnas detectadas" dice cuáles se ocultaron', async ({ page }) => {
     const errores = vigilarErrores(page);
     await abrir(page);
+    // (Los indicadores ▲▼ son dibujos SVG, no texto: los títulos se leen tal cual.)
     const titulos = await page.locator('#tabla-resultados thead th').allInnerTexts();
-    expect(titulos.map((t) => t.replace(/[↕▲▼]/g, '').trim())).toEqual([
+    expect(titulos.map((t) => t.trim())).toEqual([
       'Código',
       'Descripción del centro de negocio',
       'Cliente',

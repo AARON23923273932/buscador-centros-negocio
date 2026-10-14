@@ -25,6 +25,19 @@ describe('publicación con rutas', () => {
     expect(config.navigationFallback.exclude).toEqual(expect.arrayContaining(['/assets/*', '/redirect.html', '/config.json']));
   });
 
+  it('Azure Static Web Apps: index.html sin caché larga también en /ordenes y /centros/… (cabecera global)', () => {
+    // Las reglas de "routes" NO se aplican a lo que responde navigationFallback (documentación de Microsoft,
+    // "Fallback routes"): una regla para /index.html no alcanzaría a /centros/A2338PY01. Por eso "no-cache" va en
+    // globalHeaders (vale para toda respuesta) y solo los archivos con huella (assets/…) la cambian por una larga.
+    type Regla = { route: string; headers?: Record<string, string> };
+    const config = JSON.parse(leer('public/staticwebapp.config.json')) as { routes: Regla[]; globalHeaders: Record<string, string> };
+    expect(config.globalHeaders['Cache-Control']).toBe('no-cache');
+    const cabecera = (ruta: string) => config.routes.find((r) => r.route === ruta)?.headers?.['Cache-Control'];
+    expect(cabecera('/assets/*')).toBe('public, max-age=31536000, immutable');
+    expect(cabecera('/config.json')).toContain('no-store');
+    expect(config.routes.some((r) => r.route === '/index.html')).toBe(false); // no haría nada en las rutas de la app
+  });
+
   it('la app se publica en la raíz (base "/") y index.html pide sus archivos desde "/"', () => {
     expect(leer('vite.config.ts')).toMatch(/^\s*base: '\/',$/m);
     const index = leer('index.html');
