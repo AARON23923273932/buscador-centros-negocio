@@ -2,6 +2,14 @@
    estilos.css — Apariencia de la app.
    Los colores están en "variables" (--nombre) para cambiar entre modo claro y
    oscuro (según el sistema del usuario o el botón ☀️/🌙 de la cabecera).
+
+   Cambios pedidos por el supervisor (14/10/2026):
+    1. Más margen a los lados: el contenido va en una columna centrada de ancho cómodo
+       (--ancho-contenido) con margen lateral generoso (--margen-lateral). En el celular, 16 px.
+    2. Contornos menos agresivos: bordes de 1 px de color suave (--borde-control) y, al llegar con el
+       teclado, un anillo suave (--anillo) en vez del contorno grueso de 3 px. Solo con :focus-visible
+       (no al hacer clic con el mouse).
+    3. Íconos alineados: todos son SVG de 16–18 px (clase "icono") centrados con inline-flex.
    ============================================================================= */
 
 :root {
@@ -10,6 +18,7 @@
   --superficie: #ffffff;
   --superficie-2: #eef1f5;
   --borde: #d6dbe3;
+  --borde-control: #c5ccd7;
   --borde-fuerte: #b9c1cd;
   --texto: #1a2130;
   --texto-2: #535d6e;
@@ -28,9 +37,16 @@
   --info: #174a9c;
   --info-fondo: #e7effc;
   --foco: #1d5bbf;
-  --sombra: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  /* Anillo de foco: el primario semitransparente (va junto con el borde en color primario). */
+  --anillo: rgba(29, 91, 191, 0.32);
+  --sombra: 0 1px 2px rgba(16, 24, 40, 0.05);
   --radio: 10px;
   --fuente: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Flecha de los desplegables (SVG propio: igual en todos los navegadores; la CSP permite imágenes data:). */
+  --flecha-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23535d6e' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
+  /* Columna de contenido: ancho máximo cómodo de leer y margen a los lados (16 px en el celular). */
+  --ancho-contenido: 1240px;
+  --margen-lateral: clamp(16px, 4vw, 56px);
 }
 
 /* Modo oscuro: sigue al sistema, salvo que la persona elija otro con el botón ☀️/🌙
@@ -42,6 +58,7 @@
     --superficie: #161a22;
     --superficie-2: #1d222c;
     --borde: #2c3340;
+    --borde-control: #394252;
     --borde-fuerte: #3d4656;
     --texto: #e7eaf0;
     --texto-2: #a6afbe;
@@ -60,7 +77,9 @@
     --info: #a9c6ff;
     --info-fondo: #18243b;
     --foco: #79a8ff;
-    --sombra: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --anillo: rgba(121, 168, 255, 0.4);
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --flecha-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a6afbe' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
   }
 }
 :root[data-tema="oscuro"] {
@@ -69,6 +88,7 @@
   --superficie: #161a22;
   --superficie-2: #1d222c;
   --borde: #2c3340;
+  --borde-control: #394252;
   --borde-fuerte: #3d4656;
   --texto: #e7eaf0;
   --texto-2: #a6afbe;
@@ -87,7 +107,9 @@
   --info: #a9c6ff;
   --info-fondo: #18243b;
   --foco: #79a8ff;
-  --sombra: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --anillo: rgba(121, 168, 255, 0.4);
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --flecha-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a6afbe' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
 }
 
 *,
@@ -115,7 +137,8 @@ body {
 }
 
 h1,
-h2 {
+h2,
+h3 {
   line-height: 1.25;
 }
 
@@ -133,10 +156,29 @@ a {
   color: var(--primario);
 }
 
-/* Foco visible para quien usa teclado */
+/* ---------- Foco (teclado) ----------
+   Solo con :focus-visible: el navegador lo muestra al llegar con el teclado, no al hacer clic con el mouse.
+   General (enlaces, textos): un contorno fino de 2 px. Controles con borde (botones, cajas, desplegables):
+   borde en color primario + anillo suave alrededor (más abajo). El contorno transparente hace que el foco
+   se siga viendo en el modo de alto contraste de Windows (ahí no se dibujan sombras). */
 :focus-visible {
-  outline: 3px solid var(--foco);
+  outline: 2px solid var(--foco);
   outline-offset: 2px;
+}
+.btn:focus-visible,
+.btn-tema:focus-visible,
+.btn-copiar:focus-visible,
+.btn-expandir:focus-visible,
+.btn-borrar:focus-visible,
+#buscador:focus-visible,
+.campo input:focus-visible,
+.campo select:focus-visible,
+#tam-pagina:focus-visible,
+.contenedor-tabla:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px var(--anillo);
 }
 
 .solo-lectores {
@@ -199,15 +241,38 @@ a {
   margin: 8px 0;
 }
 
-/* ---------- Cabecera ---------- */
+/* ---------- Íconos ----------
+   Bloques de 16 px (18 px los de la lupa, el logo de Microsoft y el tema) que no se encogen: dentro de un
+   botón con inline-flex + align-items:center quedan centrados con el texto, sin moverse con la línea. */
+.icono {
+  display: block;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+.icono-18 {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Columna de contenido (cabecera, avisos, buscador, tabla, pie) ---------- */
+.cabecera-interior,
+.principal {
+  width: 100%;
+  max-width: calc(var(--ancho-contenido) + 2 * var(--margen-lateral));
+  margin: 0 auto;
+  padding-left: var(--margen-lateral);
+  padding-right: var(--margen-lateral);
+}
+
+/* ---------- Cabecera (fondo a todo el ancho; su contenido, alineado con la columna) ---------- */
 .cabecera {
   background: var(--superficie);
   border-bottom: 1px solid var(--borde);
 }
 .cabecera-interior {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 12px 16px;
+  padding-top: 12px;
+  padding-bottom: 12px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -230,6 +295,9 @@ a {
   background: var(--primario);
   color: var(--primario-texto);
 }
+.logo svg {
+  display: block;
+}
 .marca-textos {
   min-width: 0;
 }
@@ -251,23 +319,27 @@ a {
 }
 .btn-tema {
   flex: none;
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-control);
   border-radius: 999px;
   background: var(--superficie);
   color: var(--texto);
   cursor: pointer;
 }
+.btn-tema svg {
+  display: block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
 .btn-tema:hover {
   background: var(--superficie-2);
-}
-.btn-tema:focus-visible {
-  outline: 3px solid var(--foco);
-  outline-offset: 2px;
+  border-color: var(--borde-fuerte);
 }
 /* Se muestra el ícono del modo AL QUE se cambia: luna en claro, sol en oscuro. */
 .btn-tema .icono-sol {
@@ -292,7 +364,7 @@ a {
   border-radius: 999px;
   background: var(--advertencia-fondo);
   color: var(--advertencia);
-  border: 1px solid currentColor;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
 }
 .datos-usuario {
   display: flex;
@@ -333,9 +405,8 @@ a {
 
 /* ---------- Contenido ---------- */
 .principal {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 16px;
+  padding-top: 20px;
+  padding-bottom: 16px;
 }
 
 .pantalla-centro {
@@ -381,14 +452,16 @@ a {
   min-height: 38px;
   padding: 6px 14px;
   border-radius: 8px;
-  border: 1px solid var(--borde-fuerte);
+  border: 1px solid var(--borde-control);
   background: var(--superficie);
   color: var(--texto);
   font: inherit;
   font-size: 0.92rem;
   font-weight: 500;
+  line-height: 1.25;
   cursor: pointer;
   white-space: nowrap;
+  text-decoration: none;
 }
 .btn:hover:not(:disabled) {
   border-color: var(--primario);
@@ -409,12 +482,19 @@ a {
   border-color: var(--primario-hover);
   color: var(--primario-texto);
 }
+/* Botón principal con el foco: el anillo va por fuera y una línea clara por dentro (se ve sobre el azul). */
+.btn-primario:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px var(--superficie),
+    0 0 0 3px var(--anillo);
+}
 .btn-grande {
   min-height: 46px;
   padding: 10px 20px;
   font-size: 1rem;
   width: 100%;
   max-width: 320px;
+  gap: 10px;
 }
 .btn-pequeno {
   min-height: 32px;
@@ -440,17 +520,17 @@ a {
 .aviso-info {
   background: var(--info-fondo);
   color: var(--info);
-  border-color: color-mix(in srgb, var(--info) 30%, transparent);
+  border-color: color-mix(in srgb, var(--info) 22%, transparent);
 }
 .aviso-error {
   background: var(--error-fondo);
   color: var(--error);
-  border-color: color-mix(in srgb, var(--error) 35%, transparent);
+  border-color: color-mix(in srgb, var(--error) 28%, transparent);
 }
 .aviso-advertencia {
   background: var(--advertencia-fondo);
   color: var(--advertencia);
-  border-color: color-mix(in srgb, var(--advertencia) 35%, transparent);
+  border-color: color-mix(in srgb, var(--advertencia) 28%, transparent);
 }
 .tarjeta-centro .aviso {
   margin-top: 16px;
@@ -485,9 +565,12 @@ a {
   display: flex;
   align-items: center;
 }
+/* La lupa, centrada en la altura de la caja (18 px). */
 .icono-lupa {
   position: absolute;
-  left: 14px;
+  left: 15px;
+  top: 50%;
+  margin-top: -9px;
   color: var(--texto-2);
   pointer-events: none;
 }
@@ -499,9 +582,12 @@ a {
   font-size: 1.05rem;
   color: var(--texto);
   background: var(--superficie);
-  border: 2px solid var(--borde-fuerte);
+  border: 1px solid var(--borde-control);
   border-radius: var(--radio);
   box-shadow: var(--sombra);
+}
+#buscador:hover {
+  border-color: var(--borde-fuerte);
 }
 #buscador:focus {
   border-color: var(--primario);
@@ -513,17 +599,22 @@ a {
 #buscador::placeholder {
   color: var(--texto-2);
 }
+/* "×" para borrar la búsqueda: botón redondo de 36 px centrado en la altura de la caja. */
 .btn-borrar {
   position: absolute;
   right: 8px;
+  top: 50%;
+  margin-top: -18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   height: 36px;
-  border: 0;
+  padding: 0;
+  border: 1px solid transparent;
   border-radius: 50%;
   background: transparent;
   color: var(--texto-2);
-  font-size: 1.4rem;
-  line-height: 1;
   cursor: pointer;
 }
 .btn-borrar:hover {
@@ -574,14 +665,34 @@ a {
   font: inherit;
   font-size: 0.92rem;
   color: var(--texto);
-  background: var(--superficie);
-  border: 1px solid var(--borde-fuerte);
+  background-color: var(--superficie);
+  border: 1px solid var(--borde-control);
   border-radius: 8px;
+}
+.campo input:hover:not(:disabled),
+.campo select:hover:not(:disabled),
+#tam-pagina:hover {
+  border-color: var(--borde-fuerte);
+}
+/* Desplegables con flecha propia (la del sistema cambia de tamaño y altura según el navegador). */
+.campo select,
+#tam-pagina {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 34px;
+  background-image: var(--flecha-select);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+  cursor: pointer;
 }
 .campo input:disabled,
 .campo select:disabled {
-  background: var(--superficie-2);
+  background-color: var(--superficie-2);
   cursor: not-allowed;
+}
+.campo select:disabled {
+  opacity: 0.75;
 }
 .campo-boton .btn {
   width: 100%;
@@ -601,10 +712,16 @@ a {
 }
 .selector-vista {
   display: inline-flex;
-  border: 1px solid var(--borde-fuerte);
+  border: 1px solid var(--borde-control);
   border-radius: 8px;
   overflow: hidden;
   background: var(--superficie);
+}
+/* Con el teclado sobre "Por orden / Por centro": el mismo anillo que los demás controles. */
+.selector-vista:has(input:focus-visible) {
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px var(--anillo);
+  outline: 2px solid transparent;
 }
 .opcion-vista {
   position: relative;
@@ -624,15 +741,11 @@ a {
   font-weight: 500;
 }
 .opcion-vista + .opcion-vista span {
-  border-left: 1px solid var(--borde-fuerte);
+  border-left: 1px solid var(--borde-control);
 }
 .opcion-vista input:checked + span {
   background: var(--primario);
   color: var(--primario-texto);
-}
-.opcion-vista input:focus-visible + span {
-  outline: 3px solid var(--foco);
-  outline-offset: -3px;
 }
 .opcion-vista input:disabled + span {
   opacity: 0.5;
@@ -710,7 +823,7 @@ a {
   top: 0;
   z-index: 2;
   background: var(--superficie-2);
-  border-bottom: 2px solid var(--borde-fuerte);
+  border-bottom: 1px solid var(--borde-control);
   padding: 0;
   font-weight: 600;
 }
@@ -729,6 +842,7 @@ a {
   width: 100%;
   padding: 9px 12px;
   border: 0;
+  border-radius: 0;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -740,17 +854,16 @@ a {
 .btn-orden:hover {
   background: var(--fila-hover);
 }
+/* Dentro del encabezado (que corta lo que sobresale): la marca de foco va por dentro. */
 .btn-orden:focus-visible {
-  outline-offset: -3px;
+  outline: 2px solid transparent;
+  box-shadow: inset 0 0 0 2px var(--primario);
 }
 .icono-orden {
   color: var(--texto-2);
-  font-size: 0.75rem;
-  opacity: 0.6;
 }
 .btn-orden.activo .icono-orden {
   color: var(--primario);
-  opacity: 1;
 }
 .tabla tbody tr:nth-child(even) > td {
   background: var(--cebra);
@@ -776,6 +889,7 @@ a {
   color: var(--texto-2);
 }
 
+/* Código del centro + botón "copiar": en la línea del texto de las demás celdas (el botón no la agranda). */
 .celda-codigo {
   display: inline-flex;
   align-items: center;
@@ -785,17 +899,34 @@ a {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.88rem;
 }
+/* El código es un enlace al detalle del centro (/centros/:codigo). */
+.enlace-codigo {
+  color: var(--primario);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+  border-radius: 3px;
+}
+.enlace-codigo:hover {
+  text-decoration-color: currentColor;
+}
+.enlace-codigo:focus-visible {
+  outline-offset: 1px;
+}
 .btn-copiar {
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 26px;
   height: 26px;
+  margin: -3px 0;
+  padding: 0;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: var(--texto-2);
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 .btn-copiar:hover,
 .btn-copiar:focus-visible {
@@ -812,16 +943,23 @@ a {
 .fila-centro {
   cursor: pointer;
 }
+/* Botón de la flecha: centrado con la primera línea de texto de la fila (no la hace más alta). */
 .btn-expandir {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px 0;
+  padding: 0;
   border: 1px solid var(--borde);
   border-radius: 6px;
   background: var(--superficie);
   color: var(--texto);
   cursor: pointer;
+}
+.btn-expandir:hover {
+  border-color: var(--borde-fuerte);
 }
 .icono-expandir {
   transition: transform 0.15s;
@@ -847,7 +985,6 @@ a {
 .tabla-anidada thead th {
   position: static;
   padding: 7px 12px;
-  border-bottom-width: 1px;
 }
 .insignia {
   display: inline-block;
@@ -858,7 +995,67 @@ a {
   color: var(--primario);
   font-weight: 700;
   font-size: 0.8rem;
+  line-height: 1.5;
   text-align: center;
+}
+
+/* ---------- Detalle de un centro (/centros/:codigo) ---------- */
+.barra-detalle {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.detalle-centro > h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 0 0 12px;
+  font-size: 1.3rem;
+}
+.detalle-centro > h2:focus {
+  outline: none;
+}
+.detalle-centro > h2 .codigo {
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+.ficha-centro {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px 28px;
+  margin: 0 0 20px;
+  padding: 16px 20px;
+}
+.ficha-dato {
+  min-width: 0;
+}
+.ficha-ancha {
+  grid-column: span 2;
+}
+.ficha-centro dt {
+  margin-bottom: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--texto-2);
+}
+.ficha-centro dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.subtitulo-detalle {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.subtitulo-detalle .tenue {
+  font-weight: 400;
+  font-size: 0.9rem;
+}
+.tabla-detalle thead th {
+  padding: 9px 12px;
+}
+.contenedor-detalle {
+  margin-bottom: 12px;
 }
 
 /* ---------- Paginación ---------- */
@@ -870,16 +1067,21 @@ a {
   gap: 6px;
   margin: 12px 0;
 }
+.btn-pagina {
+  min-width: 38px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
 .pagina-actual {
   padding: 0 8px;
   font-size: 0.9rem;
   color: var(--texto-2);
+  border-radius: 4px;
 }
 /* Recibe el foco al llegar a la primera/última página con el teclado: debe verse dónde está. */
 .pagina-actual:focus-visible {
-  outline: 3px solid var(--foco);
+  outline: 2px solid var(--foco);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /* ---------- Detalle de columnas y pie ---------- */
@@ -891,6 +1093,7 @@ a {
   cursor: pointer;
   color: var(--texto-2);
   font-weight: 500;
+  border-radius: 4px;
 }
 .info-columnas p {
   overflow-wrap: anywhere;
@@ -942,6 +1145,7 @@ a {
 /* ---------- Indicador de carga ---------- */
 .spinner {
   display: inline-block;
+  flex-shrink: 0;
   width: 22px;
   height: 22px;
   border: 3px solid var(--borde);
@@ -970,10 +1174,12 @@ a {
     font-size: 14px;
   }
   .principal {
-    padding: 12px 16px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
   .cabecera-interior {
-    padding: 10px 16px;
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
   .subtitulo {
     display: none;
@@ -1031,6 +1237,13 @@ a {
   .fila-detalle > td {
     padding-left: 12px;
   }
+  .ficha-centro {
+    grid-template-columns: 1fr;
+    padding: 14px 16px;
+  }
+  .ficha-ancha {
+    grid-column: auto;
+  }
 }
 
 @media print {
@@ -1042,7 +1255,8 @@ a {
   .barra-resultados .acciones-resultados,
   .paginacion,
   .detalles-columnas,
-  .btn-copiar {
+  .btn-copiar,
+  .barra-detalle {
     display: none !important;
   }
   .contenedor-tabla {

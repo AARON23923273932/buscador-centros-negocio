@@ -6,18 +6,18 @@
 import { numero } from './formato.ts';
 import type { Columna, Direccion, Pagina, Vista } from './tipos.ts';
 
-/** Indicador de orden (▲ ▼) y valor de aria-sort para un encabezado. */
+/**
+ * Estado de orden de un encabezado: valor de aria-sort (lo leen los lectores de pantalla y elige el
+ * indicador ▲ ▼ que dibuja componentes/Iconos.tsx) y si es la columna ordenada.
+ */
 export interface EstadoOrden {
   aria: 'none' | 'ascending' | 'descending';
-  icono: string;
   activo: boolean;
 }
 
 export function estadoOrden(clave: string, ordenarPor: string, direccion: Direccion): EstadoOrden {
-  if (clave !== ordenarPor) return { aria: 'none', icono: '↕', activo: false };
-  return direccion === 'desc'
-    ? { aria: 'descending', icono: '▼', activo: true }
-    : { aria: 'ascending', icono: '▲', activo: true };
+  if (clave !== ordenarPor) return { aria: 'none', activo: false };
+  return direccion === 'desc' ? { aria: 'descending', activo: true } : { aria: 'ascending', activo: true };
 }
 
 /** Clases CSS de una columna: "num" (alineada a la derecha), "campo-…" y "ancha" (descripción). */

@@ -1,7 +1,8 @@
 // Buscador global: una caja grande; filtra 200 ms después de la última tecla (Enter = ya).
+// La lupa (izquierda) y la "×" para borrar (derecha) se centran en la caja con CSS (estilos.css).
 import type { RefObject } from 'react';
 import { useMediaQuery } from '../hooks/useMediaQuery.ts';
-import { IconoLupa } from './Iconos.tsx';
+import { IconoCerrar, IconoLupa } from './Iconos.tsx';
 
 interface Props {
   valor: string;
@@ -46,7 +47,7 @@ export function Buscador({ valor, alEscribir, alEnviar, alBorrar, campoRef }: Pr
           onChange={(ev) => alEscribir(ev.target.value)}
         />
         <button type="button" id="btn-borrar-busqueda" className="btn-borrar" aria-label="Borrar búsqueda" hidden={!valor} onClick={alBorrar}>
-          ×
+          <IconoCerrar />
         </button>
       </div>
       <p id="ayuda-busqueda" className="ayuda">

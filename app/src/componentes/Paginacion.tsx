@@ -1,10 +1,11 @@
-// Paginación: « ‹ Anterior · Página X de Y · Siguiente › ».
+// Paginación: « ‹ Anterior · Página X de Y · Siguiente › » (las flechas son íconos SVG, ver Iconos.tsx).
 //
 // Teclado: si el botón que tenía el foco queda desactivado (ej. "Siguiente" al llegar a la
 // última página), el foco pasa al texto "Página X de Y" para que no se pierda.
 import { memo, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { numero } from '../logica/formato.ts';
 import type { Pagina } from '../logica/tipos.ts';
+import { IconoPagina } from './Iconos.tsx';
 
 interface Props {
   /** null = todavía no hay datos (no se muestran botones). */
@@ -65,11 +66,12 @@ export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef 
     const ultima = pag.pagina >= pag.totalPaginas;
     botones = (
       <>
-        {boton(1, '«', 'Primera página', primera)}
+        {boton(1, <IconoPagina tipo="primera" />, 'Primera página', primera)}
         {boton(
           pag.pagina - 1,
           <>
-            ‹ <span className="texto-boton">Anterior</span>
+            <IconoPagina tipo="anterior" />
+            <span className="texto-boton">Anterior</span>
           </>,
           'Página anterior',
           primera,
@@ -80,12 +82,13 @@ export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef 
         {boton(
           pag.pagina + 1,
           <>
-            <span className="texto-boton">Siguiente</span> ›
+            <span className="texto-boton">Siguiente</span>
+            <IconoPagina tipo="siguiente" />
           </>,
           'Página siguiente',
           ultima,
         )}
-        {boton(pag.totalPaginas, '»', 'Última página', ultima)}
+        {boton(pag.totalPaginas, <IconoPagina tipo="ultima" />, 'Última página', ultima)}
       </>
     );
   }

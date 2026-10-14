@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Borradores, ClaveTexto } from '../hooks/useBusqueda.ts';
 import type { EstadoBusqueda } from '../logica/tipos.ts';
 import type { ClaveControl, ClaveDesplegable, EstadoControl } from '../logica/vista.ts';
+import { IconoFiltros } from './Iconos.tsx';
 
 interface Props {
   estado: EstadoBusqueda;
@@ -76,6 +77,7 @@ export function Filtros(props: Props) {
         aria-controls="panel-filtros"
         onClick={() => setAbierto((a) => !a)}
       >
+        <IconoFiltros />
         Filtros{' '}
         <span id="contador-filtros" className="insignia" hidden={!activos}>
           {activos ?? ''}

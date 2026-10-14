@@ -9,8 +9,11 @@ export function PantallaLogin({ sesion }: { sesion: Sesion }) {
   const [ocupado, setOcupado] = useState(false);
   const boton = useRef<HTMLButtonElement>(null);
 
+  // El foco empieza en el botón (Enter inicia sesión), pero SIN el anillo de foco: al abrir la página nadie
+  // usó todavía el teclado y el navegador lo mostraría como si sí (pedido del supervisor, 14/10/2026).
+  // Con Tab el anillo aparece normalmente en lo que reciba el foco.
   useEffect(() => {
-    boton.current?.focus();
+    boton.current?.focus({ focusVisible: false });
   }, []);
 
   const iniciar = async () => {

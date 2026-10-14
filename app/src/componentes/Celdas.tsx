@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import type { Celda, Columna, Direccion, Fila } from '../logica/tipos.ts';
 import { claseColumna, estadoOrden } from '../logica/tabla.ts';
-import { IconoCopiar } from './Iconos.tsx';
+import { IconoCopiar, IconoOrden } from './Iconos.tsx';
 import { Resaltado } from './Resaltado.tsx';
 
 /** Copiar un código (lo hace la pantalla principal: copia y avisa). */
@@ -37,9 +37,7 @@ export function EncabezadoOrdenable({
         onClick={() => alOrdenar?.(clave)}
       >
         <span>{titulo}</span>
-        <span className="icono-orden" aria-hidden="true">
-          {e.icono}
-        </span>
+        <IconoOrden aria={e.aria} />
       </button>
     </th>
   );
