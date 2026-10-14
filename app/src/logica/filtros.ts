@@ -29,8 +29,12 @@ import type {
 /** Comparador de textos en español: "a" = "á", "2" < "10". */
 const COMPARADOR = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
 
-/** Tildes "sueltas" que quedan después de normalize('NFD') (rango Unicode U+0300–U+036F). */
-const MARCAS_TILDE = /[̀-ͯ]/g;
+/**
+ * Tildes "sueltas" que quedan después de normalize('NFD') (rango Unicode U+0300–U+036F).
+ * Se escriben con su código (\u0300) y no pegadas tal cual: son invisibles y un editor podría cambiarlas
+ * sin que se note (tests/unit/codigo-fuente.test.ts lo revisa).
+ */
+const MARCAS_TILDE = /[\u0300-\u036f]/g;
 
 /** Campos lógicos que la app entiende (los nombres reales de columnas van en config.json). */
 export const CAMPOS: readonly Campo[] = ['codigoCentro', 'descripcionCentro', 'cliente', 'ordenCompra', 'tipoOrden', 'estado'];
