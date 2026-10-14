@@ -1,6 +1,6 @@
 # ✅ Plan de pruebas — Buscador de centros de negocio
 
-> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (297 unitarias de lógica y componentes + 42 en navegador, al 13/10/2026, ya con la versión **React + TypeScript**) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
+> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (320 unitarias de lógica y componentes + 60 en navegador, al 14/10/2026, ya con **React Router** y los cambios de diseño de Gustavo) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
 > Marca `[x]` lo que pase. Si algo falla, anota qué viste (o toma captura) y me lo pasas.
 
 **Cómo abrir la app en tu PC:**
@@ -26,7 +26,7 @@ Objetivo: confirmar que **hace lo que pidieron** y que es fácil de usar.
 - [ ] 1.6 Clic en el título **Código** (y otra vez) → ordena de menor a mayor y al revés.
 - [ ] 1.7 Cambiar a **"Por centro de negocio"** → abrir un centro → ves todas sus órdenes.
 - [ ] 1.8 **Exportar a Excel** con un filtro puesto → el archivo tiene solo esas filas.
-- [ ] 1.9 Copiar la dirección de la página con un filtro puesto, pegarla en otra pestaña → sale el mismo filtro.
+- [ ] 1.9 Copiar la dirección de la página con un filtro puesto (ej. `…/centros?q=cableado&estado=Abierta`), pegarla en otra pestaña → sale el mismo filtro y la misma vista.
 - [ ] 1.10 Achicar la ventana a tamaño celular (o F12 → ícono de celular) → se puede usar.
 - [ ] 1.11 Filtro **Estado**: es una lista para elegir (no se escribe) con los valores del Excel (*Abierta*, *Cerrada*, *En ejecución*…). Elegir uno → todas las filas tienen ese estado; queda en la dirección (`?estado=…`) y **Limpiar filtros** lo quita. **Tipo de orden** también es una lista para elegir.
 - [ ] 1.12 Las columnas **Monto** y **Moneda** **no** aparecen: ni en la tabla, ni al abrir un centro en "Por centro de negocio", ni en el Excel exportado. Buscar `USD` no encuentra nada.
@@ -43,6 +43,17 @@ Objetivo: confirmar que **hace lo que pidieron** y que es fácil de usar.
   ```
   En otra terminal, la versión nueva: `npm.cmd run dev:demo` en `sitio-web/app` → http://localhost:5173. Comparar las dos pestañas. Al terminar: **Ctrl + C** en las dos terminales y, desde `sitio-web`, `git worktree remove ../sitio-web-anterior`. (Otra opción: comparar con https://aic-centros-negocio.netlify.app **antes** de volver a publicar; esa tiene login y el Excel real.)
   - [ ] 1.15.1 **Pantalla de carga:** recargar con **red lenta** (F12 → pestaña **Red** / *Network* → cambiar "Sin limitación" por **3G lento** / *Slow 3G*) → la cabecera, el título y el botón ☀️/🌙 se ven **desde el primer momento** (antes de "Cargando…" no hay una pantalla sin cabecera) y la tarjeta "Cargando…" no salta hacia abajo al terminar de cargar. Volver a poner "Sin limitación" al terminar.
+- [ ] 1.16 **Rutas con React Router (14/10/2026, pedido de Gustavo):** cada pantalla tiene su dirección.
+  - [ ] 1.16.1 Abrir `http://localhost:5173/?q=cableado` → la dirección pasa a **`/ordenes?q=cableado`** y la búsqueda se mantiene.
+  - [ ] 1.16.2 **Por orden / Por centro de negocio** → la dirección cambia entre **`/ordenes`** y **`/centros`** sin perder la búsqueda ni los filtros. El botón **atrás** del navegador vuelve a la vista anterior con sus filtros (y su orden de columnas).
+  - [ ] 1.16.3 Clic en un **código de centro** (está subrayado) → **`/centros/<código>`**: se ven el código, la descripción, el/los cliente(s), el/los estado(s), el N° de órdenes y la tabla con **todas** sus órdenes. **Volver a la lista** regresa a la lista con los mismos filtros. El ícono de **copiar** al lado del código sigue copiando (y no abre el detalle).
+  - [ ] 1.16.4 En el detalle, **recargar (F5)** → sigue el mismo centro. Escribir en la dirección un código que no existe (`/centros/NO-EXISTE`) → mensaje claro "No se encontró el centro de negocio…".
+  - [ ] 1.16.5 Una dirección que no es de la app (`http://localhost:5173/hola`) → **"Página no encontrada"** con el botón **Ir al buscador**.
+  - [ ] 1.16.6 Un enlace **viejo** `http://localhost:5173/?vista=centro&q=cableado` → lleva a **`/centros?q=cableado`**.
+- [ ] 1.17 **Diseño (14/10/2026, pedido de Gustavo):**
+  - [ ] 1.17.1 **Más margen a los lados:** en una pantalla grande el contenido (avisos, buscador, filtros, tabla, pie) va en una columna centrada con espacio a los lados, alineada con la cabecera; en el celular queda un margen de 16 px y la página no se mueve de costado (la tabla sí tiene su propio desplazamiento).
+  - [ ] 1.17.2 **Contornos menos agresivos:** cajas, desplegables, botones y la tabla tienen bordes finos y suaves. Al hacer **clic** con el mouse en un botón **no** aparece contorno; al moverse con **Tab** aparece un **anillo azul suave** que se ve bien en claro y en oscuro. En la pantalla "Bienvenido" (login) el botón no aparece remarcado al abrir la página.
+  - [ ] 1.17.3 **Íconos alineados** con su texto (acercar con **Ctrl + rueda** para revisar): lupa y "×" del buscador, flechas de los desplegables, copiar junto al código, ▲▼ de los títulos, flecha de "Por centro", Actualizar, Exportar, Filtros (celular), ☀️/🌙, flechas de la paginación y el logo de Microsoft del botón de login.
 
 ---
 
@@ -95,6 +106,7 @@ Necesitas: etapa 3 hecha + que **tu cuenta pueda abrir** el Excel original en Sh
 - [ ] 4.6 Entrar con una cuenta **personal** (@gmail/@outlook/@hotmail) → **no** entra (error de Microsoft o "Tu cuenta no tiene acceso").
 - [ ] 4.7 **Actualización:** hacer una copia del Excel en **tu** OneDrive, apuntar la app a esa copia (me pasas su enlace), agregarle una fila → pulsar **Actualizar** → aparece la fila. *(Así no se toca el Excel del bot.)*
 - [ ] 4.8 (Si hay el caso) Esperar a que el bot cree un centro nuevo → aparece al pulsar Actualizar.
+- [ ] 4.9 **Iniciar sesión desde una ruta** (14/10/2026): con la sesión cerrada, abrir `http://localhost:5173/centros/<un código real>?q=<algo>` → pide iniciar sesión → al volver de Microsoft queda en **esa misma dirección** (el detalle de ese centro, con la búsqueda en la dirección).
 
 ---
 
@@ -113,6 +125,7 @@ Necesitas: etapa 3 hecha + que **tu cuenta pueda abrir** el Excel original en Sh
 - [x] 6.2 Correr de nuevo todas las revisiones automáticas — **yo**: `npm.cmd run typecheck` (tipos de TypeScript), `npm.cmd test` (unitarias), `npm.cmd run test:e2e` (en navegador) y `npm.cmd run build` (compilación). Hecho con la versión React + TypeScript: sin errores de tipos, 268 unitarias y 39 en navegador pasan, `build` y `preparar-publicacion` OK. *(13/10/2026)*
 - [x] 6.3 Publicada en internet con HTTPS en **Netlify**: https://aic-centros-negocio.netlify.app (se sube a mano: `npm.cmd run preparar-publicacion` y arrastrar `publicar/`, [guía, paso 6](../GUIA-CONFIGURACION-MICROSOFT.md#paso-6-publicar-la-app-hosting)). *(12/10/2026)*
 - [ ] 6.4 Antes de subir la versión con el Excel real: que el administrador haya hecho el **paso 2** de la guía (`Files.Read.All` en la lista + consentimiento). Después, cerrar el Excel de ejemplo, `npm.cmd run preparar-publicacion`, subir `publicar/` y repetir 4.2–4.6 en https://aic-centros-negocio.netlify.app.
+- [ ] 6.5 **Versión con rutas (React Router):** `publicar/` tiene el archivo **`_redirects`** (el script se detiene si falta). Ya publicada, abrir directamente `https://aic-centros-negocio.netlify.app/centros/<un código real>` y **recargar (F5)** → se ve el detalle, no *"Page not found"* de Netlify. Repetir 1.16 y 4.9 en la dirección publicada ([guía, paso 6 → "Rutas de la app y `_redirects`"](../GUIA-CONFIGURACION-MICROSOFT.md#rutas-de-la-app-y-_redirects-14102026-react-router)).
 
 ---
 

@@ -225,7 +225,7 @@ Ejemplo para producción (los valores entre `< >` son los del paso 1 y 4):
 | `microsoft.clientId` | Id. de aplicación (paso 1). |
 | `microsoft.tenantId` | Id. de directorio de AIC (paso 1). **Obligatorio** en modo `microsoft`: la app es de inquilino único y, sin él, Microsoft rechaza el inicio de sesión (`AADSTS50194`). *(Avanzado, no recomendado: `"organizations"` = cualquier cuenta de trabajo; solo se acepta si también se llena `tenantsPermitidos`.)* |
 | `microsoft.tenantsPermitidos` | Lista de Id. de directorio aceptados. Con el de AIC basta (los invitados de Jaicos también entran con el tenant de AIC). Vacía = no se revisa. Es una revisión **en el navegador** (comodidad), igual que los dominios. |
-| `microsoft.redirectUri` | Vacío = `<dirección de la app>/redirect.html` (lo normal). |
+| `microsoft.redirectUri` | Vacío = `<dirección de la app>/redirect.html` (lo normal; siempre en la raíz de la app, aunque se inicie sesión desde una ruta como `/centros/A2338PY01`). |
 | `microsoft.postLogoutRedirectUri` | A dónde vuelve la persona al cerrar sesión. Vacío = `<dirección de la app>/` (lo normal; debe estar registrada en el paso 1.6). |
 | `microsoft.dominiosPermitidos` | Dominios que pueden entrar. Se compara el **nombre de inicio de sesión (UPN)**, no el correo: **el administrador debe confirmar que el UPN del personal termina en `@aic.pe` / `@jaicoscorp.com`** *(por confirmar)*. Si el UPN fuera otro (ej. `@aic.onmicrosoft.com`), agregar ese dominio a la lista. `jaicoscorp.com` *(por confirmar)*. Vacío = no se revisa el dominio. Siempre entre corchetes, aunque sea uno: `["aic.pe"]`. |
 | `microsoft.scopes` | Dejar `["User.Read", "Files.Read.All"]` (paso 2). |
@@ -281,7 +281,20 @@ La app se publica **a mano**: se compila en la PC y se arrastra una carpeta a Ne
 4. **https://app.netlify.com** → el sitio `aic-centros-negocio` → **Deploys** → arrastrar la carpeta **`publicar`** al recuadro *"Drag and drop your project folder here"*.
 5. La primera vez (ya hecho): registrar `https://aic-centros-negocio.netlify.app/redirect.html` y `https://aic-centros-negocio.netlify.app/` como URI de redirección **SPA** en Entra ID (paso 1.6).
 
-`publicar/` incluye `netlify.toml` (publicar la carpeta tal cual) y `_headers` (que `config.json` no quede guardado en caché).
+`publicar/` incluye `netlify.toml` (publicar la carpeta tal cual), `_headers` (que `config.json` no quede guardado en caché) y **`_redirects`** (rutas de la app, ver abajo).
+
+#### Rutas de la app y `_redirects` *(14/10/2026, React Router)*
+La app tiene **direcciones propias** para cada pantalla: `/ordenes`, `/centros` y `/centros/<código>` (ej. `https://aic-centros-negocio.netlify.app/centros/A2338PY01?q=cableado`). Esas direcciones **no son archivos**: si alguien abre un enlace así o recarga la página, Netlify buscaría un archivo `centros/A2338PY01` y respondería *"Page not found"*. Para eso está `app/public/_redirects` (se copia solo a `publicar/`):
+
+```
+/*    /index.html    200
+```
+
+En simple: *"cualquier dirección → entrega `index.html` (código 200)"*; la app lee la dirección y muestra la pantalla que corresponde (o "Página no encontrada"). Netlify **revisa primero si el archivo existe** (`assets/…`, `config.json`, `redirect.html`, `favicon.svg`…) y solo si no existe usa esta regla, así que esos archivos se siguen entregando normal. (No poner `200!`: el `!` obligaría a entregar `index.html` también en vez de esos archivos.) `npm run preparar-publicacion` se detiene si `publicar/` quedó sin `_redirects`.
+
+- **Entra ID no cambia:** la página puente sigue siendo `https://aic-centros-negocio.netlify.app/redirect.html` (siempre en la raíz, aunque se inicie sesión desde `/centros/…`). Al volver de Microsoft, la persona regresa a la **misma dirección** desde donde pulsó "Iniciar sesión" (ruta + búsqueda).
+- **La app se publica en la raíz del dominio** (`base: '/'` en `app/vite.config.ts`). Si algún día se publica en una subcarpeta (ej. `https://servidor/buscador/`), cambiar `base` a `'/buscador/'`, adaptar la regla (`/buscador/*  /buscador/index.html  200`) y registrar `https://servidor/buscador/redirect.html` en Entra ID.
+- **Para probarlo después de publicar:** abrir directamente `https://aic-centros-negocio.netlify.app/centros/<un código real>` y pulsar **F5** (recargar): debe verse el detalle del centro, no un error de Netlify.
 
 ### Otra opción: Azure Static Web Apps — plan **Gratis**
 Sirve justo para este tipo de app (página estática), da HTTPS automático y una dirección del tipo `https://<nombre>.azurestaticapps.net`. Se puede usar un subdominio propio después (ej. `buscador.aic.pe`, *por confirmar*).
@@ -307,7 +320,7 @@ Sirve justo para este tipo de app (página estática), da HTTPS automático y un
 5. **Registrar la dirección final en Entra ID** (paso 1.6): agregar `https://<dirección>/redirect.html` y `https://<dirección>/` como URI de redirección **SPA**.
 6. Abrir la dirección y probar (ver "Lista de verificación").
 
-El archivo `staticwebapp.config.json` (ya incluido en `dist/`) agrega cabeceras de seguridad y evita que `config.json` quede guardado en caché.
+El archivo `staticwebapp.config.json` (ya incluido en `dist/`) agrega cabeceras de seguridad, evita que `config.json` quede guardado en caché y hace lo mismo que `_redirects` en Netlify: con `navigationFallback`, toda dirección que no sea un archivo (ej. `/centros/A2338PY01`) entrega `index.html`, salvo `assets/…`, `config.json`, `redirect.html` y demás archivos (si faltaran, responden "no encontrado" en vez de la página).
 
 **Para cambiar algo después** (con Netlify, cambiar "`swa deploy …`" por "`npm.cmd run preparar-publicacion` y arrastrar `publicar/`"):
 - Solo configuración → editar **`app/public/config.json`**, `npm run build` y volver a ejecutar `swa deploy …`. (No editar `dist/config.json` ni `publicar/config.json`: se pierden en el siguiente `npm run build` / `preparar-publicacion`.)
@@ -322,6 +335,7 @@ Cualquier servicio que publique **archivos estáticos con HTTPS** sirve: un serv
 - Publicar el **contenido** de `dist/` tal cual (incluye `index.html`, `redirect.html`, `config.json`, `assets/`).
 - **HTTPS obligatorio** (Microsoft no acepta direcciones `http://` salvo `localhost`).
 - Que `config.json` no se guarde en caché por mucho tiempo.
+- **Rutas de la app** (`/ordenes`, `/centros/<código>`…): toda dirección que **no** sea un archivo debe entregar `index.html` (en IIS, una regla de *URL Rewrite*; en Nginx, `try_files $uri /index.html;`). Sin eso, abrir un enlace a un centro o recargar la página da error 404.
 - Registrar `https://<dirección>/redirect.html` y `https://<dirección>/` en Entra ID.
 - Opcional: quitar `datos/centros-ejemplo.xlsx` de `dist/` en producción (son datos ficticios, pero no hacen falta).
 
@@ -338,6 +352,7 @@ Cualquier servicio que publique **archivos estáticos con HTTPS** sirve: un serv
 - [ ] Cuando el bot agrega un centro nuevo, aparece al pulsar **Actualizar** (o solo, en máximo 10 minutos).
 - [ ] "Columnas detectadas en el Excel" (al final de la página) muestra bien código, descripción, cliente y orden; si no, agregar los nombres en `columnas` de `config.json`.
 - [ ] En la vista "Por centro de negocio", cada centro muestra la cantidad correcta de órdenes (si salen centros con 0 órdenes o un grupo "sin código" grande, revisar `rellenarHaciaAbajo` y los títulos de las columnas).
+- [ ] Abrir directamente (o recargar con F5) `https://<dirección>/centros/<un código real>`: se ve el detalle del centro, no un error del hosting (`_redirects` en Netlify / `navigationFallback` en Azure). Con la sesión cerrada, pide iniciar sesión y después vuelve a esa misma dirección.
 
 ---
 
@@ -364,6 +379,8 @@ Cualquier servicio que publique **archivos estáticos con HTTPS** sirve: un serv
 | "N celdas tienen una fórmula sin resultado guardado" | El bot escribe fórmulas sin calcularlas. | Abrir y guardar el Excel en Excel, o que el bot escriba valores (paso 4.1). |
 | "Falta configurar la aplicación" | Falta un dato en `config.json` o tiene la forma equivocada. | La pantalla dice qué corregir. Paso 5. |
 | "No se encontraron estas columnas en el Excel" | Los títulos del Excel real tienen otros nombres, o se leyó otra hoja. | Agregar los nombres en `columnas`, fijar `filaEncabezado` o elegir la hoja en `datos.hoja` (el aviso muestra las hojas del Excel). |
+| Al abrir un enlace a un centro (`…/centros/A2338PY01`) o recargar la página: *"Page not found"* de Netlify (o un 404 del hosting) | Falta la regla que entrega `index.html` en las rutas de la app: se publicó sin `_redirects` (o, en Azure, sin `staticwebapp.config.json`). | Volver a publicar con `npm.cmd run preparar-publicacion` (copia `_redirects` y avisa si falta). Ver paso 6, "Rutas de la app y `_redirects`". |
+| La app dice **"Página no encontrada"** | La dirección no es una de la app (`/ordenes`, `/centros`, `/centros/<código>`): enlace mal copiado o incompleto. | Pulsar **"Ir al buscador"**. Los enlaces viejos (`…/?vista=centro`) siguen funcionando: llevan a `/centros`. |
 | PowerShell: "…npm.ps1 no se puede cargar…" | La política de ejecución de PowerShell bloquea scripts. | Recuadro "PowerShell bloquea npm o swa" (paso 6). |
 | `npm run test:e2e`: "Executable doesn't exist… run npx playwright install" | En esa PC no está el navegador de pruebas. | `npx.cmd playwright install chromium` (una vez). |
 | `npm run build` (o `preparar-publicacion`) se detiene con `error TS…` o con un error de oxlint (ej. `react-hooks(exhaustive-deps)`) | TypeScript o la revisión de reglas de React (`lint`) encontró un error en el código (la app no se compila para no publicar algo roto). | Lo corrige quien mantiene el código (`npm run typecheck` / `npm run lint` muestran el archivo y la línea). No es un problema de `config.json`. |
