@@ -1,6 +1,6 @@
 # ✅ Plan de pruebas — Buscador de centros de negocio
 
-> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (231 de lógica + 38 en navegador, al 12/10/2026) ya pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
+> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (268 unitarias de lógica y componentes + 39 en navegador, al 13/10/2026, ya con la versión **React + TypeScript**) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
 > Marca `[x]` lo que pase. Si algo falla, anota qué viste (o toma captura) y me lo pasas.
 
 **Cómo abrir la app en tu PC:**
@@ -31,6 +31,7 @@ Objetivo: confirmar que **hace lo que pidieron** y que es fácil de usar.
 - [ ] 1.12 Las columnas **Monto** y **Moneda** **no** aparecen: ni en la tabla, ni al abrir un centro en "Por centro de negocio", ni en el Excel exportado. Buscar `USD` no encuentra nada.
 - [ ] 1.13 Al final, **"Columnas detectadas en el Excel"** dice "Columnas ocultas: Monto (…), Moneda (…)".
 - [ ] 1.14 **Tu opinión:** ¿falta alguna columna, filtro o algo que el jefe pidió? ¿algún texto confuso?
+- [ ] 1.15 **Versión React + TypeScript (13/10/2026):** todo lo de 1.1–1.13 se ve y funciona **igual que antes** (mismos textos, colores, botón ☀️/🌙, teclado: `/`, Tab, "Saltar a la paginación").
 
 ---
 
@@ -98,7 +99,7 @@ Necesitas: etapa 3 hecha + que **tu cuenta pueda abrir** el Excel original en Sh
 ## Etapa 6 — Antes de entregar (lo hago yo + decisión de dónde publicar)
 
 - [x] 6.1 Actualizar SheetJS a 0.20.x (aviso de seguridad) — hecho: 0.20.3 desde cdn.sheetjs.com (13/10/2026).
-- [ ] 6.2 Correr de nuevo todas las pruebas automáticas — **yo**.
+- [ ] 6.2 Correr de nuevo todas las revisiones automáticas — **yo**: `npm.cmd run typecheck` (tipos de TypeScript), `npm.cmd test` (unitarias), `npm.cmd run test:e2e` (en navegador).
 - [x] 6.3 Publicada en internet con HTTPS en **Netlify**: https://aic-centros-negocio.netlify.app (se sube a mano: `npm.cmd run preparar-publicacion` y arrastrar `publicar/`, [guía, paso 6](../GUIA-CONFIGURACION-MICROSOFT.md#paso-6-publicar-la-app-hosting)). *(12/10/2026)*
 - [ ] 6.4 Antes de subir la versión con el Excel real: que el administrador haya hecho el **paso 2** de la guía (`Files.Read.All` en la lista + consentimiento). Después, cerrar el Excel de ejemplo, `npm.cmd run preparar-publicacion`, subir `publicar/` y repetir 4.2–4.6 en https://aic-centros-negocio.netlify.app.
 

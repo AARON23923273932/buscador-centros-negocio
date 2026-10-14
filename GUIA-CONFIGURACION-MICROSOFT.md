@@ -288,7 +288,7 @@ Sirve justo para este tipo de app (página estática), da HTTPS automático y un
 1. **Compilar la app** (después de llenar `app/public/config.json`):
    ```powershell
    cd C:\dev\AIC\automatizaciones\sitio-web\app
-   npm run build      # crea la carpeta dist/ (es lo único que se publica), con config.json incluido
+   npm run build      # revisa los tipos (TypeScript) y crea la carpeta dist/ (es lo único que se publica), con config.json incluido
    ```
 2. **Crear el recurso** (una sola vez): https://portal.azure.com → **Crear un recurso → Static Web App** →
    - Suscripción y grupo de recursos de la empresa *(por confirmar cuál)*.
@@ -310,7 +310,7 @@ El archivo `staticwebapp.config.json` (ya incluido en `dist/`) agrega cabeceras 
 
 **Para cambiar algo después** (con Netlify, cambiar "`swa deploy …`" por "`npm.cmd run preparar-publicacion` y arrastrar `publicar/`"):
 - Solo configuración → editar **`app/public/config.json`**, `npm run build` y volver a ejecutar `swa deploy …`. (No editar `dist/config.json` ni `publicar/config.json`: se pierden en el siguiente `npm run build` / `preparar-publicacion`.)
-- Código → `npm test`, `npm run test:e2e`, `npm run build` y `swa deploy …`.
+- Código → `npm run typecheck`, `npm test`, `npm run test:e2e`, `npm run build` y `swa deploy …`. (El código es React + TypeScript; `npm run build` también revisa los tipos y no compila si hay un error.)
   - Las pruebas usan **su propia configuración de demostración** (no la de `public/config.json`), así que pasan aunque `config.json` ya tenga los valores de producción.
   - En una PC nueva, antes del primer `npm run test:e2e`, ejecutar una vez `npx playwright install chromium` (descarga el navegador que usan las pruebas; `npm install` no lo trae).
   - Como `npm run test:e2e` vuelve a compilar `dist/`, ejecutar `npm run build` al final (justo antes de `swa deploy`) es lo más seguro.
@@ -364,6 +364,7 @@ Cualquier servicio que publique **archivos estáticos con HTTPS** sirve: un serv
 | "No se encontraron estas columnas en el Excel" | Los títulos del Excel real tienen otros nombres, o se leyó otra hoja. | Agregar los nombres en `columnas`, fijar `filaEncabezado` o elegir la hoja en `datos.hoja` (el aviso muestra las hojas del Excel). |
 | PowerShell: "…npm.ps1 no se puede cargar…" | La política de ejecución de PowerShell bloquea scripts. | Recuadro "PowerShell bloquea npm o swa" (paso 6). |
 | `npm run test:e2e`: "Executable doesn't exist… run npx playwright install" | En esa PC no está el navegador de pruebas. | `npx playwright install chromium` (una vez). |
+| `npm run build` (o `preparar-publicacion`) se detiene con `error TS…` | TypeScript encontró un error de tipos en el código (la app no se compila para no publicar algo roto). | Lo corrige quien mantiene el código (`npm run typecheck` muestra el archivo y la línea). No es un problema de `config.json`. |
 
 ---
 
