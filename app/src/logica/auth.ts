@@ -3,7 +3,8 @@
 //
 // Flujo (con "redirección", el más compatible):
 //   1. El usuario pulsa "Iniciar sesión con Microsoft" -> la página va a login.microsoftonline.com
-//   2. Microsoft lo devuelve a redirect.html, que le pasa la respuesta a la app.
+//   2. Microsoft lo devuelve a redirect.html, que le pasa la respuesta a la app y la vuelve a abrir en la
+//      MISMA dirección desde donde se pulsó el botón (ruta + query, ej. /centros/A2338PY01?q=cableado).
 //   3. handleRedirectPromise() procesa esa respuesta y deja la cuenta guardada.
 //   4. Para leer el Excel se pide un "token de acceso" con acquireTokenSilent()
 //      (sin molestar al usuario); si ya no se puede en silencio, se redirige otra vez.
@@ -32,6 +33,7 @@ import {
 import { construirAuthority, esErrorConsentimiento, explicarErrorLogin, verificarAcceso } from './acceso.ts';
 import type { ConfigMicrosoft } from './config.ts';
 import { ErrorDatos } from './graph.ts';
+import { BASE_APP } from './rutas.ts';
 
 const CLAVE_REINTENTO = 'buscador-cn.reintento-token';
 const ESPERA_REINTENTO_MS = 2 * 60 * 1000;
@@ -79,6 +81,8 @@ export type PcaMinima = Pick<
 /** Dependencias que se pueden reemplazar en las pruebas. */
 export interface DependenciasAuth {
   ubicacion?: { href: string };
+  /** Carpeta donde está publicada la app ("/" por defecto: "base" de vite.config.ts). */
+  base?: string;
   crearPca?: (configuracion: Configuration) => Promise<PcaMinima>;
   almacen?: AlmacenReintento | null;
 }
@@ -129,7 +133,10 @@ export async function iniciarMicrosoft(ms: ConfigMicrosoft, dep: DependenciasAut
   const crearPca = dep.crearPca || createStandardPublicClientApplication;
   const almacen = dep.almacen !== undefined ? dep.almacen : almacenPorDefecto();
 
-  const base = new URL('./', ubicacion.href);
+  // Dirección de la app: su carpeta (no la ruta actual). Si se inicia sesión desde /centros/A2338PY01, la
+  // página puente sigue siendo <app>/redirect.html (la registrada en Entra ID), no /centros/redirect.html.
+  // A qué ruta se vuelve después lo recuerda MSAL: la dirección completa desde donde se pulsó el botón.
+  const base = new URL(dep.base ?? BASE_APP, ubicacion.href);
   const scopes = ms.scopes; // todos: se piden al leer el Excel
   const scopesInicio = permisosDeInicio(scopes);
   const pca = await crearPca({

@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/App.tsx';
+import { Enrutador } from '../../src/componentes/Enrutador.tsx';
 
 const INDEX = readFileSync(resolve(import.meta.dirname, '../../index.html'), 'utf8');
 
@@ -50,7 +51,7 @@ describe('index.html: pantalla antes de que cargue React', () => {
   });
 
   it('es exactamente lo primero que dibuja React (sin salto visual al reemplazarlo)', () => {
-    const { container } = render(<App />);
+    const { container } = render(<App />, { wrapper: Enrutador });
     expect(container.querySelector('#pantalla-carga')).not.toBeNull();
     expect(formaDeHijos(raiz!)).toEqual(formaDeHijos(container));
   });

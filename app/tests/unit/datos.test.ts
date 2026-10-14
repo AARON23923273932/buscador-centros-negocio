@@ -652,7 +652,8 @@ describe('descargarExcel (archivo local)', () => {
       headers: { 'last-modified': 'Fri, 09 Oct 2026 14:10:00 GMT' },
     }));
     const r = await descargarExcel({ datos: { fuente: 'archivo-local', rutaLocal: 'datos/x.xlsx' } }, null, fetchFalso);
-    expect(fetchFalso).toHaveBeenCalledWith('datos/x.xlsx', { cache: 'no-store' });
+    // Se pide desde la carpeta de la app ("/"), no desde la ruta actual (en /centros/X sería /centros/datos/…).
+    expect(fetchFalso).toHaveBeenCalledWith('/datos/x.xlsx', { cache: 'no-store' });
     expect(new Uint8Array(r.contenido)).toEqual(new Uint8Array([1, 2, 3]));
     expect(r.modificado?.toISOString()).toBe('2026-10-09T14:10:00.000Z');
     expect(r.nombre).toBe('x.xlsx');

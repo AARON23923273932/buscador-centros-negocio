@@ -11,9 +11,10 @@ import { resolve } from 'node:path';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/App.tsx';
-import { PantallaApp } from '../../src/componentes/PantallaApp.tsx';
+import { Enrutador } from '../../src/componentes/Enrutador.tsx';
 import { CONFIG_POR_DEFECTO, type Config } from '../../src/logica/config.ts';
 import { filtrarFilas, ordenarFilas, segmentosResaltado, sePuedeFiltrar, valoresUnicos } from '../../src/logica/filtros.ts';
+import { abrirRutas } from './ayuda-rutas.tsx';
 
 vi.mock('../../src/logica/filtros.ts', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../src/logica/filtros.ts')>();
@@ -63,9 +64,9 @@ afterEach(() => {
   history.replaceState(null, '', '/');
 });
 
-describe('PantallaApp: escribir no vuelve a dibujar la tabla', () => {
+describe('PantallaApp (rutas /ordenes y /centros): escribir no vuelve a dibujar la tabla', () => {
   it('cada tecla en el buscador o en un filtro "contiene" solo cambia la caja (la tabla espera los 200 ms)', async () => {
-    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    abrirRutas({ config: CONFIG, sesion: null, avisar: () => {} });
     await waitFor(() => expect(contador()).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
     reiniciarEspias();
 
@@ -91,7 +92,7 @@ describe('PantallaApp: escribir no vuelve a dibujar la tabla', () => {
   });
 
   it('cambiar de página no vuelve a filtrar ni a ordenar todas las filas (solo corta otra página)', async () => {
-    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    abrirRutas({ config: CONFIG, sesion: null, avisar: () => {} });
     await waitFor(() => expect(contador()).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
     fireEvent.click(document.querySelector<HTMLButtonElement>('[data-orden="descripcionCentro"]')!);
     await waitFor(() => expect(location.search).toContain('ord=descripcionCentro'));
@@ -111,8 +112,8 @@ describe('PantallaApp: escribir no vuelve a dibujar la tabla', () => {
   });
 
   it('abrir otro centro (vista "Por centro") no vuelve a dibujar las órdenes de los centros ya abiertos', async () => {
-    history.replaceState(null, '', '/?vista=centro');
-    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    // La vista "Por centro" es la ruta /centros.
+    abrirRutas({ config: CONFIG, sesion: null, avisar: () => {} }, '/centros');
     await waitFor(() => expect(contador()).toMatch(/centros/));
     const botones = () => screen.getAllByRole('button', { name: /^Ver órdenes de / });
     fireEvent.click(botones()[0]);
@@ -131,7 +132,11 @@ describe('PantallaApp: escribir no vuelve a dibujar la tabla', () => {
 
 describe('App: el aviso flotante y el botón de tema no vuelven a dibujar la tabla', () => {
   it('copiar un código (aviso "Código … copiado") y cambiar a modo oscuro no tocan la tabla', async () => {
-    render(<App />);
+    render(
+      <Enrutador>
+        <App />
+      </Enrutador>,
+    );
     await waitFor(() => expect(contador()).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
     reiniciarEspias();
 

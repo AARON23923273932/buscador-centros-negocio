@@ -1,0 +1,6 @@
+# Netlify: la app tiene rutas (React Router): /ordenes, /centros, /centros/A2338PY01…
+# Al abrir o recargar una de esas direcciones, el servidor no tiene un archivo con ese nombre: debe
+# responder index.html (código 200) y React Router muestra la ruta. Netlify revisa PRIMERO si existe
+# un archivo (assets/…, config.json, redirect.html, favicon.svg…) y solo si no existe usa esta regla.
+# (Sin "!" al final: así nunca tapa un archivo que sí existe.)
+/*    /index.html    200

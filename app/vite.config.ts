@@ -57,8 +57,11 @@ function sinTemporalesDeOffice(): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
-  // Rutas relativas: la app funciona aunque se publique dentro de una subcarpeta.
-  base: './',
+  // La app se publica en la RAÍZ del dominio (https://aic-centros-negocio.netlify.app/). Con React Router hay
+  // rutas anidadas (/centros/A2338PY01): los archivos (assets/…, config.json, favicon…) se piden siempre desde
+  // "/", no relativos a la ruta actual. Si algún día se publica en una subcarpeta, poner aquí "/subcarpeta/"
+  // (React Router, config.json, el Excel de ejemplo y redirect.html la toman de import.meta.env.BASE_URL).
+  base: '/',
   plugins: [
     // React: JSX/TSX y recarga instantánea en desarrollo.
     react(),

@@ -4,10 +4,14 @@
 // Las cajas de texto (buscador y filtros "contiene") esperan 200 ms después de la última
 // tecla antes de filtrar: lo escrito va primero a "borradores" (lo que se ve en la caja)
 // y después al estado (lo que filtra y lo que queda en la URL). Enter filtra de inmediato.
+//
+// El estado vive en la dirección (useEstadoUrl): la vista es la ruta (/ordenes o /centros) y lo demás,
+// la query (?q=…). Si la dirección cambia por fuera (botón atrás/adelante), las cajas se actualizan.
 // =============================================================================
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FILTROS_VACIOS } from '../logica/filtros.ts';
+import { rutaDeVista } from '../logica/rutas.ts';
 import type { EstadoBusqueda, ResultadoLectura, Vista } from '../logica/tipos.ts';
 import { CONTROLES, ajustarEstadoAColumnas, estadoControles, type ClaveDesplegable } from '../logica/vista.ts';
 import { useEstadoUrl } from './useEstadoUrl.ts';
@@ -18,6 +22,13 @@ export type Borradores = Record<ClaveTexto, string>;
 
 const CLAVES_TEXTO: readonly ClaveTexto[] = ['q', 'codigo', 'descripcion', 'orden'];
 const ESPERA_MS = 200;
+
+const borradoresDe = (estado: EstadoBusqueda): Borradores => ({
+  q: estado.q,
+  codigo: estado.codigo,
+  descripcion: estado.descripcion,
+  orden: estado.orden,
+});
 
 export interface Busqueda {
   estado: EstadoBusqueda;
@@ -31,6 +42,7 @@ export interface Busqueda {
   elegir: (clave: ClaveDesplegable, valor: string) => void;
   /** "Limpiar filtros": vacía el buscador y todos los filtros. */
   limpiar: () => void;
+  /** "Por orden" / "Por centro": va a /ordenes o /centros (conserva búsqueda y filtros; quita el orden). */
   cambiarVista: (vista: Vista) => void;
   cambiarTamano: (tamano: number) => void;
   irAPagina: (pagina: number) => void;
@@ -39,24 +51,36 @@ export interface Busqueda {
   /** Corrige el estado según las columnas del Excel recién leído (ver logica/vista.ts). */
   ajustarAColumnas: (datos: ResultadoLectura) => void;
   setEstado: (cambio: (e: EstadoBusqueda) => EstadoBusqueda) => void;
+  /** Avisa qué query escribió la app en la dirección (para useGuardarEnUrl). */
+  marcarEscrita: (consulta: string) => void;
 }
 
 export function useBusqueda(tamanoPorDefecto: number): Busqueda {
-  const [estado, setEstado] = useEstadoUrl(tamanoPorDefecto);
-  const [borradores, setBorradores] = useState<Borradores>(() => ({
-    q: estado.q,
-    codigo: estado.codigo,
-    descripcion: estado.descripcion,
-    orden: estado.orden,
-  }));
+  const { estado, setEstado, navegar, lecturas, marcarEscrita } = useEstadoUrl(tamanoPorDefecto);
+  const [borradores, setBorradores] = useState<Borradores>(() => borradoresDe(estado));
   // Copia siempre al día de los borradores (Enter debe usar lo último escrito).
   const borradoresRef = useRef(borradores);
   const temporizadores = useRef(new Map<ClaveTexto, ReturnType<typeof setTimeout>>());
+
+  // El estado se volvió a leer de la dirección (botón atrás/adelante): las cajas muestran lo de la dirección.
+  const [lecturasVistas, setLecturasVistas] = useState(lecturas);
+  if (lecturas !== lecturasVistas) {
+    setLecturasVistas(lecturas);
+    setBorradores(borradoresDe(estado));
+  }
+  useLayoutEffect(() => {
+    borradoresRef.current = borradores;
+  }, [borradores]);
 
   const cancelar = useCallback((clave: ClaveTexto) => {
     clearTimeout(temporizadores.current.get(clave));
     temporizadores.current.delete(clave);
   }, []);
+
+  // …y lo que se estaba escribiendo antes de volver atrás ya no se aplica.
+  useEffect(() => {
+    if (lecturas > 0) for (const clave of CLAVES_TEXTO) cancelar(clave);
+  }, [lecturas, cancelar]);
 
   const cambiarBorradores = useCallback((cambio: Partial<Borradores>) => {
     borradoresRef.current = { ...borradoresRef.current, ...cambio };
@@ -101,8 +125,8 @@ export function useBusqueda(tamanoPorDefecto: number): Busqueda {
   }, [cancelar, cambiarBorradores, setEstado]);
 
   const cambiarVista = useCallback(
-    (vista: Vista) => setEstado((e) => ({ ...e, vista, ordenarPor: '', direccion: 'asc', pagina: 1 })),
-    [setEstado],
+    (vista: Vista) => navegar(rutaDeVista(vista), { ...estado, vista, ordenarPor: '', direccion: 'asc', pagina: 1 }),
+    [navegar, estado],
   );
 
   const cambiarTamano = useCallback((tamano: number) => setEstado((e) => ({ ...e, tamano, pagina: 1 })), [setEstado]);
@@ -159,5 +183,6 @@ export function useBusqueda(tamanoPorDefecto: number): Busqueda {
     ordenar,
     ajustarAColumnas,
     setEstado,
+    marcarEscrita,
   };
 }

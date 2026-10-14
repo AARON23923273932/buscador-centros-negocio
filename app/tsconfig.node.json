@@ -2,7 +2,8 @@
   // TypeScript de lo que corre en Node: pruebas (Vitest y Playwright) y archivos de configuración.
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node"],
+    // vite/client: las pruebas importan código de src/ que usa import.meta.env.BASE_URL (Vitest lo define).
+    "types": ["node", "vite/client"],
     // Los scripts .mjs de scripts/ también se revisan: sus tipos van en comentarios JSDoc (@param, @returns…).
     "allowJs": true,
     "checkJs": true,

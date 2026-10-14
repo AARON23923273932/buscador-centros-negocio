@@ -4,13 +4,15 @@
 //   - useArranque (ref "iniciado"): MSAL procesa UNA sola vez la vuelta de Microsoft (handleRedirectPromise);
 //   - useExcel (memoria.cargando): el Excel se descarga UNA sola vez.
 // Las pruebas en navegador (Playwright) usan la versión compilada, donde StrictMode no actúa: por eso
-// esta prueba monta la app completa dentro de <StrictMode> (modo microsoft + Graph, con MSAL simulado).
+// esta prueba monta la app completa como src/main.tsx (<StrictMode> + <Enrutador>), en modo microsoft + Graph
+// con MSAL simulado.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/App.tsx';
+import { Enrutador } from '../../src/componentes/Enrutador.tsx';
 
 const msal = vi.hoisted(() => {
   const cuenta = {
@@ -99,7 +101,9 @@ describe('<StrictMode>: los efectos dobles de React no repiten el inicio de sesi
     const pedidos = simularRed();
     render(
       <StrictMode>
-        <App />
+        <Enrutador>
+          <App />
+        </Enrutador>
       </StrictMode>,
     );
     await waitFor(() => expect(document.getElementById('contador')?.textContent).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));

@@ -19,6 +19,7 @@ import type { CellObject, WorkBook, WorkSheet } from 'xlsx/xlsx.mjs';
 import { CAMPOS, NOMBRES_CAMPOS, normalizarTexto, prepararFila } from './filtros.ts';
 import { ErrorDatos, descargarDesdeGraph } from './graph.ts';
 import { en } from './listas.ts';
+import { rutaPublica } from './rutas.ts';
 import type { ConfigDatos } from './config.ts';
 import type { ArchivoExcel, Campo, Celda, Columna, FetchFn, MapaCampos, ResultadoLectura } from './tipos.ts';
 
@@ -779,7 +780,8 @@ export async function descargarExcel(
 async function descargarArchivoLocal(ruta: string, fetchFn: FetchFn): Promise<ArchivoExcel> {
   let respuesta: Response;
   try {
-    respuesta = await fetchFn(ruta, { cache: 'no-store' });
+    // Desde la carpeta de la app (no desde la ruta actual: en /centros/A2338PY01, "datos/…" sería /centros/datos/…).
+    respuesta = await fetchFn(rutaPublica(ruta), { cache: 'no-store' });
   } catch (e) {
     throw new ErrorDatos('sin-red', 'No hay conexión: no se pudo descargar el Excel. Revisa tu internet y vuelve a intentar.', e);
   }

@@ -5,18 +5,25 @@
 //        ──► buscar / filtrar / ordenar / paginar ──► dibujar la tabla
 //
 // Pantallas: cargando · mensaje (falta configuración, sin acceso, error) · iniciar sesión · aplicación.
+//
+// La aplicación tiene rutas (React Router, ver componentes/RutasApp.tsx): /ordenes, /centros,
+// /centros/:codigo… Solo se muestran con la sesión iniciada: así el inicio de sesión protege TODAS.
+// Antes de eso la dirección no se toca: MSAL recuerda la dirección completa (ruta + query) al ir a
+// Microsoft y la persona vuelve a ESA misma (ej. /centros/A2338PY01?q=cableado).
 // =============================================================================
 
 import { useEffect, type ReactNode } from 'react';
+import { useLocation } from 'react-router';
 import { useArranque } from './hooks/useArranque.ts';
 import { useAvisoFlotante } from './hooks/useAvisoFlotante.ts';
 import { useTema } from './hooks/useTema.ts';
 import { AvisoFlotante } from './componentes/Avisos.tsx';
 import { Cabecera, type Usuario } from './componentes/Cabecera.tsx';
 import { PantallaMensaje } from './componentes/Mensaje.tsx';
-import { PantallaApp } from './componentes/PantallaApp.tsx';
 import { PantallaCarga } from './componentes/PantallaCarga.tsx';
 import { PantallaLogin } from './componentes/PantallaLogin.tsx';
+import { RutasApp } from './componentes/RutasApp.tsx';
+import { vistaDeRuta } from './logica/rutas.ts';
 
 const TITULO = 'Buscador de centros de negocio';
 const SUBTITULO = 'Centros de negocio y sus órdenes de compra / servicio';
@@ -32,6 +39,9 @@ export function App() {
   const tema = useTema();
   const { aviso, avisar } = useAvisoFlotante();
   const arranque = useArranque();
+  // Enlace para saltar con el teclado: al buscador en las listas (y en el inicio); al contenido en las demás rutas.
+  const { pathname } = useLocation();
+  const conBuscador = pathname === '/' || vistaDeRuta(pathname) !== null;
 
   const config = 'config' in arranque ? arranque.config : null;
   const titulo = config?.titulo ? String(config.titulo) : TITULO;
@@ -102,15 +112,15 @@ export function App() {
       if (sesion) {
         usuario = { nombre: sesion.nombre, correo: sesion.correo, cerrarSesion: irAMicrosoft(() => sesion.cerrarSesion()) };
       }
-      pantalla = <PantallaApp config={arranque.config} sesion={sesion} avisar={avisar} />;
+      pantalla = <RutasApp config={arranque.config} sesion={sesion} avisar={avisar} />;
       break;
     }
   }
 
   return (
     <>
-      <a className="saltar" href="#buscador">
-        Saltar al buscador
+      <a className="saltar" href={conBuscador ? '#buscador' : '#principal'}>
+        {conBuscador ? 'Saltar al buscador' : 'Saltar al contenido'}
       </a>
       <Cabecera
         titulo={titulo}

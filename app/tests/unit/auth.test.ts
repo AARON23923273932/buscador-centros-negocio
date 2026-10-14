@@ -30,7 +30,9 @@ const MS: ConfigMicrosoft = {
   redirectUri: '',
   postLogoutRedirectUri: '',
 };
-const UBICACION = { href: 'https://buscador.ejemplo.test/app/index.html?q=x' };
+// App publicada en una subcarpeta (/app/, con base: '/app/' en vite.config.ts), abierta en una ruta anidada.
+const UBICACION = { href: 'https://buscador.ejemplo.test/app/centros/A2338PY01?q=x' };
+const BASE = '/app/';
 
 /** Cuenta de mentira (lo mínimo que la app lee de una cuenta de MSAL). */
 const cuenta = (correo: string) => ({
@@ -75,9 +77,9 @@ function almacenFalso() {
   return { getItem: (k: string) => datos.get(k) ?? null, setItem: (k: string, v: string) => void datos.set(k, String(v)) };
 }
 
-async function iniciar(pca: PcaFalso) {
+async function iniciar(pca: PcaFalso, { ubicacion = UBICACION, base = BASE }: { ubicacion?: { href: string }; base?: string } = {}) {
   const crearPca = vi.fn(async (_config: unknown) => comoPca(pca));
-  const sesion = await iniciarMicrosoft(MS, { ubicacion: UBICACION, crearPca, almacen: almacenFalso() });
+  const sesion = await iniciarMicrosoft(MS, { ubicacion, base, crearPca, almacen: almacenFalso() });
   return { sesion, crearPca };
 }
 
@@ -93,6 +95,17 @@ describe('iniciarMicrosoft', () => {
     });
     expect(config.cache.cacheLocation).toBe('localStorage');
   });
+
+  // Con React Router la app tiene rutas anidadas: la página puente NO depende de la ruta desde donde se inicia
+  // sesión (no sería /centros/redirect.html, que no está registrada en Entra ID). La ruta a la que se vuelve
+  // la recuerda MSAL por su cuenta (la dirección completa al pulsar el botón).
+  it('desde una ruta anidada (/centros/A2338PY01?q=x) la página puente sigue siendo <raíz de la app>/redirect.html', async () => {
+    const { crearPca } = await iniciar(pcaFalso(), { ubicacion: { href: 'https://aic-centros-negocio.example/centros/A2338PY01?q=x' }, base: '/' });
+    const config = crearPca.mock.calls[0][0] as { auth: { redirectUri: string; postLogoutRedirectUri: string } };
+    expect(config.auth.redirectUri).toBe('https://aic-centros-negocio.example/redirect.html');
+    expect(config.auth.postLogoutRedirectUri).toBe('https://aic-centros-negocio.example/');
+  });
+
 
   it('sin cuenta: pide iniciar sesión con selección de cuenta y SOLO el permiso básico (User.Read)', async () => {
     const pca = pcaFalso();

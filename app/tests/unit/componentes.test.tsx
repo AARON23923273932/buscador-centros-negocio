@@ -9,7 +9,6 @@ import { AvisoError, AvisoFlotante } from '../../src/componentes/Avisos.tsx';
 import { BotonTema } from '../../src/componentes/BotonTema.tsx';
 import { Filtros } from '../../src/componentes/Filtros.tsx';
 import { Paginacion } from '../../src/componentes/Paginacion.tsx';
-import { PantallaApp } from '../../src/componentes/PantallaApp.tsx';
 import { useAvisoFlotante } from '../../src/hooks/useAvisoFlotante.ts';
 import { useBusqueda } from '../../src/hooks/useBusqueda.ts';
 import { useTema } from '../../src/hooks/useTema.ts';
@@ -20,6 +19,7 @@ import { paginar } from '../../src/logica/filtros.ts';
 import { CLAVE_TEMA } from '../../src/logica/tema.ts';
 import { estadoControles } from '../../src/logica/vista.ts';
 import { crearExcelDesdeMatriz } from './ayuda.ts';
+import { abrirRutas, ConEnrutador } from './ayuda-rutas.tsx';
 
 afterEach(() => {
   cleanup();
@@ -34,7 +34,7 @@ describe('useBusqueda (cajas de texto con espera)', () => {
   });
 
   it('filtra 200 ms después de la última tecla; Enter filtra ya', () => {
-    const { result } = renderHook(() => useBusqueda(50));
+    const { result } = renderHook(() => useBusqueda(50), { wrapper: ConEnrutador });
     act(() => result.current.escribir('q', 'cab'));
     act(() => result.current.escribir('q', 'cableado'));
     expect(result.current.borradores.q).toBe('cableado');
@@ -50,7 +50,7 @@ describe('useBusqueda (cajas de texto con espera)', () => {
   });
 
   it('"Limpiar filtros" vacía todo y cancela lo que estaba por aplicarse', () => {
-    const { result } = renderHook(() => useBusqueda(50));
+    const { result } = renderHook(() => useBusqueda(50), { wrapper: ConEnrutador });
     act(() => result.current.elegir('estado', 'Abierta'));
     act(() => result.current.escribir('orden', '4500'));
     act(() => result.current.limpiar());
@@ -60,7 +60,7 @@ describe('useBusqueda (cajas de texto con espera)', () => {
   });
 
   it('ordenar: la primera vez ascendente, la segunda descendente; cambiar de vista quita el orden', () => {
-    const { result } = renderHook(() => useBusqueda(50));
+    const { result } = renderHook(() => useBusqueda(50), { wrapper: ConEnrutador });
     act(() => result.current.irAPagina(3));
     act(() => result.current.ordenar('cliente'));
     expect(result.current.estado).toMatchObject({ ordenarPor: 'cliente', direccion: 'asc', pagina: 1 });
@@ -68,10 +68,12 @@ describe('useBusqueda (cajas de texto con espera)', () => {
     expect(result.current.estado.direccion).toBe('desc');
     act(() => result.current.cambiarVista('centro'));
     expect(result.current.estado).toMatchObject({ vista: 'centro', ordenarPor: '', direccion: 'asc' });
+    // La vista es la ruta: "Por centro" lleva a /centros (los filtros siguen en la query).
+    expect(location.pathname).toBe('/centros');
   });
 
   it('al leer el Excel se vacían las cajas de los filtros que no se pueden usar', () => {
-    const { result } = renderHook(() => useBusqueda(50));
+    const { result } = renderHook(() => useBusqueda(50), { wrapper: ConEnrutador });
     act(() => result.current.escribir('codigo', 'CN'));
     act(() => result.current.escribir('q', 'algo'));
     const datos = leerLibro(crearExcelDesdeMatriz([['Cliente', 'Orden de compra'], ['Demo', 'OC-1']]), {
@@ -85,7 +87,7 @@ describe('useBusqueda (cajas de texto con espera)', () => {
 
   it('lee la búsqueda inicial de la dirección (enlace compartido)', () => {
     history.replaceState(null, '', '/?q=fibra&estado=Cerrada&vista=centro&tam=25');
-    const { result } = renderHook(() => useBusqueda(50));
+    const { result } = renderHook(() => useBusqueda(50), { wrapper: ConEnrutador });
     expect(result.current.estado).toMatchObject({ q: 'fibra', estado: 'Cerrada', vista: 'centro', tamano: 25 });
     expect(result.current.borradores.q).toBe('fibra');
   });
@@ -260,7 +262,7 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
     );
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: vi.fn(async () => {}) } });
     const avisar = vi.fn();
-    render(<PantallaApp config={CONFIG} sesion={null} avisar={avisar} />);
+    abrirRutas({ config: CONFIG, sesion: null, avisar });
 
     const contador = document.getElementById('contador')!;
     await waitFor(() => expect(contador.textContent).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
@@ -287,7 +289,7 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
 
   it('si el Excel no está: aviso con "Reintentar", tabla sin datos y exportar desactivado', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })));
-    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    abrirRutas({ config: CONFIG, sesion: null, avisar: () => {} });
     const aviso = await screen.findByRole('alert');
     await waitFor(() => expect(aviso.textContent).toContain('No se encontró el archivo de Excel'));
     expect(document.getElementById('texto-actualizado')?.textContent).toBe('No se pudieron cargar los datos.');
@@ -299,7 +301,7 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
   it('si "Reintentar" vuelve a fallar con el mismo mensaje, el aviso se vuelve a anunciar y el botón conserva el foco', async () => {
     const pedir = vi.fn(async () => new Response('', { status: 404 }));
     vi.stubGlobal('fetch', pedir);
-    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    abrirRutas({ config: CONFIG, sesion: null, avisar: () => {} });
     const aviso = await screen.findByRole('alert');
     await waitFor(() => expect(aviso.textContent).toContain('No se encontró el archivo de Excel (datos/centros-ejemplo.xlsx).'));
     const texto = aviso.querySelector('span');
@@ -322,7 +324,7 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
       .mockResolvedValueOnce(new Response('', { status: 404 }))
       .mockImplementationOnce(() => new Promise((r) => (responder = r)));
     vi.stubGlobal('fetch', pedir);
-    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    abrirRutas({ config: CONFIG, sesion: null, avisar: () => {} });
     const texto = document.getElementById('texto-actualizado')!;
     const tabla = document.getElementById('contenedor-tabla')!;
     await waitFor(() => expect(tabla.textContent).toBe('No hay datos para mostrar. Revisa el mensaje de arriba.'));
@@ -340,7 +342,7 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
   it('si falla una actualización con datos ya cargados: se siguen mostrando y el aviso dice de qué hora son', async () => {
     const pedir = vi.fn<() => Promise<Response>>().mockResolvedValueOnce(excelOk()).mockResolvedValue(new Response('', { status: 404 }));
     vi.stubGlobal('fetch', pedir);
-    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    abrirRutas({ config: CONFIG, sesion: null, avisar: () => {} });
     const contador = document.getElementById('contador')!;
     await waitFor(() => expect(contador.textContent).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
     const hora = document.getElementById('texto-actualizado')?.textContent?.match(/a las (\d{2}:\d{2})/)?.[1];
@@ -356,7 +358,7 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
   it('al volver a la pestaña después de mucho tiempo, vuelve a leer el Excel', async () => {
     const pedir = vi.fn(async () => excelOk());
     vi.stubGlobal('fetch', pedir);
-    render(<PantallaApp config={{ ...CONFIG, autoActualizarMinutos: 10 }} sesion={null} avisar={() => {}} />);
+    abrirRutas({ config: { ...CONFIG, autoActualizarMinutos: 10 }, sesion: null, avisar: () => {} });
     await waitFor(() => expect(document.getElementById('contador')?.textContent).toMatch(/^Mostrando/));
     expect(pedir).toHaveBeenCalledTimes(1);
 

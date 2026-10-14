@@ -10,7 +10,8 @@ describe('estado en la URL', () => {
   it('el estado inicial usa la misma lista de filtros que "Limpiar filtros" (FILTROS_VACIOS)', () => {
     expect(estadoInicial(50)).toMatchObject(FILTROS_VACIOS);
   });
-  it('ida y vuelta conserva búsqueda, filtros, vista, orden y página', () => {
+  // La vista ya no va en la query (es la ruta /ordenes o /centros): la ida y vuelta es con la vista normal.
+  it('ida y vuelta conserva búsqueda, filtros, orden y página', () => {
     const estado: EstadoBusqueda = {
       ...estadoInicial(50),
       q: 'cableado ñandú',
@@ -20,7 +21,6 @@ describe('estado en la URL', () => {
       orden: '4500',
       tipo: 'Compra',
       estado: 'En ejecución',
-      vista: 'centro',
       ordenarPor: 'cliente',
       direccion: 'desc',
       pagina: 3,
@@ -31,6 +31,10 @@ describe('estado en la URL', () => {
     expect(url).not.toMatch(/[?&](code|state|error)=/); // nombres reservados por el login
     expect(url).toContain('estado=En+ejecuci%C3%B3n');
     expect(leerEstadoDeUrl(url, 50)).toEqual(estado);
+  });
+  it('la vista no se escribe en la query (va en la ruta); ?vista=centro de un enlace viejo se sigue leyendo', () => {
+    expect(escribirEstadoEnUrl({ ...estadoInicial(50), vista: 'centro', q: 'fibra' }, 50)).toBe('?q=fibra');
+    expect(leerEstadoDeUrl('?q=fibra&vista=centro', 50)).toMatchObject({ q: 'fibra', vista: 'centro' });
   });
   it('valores raros se ignoran', () => {
     const e = leerEstadoDeUrl('?vista=otra&pag=-4&tam=7&dir=x', 50);

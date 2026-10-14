@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Sesion } from '../logica/auth.ts';
 import { cargarConfig, revisarConfig, type Config, type ConfigSinValidar } from '../logica/config.ts';
+import { rutaPublica } from '../logica/rutas.ts';
 
 export type Arranque =
   /** Leyendo config.json o preparando el inicio de sesión. */
@@ -45,7 +46,8 @@ export function useArranque(): Arranque {
 async function arrancar(setArranque: (a: Arranque) => void): Promise<void> {
   let sinValidar: ConfigSinValidar;
   try {
-    sinValidar = await cargarConfig(new URL('config.json', document.baseURI).href);
+    // Desde la carpeta de la app (no desde la ruta actual: en /centros/A2338PY01 sería /centros/config.json).
+    sinValidar = await cargarConfig(rutaPublica('config.json'));
   } catch (e) {
     setArranque({ fase: 'sin-config', error: e instanceof Error ? e.message : String(e) });
     return;
