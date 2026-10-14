@@ -34,7 +34,7 @@
 }
 
 /* Modo oscuro: sigue al sistema, salvo que la persona elija otro con el botón ☀️/🌙
-   (src/tema.js guarda la elección en <html data-tema="claro|oscuro">). */
+   (src/hooks/useTema.ts guarda la elección en <html data-tema="claro|oscuro">). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
     color-scheme: dark;

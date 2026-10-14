@@ -99,7 +99,7 @@ Necesitas: etapa 3 hecha + que **tu cuenta pueda abrir** el Excel original en Sh
 ## Etapa 6 — Antes de entregar (lo hago yo + decisión de dónde publicar)
 
 - [x] 6.1 Actualizar SheetJS a 0.20.x (aviso de seguridad) — hecho: 0.20.3 desde cdn.sheetjs.com (13/10/2026).
-- [ ] 6.2 Correr de nuevo todas las revisiones automáticas — **yo**: `npm.cmd run typecheck` (tipos de TypeScript), `npm.cmd test` (unitarias), `npm.cmd run test:e2e` (en navegador).
+- [x] 6.2 Correr de nuevo todas las revisiones automáticas — **yo**: `npm.cmd run typecheck` (tipos de TypeScript), `npm.cmd test` (unitarias), `npm.cmd run test:e2e` (en navegador) y `npm.cmd run build` (compilación). Hecho con la versión React + TypeScript: sin errores de tipos, 268 unitarias y 39 en navegador pasan, `build` y `preparar-publicacion` OK. *(13/10/2026)*
 - [x] 6.3 Publicada en internet con HTTPS en **Netlify**: https://aic-centros-negocio.netlify.app (se sube a mano: `npm.cmd run preparar-publicacion` y arrastrar `publicar/`, [guía, paso 6](../GUIA-CONFIGURACION-MICROSOFT.md#paso-6-publicar-la-app-hosting)). *(12/10/2026)*
 - [ ] 6.4 Antes de subir la versión con el Excel real: que el administrador haya hecho el **paso 2** de la guía (`Files.Read.All` en la lista + consentimiento). Después, cerrar el Excel de ejemplo, `npm.cmd run preparar-publicacion`, subir `publicar/` y repetir 4.2–4.6 en https://aic-centros-negocio.netlify.app.
 

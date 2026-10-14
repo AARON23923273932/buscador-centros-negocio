@@ -1,4 +1,4 @@
-// Pruebas de cómo la app encuentra el Excel real a partir de su enlace (graph.js), con un Graph SIMULADO:
+// Pruebas de cómo la app encuentra el Excel real a partir de su enlace (src/logica/graph.ts), con un Graph SIMULADO:
 // ninguna petición sale a internet. Cubren el enlace de "Copiar vínculo" y la dirección del navegador
 // de Excel Online (…/_layouts/15/Doc.aspx?sourcedoc={GUID}&file=Nombre.xlsx), que es la que dio el usuario.
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';

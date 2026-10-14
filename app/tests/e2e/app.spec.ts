@@ -1,5 +1,5 @@
 // Pruebas de punta a punta en modo demo: abren la app en Chromium y la usan como una persona.
-// Usan su PROPIA configuración (config-pruebas.js), no app/public/config.json: así siguen
+// Usan su PROPIA configuración (config-pruebas.ts), no app/public/config.json: así siguen
 // funcionando cuando ese archivo ya tiene los valores de producción.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';

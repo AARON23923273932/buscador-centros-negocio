@@ -17,7 +17,7 @@ import {
   partesFormato,
 } from '../../src/logica/datos.ts';
 import { agruparPorCentro, filtrarFilas, ordenarFilas, valoresUnicos } from '../../src/logica/filtros.ts';
-import { cambiarXmlHoja, crearExcel, crearExcelDesdeMatriz, crearLibro } from './ayuda.js';
+import { cambiarXmlHoja, crearExcel, crearExcelDesdeMatriz, crearLibro } from './ayuda.ts';
 
 const OPCIONES = {
   columnas: CONFIG_POR_DEFECTO.columnas,

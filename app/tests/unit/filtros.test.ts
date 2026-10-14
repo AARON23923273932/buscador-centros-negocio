@@ -17,7 +17,7 @@ import {
   valoresUnicos,
 } from '../../src/logica/filtros.ts';
 import type { Filtros } from '../../src/logica/tipos.ts';
-import { filaDePrueba } from './ayuda.js';
+import { filaDePrueba } from './ayuda.ts';
 
 const FILAS = [
   filaDePrueba(3, {

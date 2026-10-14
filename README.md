@@ -3,7 +3,8 @@
 > Proyecto "Sitio web" en Notion (código PRY-2, id `3f2738bc3a6381408614e380da98edac`). Notion es la agenda; aquí está el trabajo.
 > La app está en [`app/`](app/). La guía para conectarla a Microsoft 365 está en [`GUIA-CONFIGURACION-MICROSOFT.md`](GUIA-CONFIGURACION-MICROSOFT.md). Las pruebas manuales para entregarla están en [`pruebas/plan-de-pruebas.md`](pruebas/plan-de-pruebas.md).
 
-## Estado actual (12/10/2026)
+## Estado actual (13/10/2026)
+- **Código migrado a React 19 + TypeScript (estricto)** *(13/10/2026, pedido del supervisor: "priorizar el uso de TypeScript y una librería como React por temas de escalabilidad")*. La app **se ve y funciona igual** (mismos textos, diseño, login, filtros, exportar…): lo comprueban las mismas 39 pruebas en navegador, sin cambiar sus selectores, y 268 pruebas unitarias (antes 234). Detalle en las secciones 7 y 8. Para que Netlify muestre esta versión hay que volver a publicar (`npm.cmd run preparar-publicacion` y arrastrar `publicar/`).
 - **Publicada en Netlify:** https://aic-centros-negocio.netlify.app (en línea siempre, no depende de la PC).
 - **Login con Microsoft activo:** app "Buscador de centros de negocio" registrada en Entra ID (tenant JAICOS CORP S.A.C.). Solo entran cuentas `@aic.pe` y `@jaicoscorp.com`. Permisos (solo lectura): al **iniciar sesión** solo se pide `User.Read`; `Files.Read.All` se pide **al leer el Excel**.
 - **Datos: conectada al Excel real** `centros-negocio-aic.xlsx` (SharePoint de jaicoscorp, sitio raíz) por su enlace (`"fuente": "graph"`, `datos.urlCompartida` en `config.json`). El enlace es la **dirección del navegador** de Excel Online (`…/_layouts/15/Doc.aspx?sourcedoc=…&file=…`): si Microsoft Graph no lo abre como "enlace para compartir", la app **busca el archivo** en las bibliotecas de ese sitio por su identificador y su nombre (detalle en la guía, paso 4.3).
@@ -62,18 +63,22 @@ npm run dev:demo     # demo (sin login, Excel de ejemplo) → http://localhost:5
 >
 > **Puertos:** `npm run dev` usa siempre el 5173 y `npm run preview` el 4173 (son los registrados en Microsoft). Si están ocupados, la app **no arranca** y lo avisa: cierra el otro programa (por ejemplo, otro `npm run dev` abierto).
 
-Otros comandos (siempre dentro de `app/`):
+Todos los comandos (siempre dentro de `app/`; en PowerShell, `npm.cmd` en vez de `npm`):
 
 | Comando | Para qué sirve |
 |---|---|
+| `npm run dev` | La app con la **configuración real** (login de Microsoft + Excel real) en http://localhost:5173. Los cambios en el código se ven al instante. |
 | `npm run dev:demo` | La app en **modo demo** (sin login, Excel de ejemplo) en http://localhost:5173, sin tocar `config.json`. |
-| `npm run build` | "Compila" la app: crea la carpeta `dist/`. |
-| `npm run preparar-publicacion` | Compila y deja la copia **lista para Netlify** en `publicar/` (sin archivos temporales de Office `~$…`). |
+| `npm run typecheck` | Revisa los **tipos de TypeScript** de todo el código (app, pruebas y configuración) sin compilar nada. Si algo no encaja (ej. una función recibe un número donde esperaba texto), muestra el archivo y la línea. |
+| `npm test` | Pruebas **unitarias** con Vitest (268): la lógica (búsqueda, filtros, lectura del Excel, Graph, reglas de acceso…) y los componentes de React (buscador, tabla, paginación, botón de tema…), sin abrir un navegador. |
+| `npm run test:e2e` | Pruebas **de punta a punta** con Playwright (39): compila, abre la app en Chromium y hace clic como una persona (modo demo + un inicio de sesión de Microsoft **simulado**, sin internet). Usan su propia configuración de demostración (`tests/e2e/config-pruebas.ts`), así que pasan igual aunque `config.json` ya tenga los valores de producción. **En una PC nueva**, antes de la primera vez: `npx playwright install chromium` (descarga el navegador de pruebas; `npm install` no lo trae). |
+| `npm run build` | "Compila" la app: primero ejecuta `typecheck` (si hay un error de tipos, **se detiene** y no compila) y después crea la carpeta `dist/` con Vite. |
+| `npm run preparar-publicacion` | Ejecuta `build` y deja la copia **lista para Netlify** en `publicar/` (sin archivos temporales de Office `~$…`). Al final muestra el modo, la fuente de datos y los permisos de `config.json`. |
 | `npm run preview` | Muestra la versión compilada (`dist/`) en http://localhost:4173 con la configuración real. |
 | `npm run preview:demo` | Lo mismo, pero en modo demo. |
-| `npm test` | Pruebas **unitarias** (revisan la lógica: búsqueda, filtros, lectura del Excel, reglas de acceso…). |
-| `npm run test:e2e` | Pruebas **de punta a punta**: compila, abre la app en Chromium y hace clic como una persona (modo demo + un inicio de sesión de Microsoft **simulado**, sin internet). Usan su propia configuración de demostración (`tests/e2e/config-pruebas.js`), así que pasan igual aunque `config.json` ya tenga los valores de producción. **En una PC nueva**, antes de la primera vez: `npx playwright install chromium` (descarga el navegador de pruebas; `npm install` no lo trae). |
 | `npm run generar-ejemplo` | Vuelve a crear el Excel de ejemplo con datos ficticios. |
+
+Antes de publicar un cambio de código: `npm run typecheck` → `npm test` → `npm run test:e2e` → `npm run preparar-publicacion`.
 
 Para cerrar `npm run dev` o `npm run preview`: **Ctrl + C** en la terminal.
 
@@ -90,13 +95,42 @@ ERP ──(bot)──► Excel en SharePoint/OneDrive ──(Microsoft Graph, co
 
 > **(por confirmar)** Se interpretó "la información debe poder actualizarse" como *"la app siempre muestra lo último que el bot escribió"*. Si en realidad se quiere **editar** datos desde la app, habría que cambiar el diseño (permisos de escritura y reglas de quién puede editar).
 
-## 5. Quién puede entrar (resumen)
+## 5. ¿Hay servidor?
+
+**No: todo corre en el navegador (SPA).** El login lo hace Microsoft (MSAL) y el Excel se lee con Microsoft Graph usando el token de la persona (permisos delegados); no hay backend ni secretos que custodiar.
+
+```
+                 ┌───────────────────────────────────────────────────────────┐
+                 │  Navegador de la persona (aquí corre TODA la app: React)  │
+                 └───────────────────────────────────────────────────────────┘
+  1. Abre la página  │  ▲ index.html, assets/*.js, config.json (archivos fijos)
+                     ▼  │
+                 Netlify (solo entrega archivos; no ejecuta código)
+
+  2. "Iniciar sesión │  ▲ vuelve por redirect.html; MSAL recibe el token de la persona
+     con Microsoft"  ▼  │
+                 login.microsoftonline.com (Entra ID: ¿cuenta de la empresa?)
+
+  3. Pide el Excel   │  ▲ el archivo .xlsx (solo si a la persona le compartieron el Excel)
+     con ese token   ▼  │
+                 graph.microsoft.com ──► SharePoint (Excel que llena el bot)
+
+  4. Lee el Excel (SheetJS), busca, filtra, ordena y exporta: todo dentro del navegador.
+```
+
+En simple:
+- **SPA** ("aplicación de página única"): la página se descarga una vez y después todo pasa en el navegador. Netlify es como una carpeta compartida en internet: solo entrega los archivos de `publicar/`.
+- **Backend** (servidor propio): un programa que corre en una computadora de la empresa o en la nube, recibe pedidos y guarda claves. **Esta app no tiene**: no hay nada que mantener encendido, actualizar ni proteger aparte de los archivos publicados.
+- **Token**: un "pase" temporal que Microsoft le da a la persona al iniciar sesión. La app lo usa para pedirle el Excel a Graph **en nombre de esa persona** (eso son los **permisos delegados**): Graph solo entrega lo que esa persona ya puede abrir en SharePoint. El token vence solo y nunca sale del navegador más que hacia Microsoft.
+- **Sin secretos:** el `clientId` y el `tenantId` de `config.json` son datos **públicos** (identifican la app, no dan acceso). La app no usa contraseñas de aplicación ni "client secret" (ver la guía, "Conceptos en 1 minuto" y "Seguridad: qué protege qué").
+
+## 6. Quién puede entrar (resumen)
 
 - Botón **Iniciar sesión con Microsoft** (se usa la librería **MSAL** de Microsoft).
 - Después del inicio de sesión la app revisa que el **nombre de inicio de sesión** (UPN, normalmente igual al correo) termine en `@aic.pe` o `@jaicoscorp.com` (y, si se configura, que la cuenta sea del tenant de la empresa). Si no: "Tu cuenta no tiene acceso" + cerrar sesión. *(por confirmar con el administrador que el UPN del personal termina en esos dominios)*
 - **Importante:** esa revisión ocurre en el navegador, así que es solo una capa de comodidad. La **seguridad real** está en Microsoft 365: (1) la app registrada en Entra ID solo para la empresa, (2) opcionalmente "asignación de usuario requerida", y (3) **los permisos del propio Excel en SharePoint**: la app lee el archivo *con la cuenta de la persona*, así que si a alguien no le compartieron el Excel, no puede verlo aunque entre a la app. Detalle en la guía.
 
-## 6. Estructura de carpetas
+## 7. Estructura de carpetas
 
 ```
 sitio-web/
@@ -105,37 +139,65 @@ sitio-web/
 ├── datos/                             ← archivos recibidos para el proyecto (vacía por ahora)
 ├── pruebas/plan-de-pruebas.md         ← pruebas que hace una persona antes de entregar (con casillas)
 ├── publicar/                          ← copia lista para Netlify (la crea npm run preparar-publicacion; no se edita)
-└── app/                               ← la aplicación
-    ├── index.html                     ← la página (estructura)
-    ├── redirect.html                  ← página "puente" a la que vuelve Microsoft tras el inicio de sesión
-    ├── public/
+└── app/                               ← la aplicación (React 19 + TypeScript)
+    ├── index.html                     ← la página: solo <div id="raiz"> (con "Cargando…"); React dibuja todo lo demás
+    ├── redirect.html                  ← página "puente" a la que vuelve Microsoft tras el inicio de sesión (sin React)
+    ├── public/                        ← se copia tal cual a dist/
     │   ├── config.json                ← CONFIGURACIÓN (la única copia que se edita; npm run build la copia a dist/)
+    │   ├── tema-inicial.js            ← aplica el modo claro/oscuro elegido antes de pintar (para que no "parpadee")
     │   ├── datos/centros-ejemplo.xlsx ← Excel de ejemplo con datos ficticios (modo demo)
     │   ├── netlify.toml / _headers    ← Netlify: publicar la carpeta tal cual y no guardar config.json en caché
     │   ├── staticwebapp.config.json   ← cabeceras de seguridad para Azure Static Web Apps (otra opción de hosting)
     │   └── favicon.svg                ← ícono de la pestaña
     ├── src/
-    │   ├── main.js                    ← arranque y "pegamento" (estado, eventos, auto-actualización)
-    │   ├── config.js                  ← lee config.json y revisa que esté completo
-    │   ├── auth.js                    ← inicio de sesión con Microsoft (MSAL)
-    │   ├── acceso.js                  ← reglas de quién puede entrar (dominios, tenant)
-    │   ├── graph.js                   ← lee el Excel desde SharePoint/OneDrive (Microsoft Graph)
-    │   ├── datos.js                   ← abre el Excel y limpia/ordena las filas (SheetJS)
-    │   ├── filtros.js                 ← buscar, filtrar, ordenar, agrupar, paginar (funciones puras)
-    │   ├── tabla.js                   ← arma el HTML de la tabla (siempre escapando los datos)
-    │   ├── estado-url.js              ← guarda la búsqueda en la dirección (enlace para compartir)
-    │   ├── exportar.js                ← descarga a Excel
-    │   ├── redirect.js                ← lógica de redirect.html
-    │   └── estilos.css                ← colores y diseño (claro/oscuro, celular)
+    │   ├── main.tsx                   ← punto de entrada: monta <App /> en index.html
+    │   ├── App.tsx                    ← la página completa: cabecera + la pantalla que toque (cargando, mensaje, login, app)
+    │   ├── redirect.ts                ← lógica de redirect.html (MSAL v5, sin React)
+    │   ├── estilos.css                ← colores y diseño (claro/oscuro, celular); el mismo de antes
+    │   ├── componentes/               ← piezas de la pantalla (.tsx = TypeScript + JSX, el "HTML" de React)
+    │   │   ├── Cabecera.tsx, BotonTema.tsx              ← título, usuario, "Cerrar sesión", botón ☀️/🌙
+    │   │   ├── PantallaCarga.tsx, PantallaLogin.tsx     ← "Cargando…" y "Bienvenido" (botón de Microsoft)
+    │   │   ├── Mensaje.tsx                              ← "Tu cuenta no tiene acceso", "Falta configurar…", errores
+    │   │   ├── PantallaApp.tsx                          ← la aplicación: une buscador, filtros, tabla y paginación
+    │   │   ├── Buscador.tsx, Filtros.tsx                ← caja de búsqueda y panel de filtros
+    │   │   ├── BarraResultados.tsx                      ← "Por orden / Por centro", contador, filas por página, exportar
+    │   │   ├── TablaOrdenes.tsx, TablaCentros.tsx       ← las dos vistas de la tabla
+    │   │   ├── Celdas.tsx, Resaltado.tsx                ← títulos que ordenan, celdas y resaltado <mark> (sin HTML del Excel)
+    │   │   ├── Paginacion.tsx                           ← « ‹ Página X de Y › » (el foco no se pierde)
+    │   │   ├── Avisos.tsx, ColumnasDetectadas.tsx       ← avisos rojo/amarillo, aviso flotante y "Columnas detectadas"
+    │   │   └── Iconos.tsx                               ← íconos SVG
+    │   ├── hooks/                     ← "estado" y efectos reutilizables (funciones use… de React)
+    │   │   ├── useArranque.ts         ← lee config.json, prepara MSAL y decide qué pantalla va
+    │   │   ├── useExcel.ts            ← descarga y lee el Excel; Actualizar y auto-actualización
+    │   │   ├── useBusqueda.ts         ← búsqueda, filtros, vista, orden y página (espera de 200 ms al escribir)
+    │   │   ├── useEstadoUrl.ts        ← lee y guarda ese estado en la dirección (enlace para compartir)
+    │   │   ├── useTema.ts             ← modo claro/oscuro
+    │   │   └── useAvisoFlotante.ts, useMediaQuery.ts
+    │   └── logica/                    ← reglas SIN pantalla (TypeScript puro; se prueban sin navegador)
+    │       ├── tipos.ts               ← "forma" de los datos: Fila, Celda, Columna, ResultadoLectura, Filtros…
+    │       ├── config.ts              ← lee config.json y revisa que esté completo (tipo Config)
+    │       ├── auth.ts                ← inicio de sesión con Microsoft (MSAL v5; tipo Sesion)
+    │       ├── acceso.ts              ← reglas de quién puede entrar (dominios, tenant)
+    │       ├── graph.ts               ← lee el Excel desde SharePoint/OneDrive (Microsoft Graph; ErrorDatos, respuestas tipadas)
+    │       ├── datos.ts               ← abre el Excel y limpia/ordena las filas (SheetJS)
+    │       ├── filtros.ts             ← buscar, filtrar, ordenar, agrupar, paginar (funciones puras)
+    │       ├── vista.ts               ← qué se ve: filas de la página, contador, filtros disponibles
+    │       ├── tabla.ts, formato.ts   ← reglas de la tabla (▲▼, aria-sort, contador) y formato de horas/fechas
+    │       ├── estado-url.ts          ← convierte la búsqueda en dirección y viceversa
+    │       ├── exportar.ts            ← descarga a Excel
+    │       └── tema.ts, portapapeles.ts ← reglas del modo claro/oscuro y "copiar código"
     ├── scripts/
     │   ├── generar-ejemplo.mjs        ← crea el Excel de ejemplo
     │   ├── preparar-publicacion.mjs   ← compila y copia a publicar/ (npm run preparar-publicacion)
     │   ├── archivos-temporales.mjs    ← deja afuera los "~$…" que crea Excel (llevan tu nombre de usuario)
     │   └── config-demo.mjs            ← modo demo en la PC sin tocar config.json (npm run dev:demo)
-    ├── tests/unit/                    ← pruebas unitarias (Vitest); graph-resolver.test.js = cómo se encuentra el Excel real
-    ├── tests/e2e/                     ← pruebas en navegador (Playwright); config-pruebas.js = su configuración fija
-    ├── vite.config.js                 ← configuración de compilación (+ política de seguridad CSP)
-    ├── vitest.config.js / playwright.config.js
+    ├── tests/unit/                    ← pruebas unitarias (Vitest, .ts/.tsx); graph-resolver.test.ts = cómo se encuentra
+    │                                     el Excel real; componentes.test.tsx = componentes de React con clics y teclado
+    ├── tests/e2e/                     ← pruebas en navegador (Playwright, .ts); config-pruebas.ts = su configuración fija
+    ├── tsconfig.json                  ← reglas de TypeScript para src/ (modo estricto)
+    ├── tsconfig.node.json             ← reglas de TypeScript para pruebas y archivos de configuración
+    ├── vite.config.ts                 ← compilación: React, política de seguridad CSP, sin "~$…", modo demo
+    ├── vitest.config.ts / playwright.config.ts
     └── package.json                   ← lista de librerías y comandos
 ```
 
@@ -155,24 +217,42 @@ Todavía **no tenemos el Excel real** (por confirmar sus columnas). Por eso la a
 - Las celdas con error de fórmula (`#N/A`) se ven tal cual, pero no se toman como código ni como cliente. Si hay fórmulas **sin resultado guardado** (se verían vacías), muestra un aviso.
 - Al final de la página, **"Columnas detectadas en el Excel"** muestra qué columna usó para cada cosa, cuáles ocultó y (con el Excel real) el `driveId` e `itemId` del archivo en SharePoint. Con el Excel real se revisa ahí y, si hace falta, se agregan los nombres reales en `config.json`.
 
-## 7. Decisiones tomadas (y por qué)
+## 8. Decisiones tomadas (y por qué)
 
 | Decisión | Por qué |
 |---|---|
-| **JavaScript sencillo (sin framework) + Vite** | Para que un principiante pueda leer y mantener el código. Vite solo sirve para probar en local y "compilar". |
-| **La app no tiene servidor propio** (es una "página estática") | Más barata y simple de publicar (hoy en el plan gratuito de Netlify). El inicio de sesión lo hace Microsoft y los datos los da Microsoft Graph. |
+| **React 19 + TypeScript estricto + Vite** *(13/10/2026, antes JavaScript sin librería)* | Pedido del supervisor, por escalabilidad (detalle abajo). Vite sirve la app en la PC y la "compila"; TypeScript solo revisa los tipos. |
+| **La app no tiene servidor propio** (es una "página estática", SPA) | Más barata y simple de publicar (hoy en el plan gratuito de Netlify). El inicio de sesión lo hace Microsoft y los datos los da Microsoft Graph (sección 5). |
 | **Leer el Excel en vivo** en vez de copiar los datos | Así siempre se ve lo último que dejó el bot, sin otro proceso que sincronice. |
 | **Permisos delegados `User.Read` + `Files.Read.All`** | Solo lectura y siempre limitado a lo que el usuario ya puede ver. Al iniciar sesión solo se pide `User.Read`: si falta que un administrador apruebe `Files.Read.All`, la persona igual entra y la app le explica qué pedir. Detalle en la guía. |
 | **`redirect.html` como página de retorno** | Es lo que recomienda MSAL versión 5 (la instalada): una página "puente" mínima para el retorno del inicio de sesión. |
 | **SheetJS (`xlsx` 0.20.3)** para leer y exportar Excel | Versión oficial del sitio de SheetJS (`cdn.sheetjs.com`; la de npm, 0.18.5, está desactualizada y tiene 2 avisos de seguridad). |
-| **Política de seguridad (CSP)** al compilar | Si una celda del Excel trajera código, el navegador no lo ejecuta. Además, todo dato del Excel se "escapa" antes de mostrarse (hay pruebas que lo verifican). |
+| **Política de seguridad (CSP)** al compilar | Si una celda del Excel trajera código, el navegador no lo ejecuta. Además, React pone todo dato del Excel como **texto** (lo "escapa"): el resaltado de la búsqueda se arma con elementos `<mark>` de React y **nunca** con `dangerouslySetInnerHTML` (hay pruebas que lo verifican, ej. una celda con `<img onerror=…>` se ve como texto). |
 | **Sesión guardada en el navegador (`localStorage`)** | Para no pedir inicio de sesión en cada pestaña. Se puede cambiar a `sessionStorage` en `config.json` si se prefiere que se cierre al cerrar la pestaña. |
+
+### Por qué React + TypeScript
+
+Pedido del supervisor: *"Priorizar el uso de TypeScript y una librería como React por temas de escalabilidad."* En la práctica:
+
+- **TypeScript** = JavaScript con **tipos**: cada dato tiene una "forma" declarada (ej. `Fila`, `Celda`, `Config`, `ResultadoLectura`, `Filtros`, `Sesion`, `ErrorDatos` y las respuestas de Graph, en `src/logica/tipos.ts` y en cada módulo). Si alguien cambia una forma o escribe mal un nombre, `npm run typecheck` (y el editor) marcan **todos** los lugares a corregir **antes** de publicar. Con la app creciendo (más columnas, más pantallas, más personas tocando el código), eso evita errores que antes solo se veían al usarla.
+- **React** = la pantalla se arma con **componentes** (piezas con nombre: `Buscador`, `Filtros`, `TablaOrdenes`…) que se dibujan solos a partir del estado. Antes, `main.js` (≈830 líneas) mostraba/ocultaba y reescribía partes del HTML a mano; ahora agregar una pantalla o una columna es agregar o cambiar un componente, sin tocar el resto. Es la librería de interfaz más usada: es fácil encontrar ayuda y personas que la conozcan.
+- **Modo estricto** (`"strict": true` en `tsconfig.json`): no se permiten valores "sin tipo" (`any` implícito) y TypeScript obliga a revisar los casos en que un dato puede faltar (`null`/`undefined`).
+
+Decisiones de la migración:
+
+| Decisión | Por qué |
+|---|---|
+| **TypeScript 7.0.2** (la estable actual) | Se probó con Vite 8, Vitest 5 y Playwright 1.61 y todo funciona (`typecheck`, pruebas y `build`), así que **no hizo falta** bajar a la 5.x. TypeScript solo **revisa** (`noEmit`): quien convierte el código a JavaScript es Vite, así que la versión de TypeScript no cambia lo que se publica. |
+| **`@azure/msal-browser` v5 directo (sin `@azure/msal-react`)** | El inicio de sesión ya estaba resuelto y probado con msal-browser (`logica/auth.ts`): vuelta por la página puente `redirect.html` (MSAL v5), revisión de dominios `aic.pe`/`jaicoscorp.com` y del tenant **después** del login, `Files.Read.All` pedido recién al leer el Excel y mensajes claros si falta el consentimiento. msal-react obliga a envolver toda la app en su `MsalProvider` (MSAL se cargaría también en modo demo, que hoy no lo descarga) y no agrega nada de eso; la app solo necesita saber "en qué fase está el arranque", y eso lo da el hook `useArranque`. Menos piezas = menos cosas que actualizar. |
+| **Estado con React puro (hooks), sin Redux ni otra librería** | El estado es poco y claro: (1) la **búsqueda** (texto, filtros, vista, orden, página) vive en `useBusqueda` y se copia a la dirección (`useEstadoUrl`), así el enlace se puede compartir; (2) los **datos del Excel** viven en `useExcel` (carga, Actualizar, auto-actualización); (3) el **arranque** (`useArranque`) es una sola variable con la fase (`cargando`, `login`, `denegado`, `app`…) y TypeScript obliga a tratar cada una. Lo que se ve (filas, contador, opciones de los filtros) se **calcula** con funciones puras de `logica/vista.ts`, que se prueban sin navegador. |
+| **Mismos ids, textos y `aria-*`** | Las 39 pruebas en navegador (Playwright) son el "contrato" de comportamiento: pasan **sin cambiar ningún selector** (solo se les agregaron tipos al pasarlas a `.ts`). `estilos.css` no cambió (salvo un comentario). |
+| **`redirect.html` sin React** | Es una página puente mínima: solo le pasa la respuesta de Microsoft a la app (`src/redirect.ts`). Así carga rápido y no depende de la app. |
 
 **Sobre SheetJS:** la versión de npm (0.18.5) tiene 2 avisos de seguridad de nivel **alto** ("prototype pollution" y "ReDoS") que se activan con un Excel **hecho a propósito para atacar**. Por eso la app usa la **0.20.3**, instalada desde el sitio oficial:
 - Para actualizarla en el futuro: `npm.cmd install --save-exact https://cdn.sheetjs.com/xlsx-<versión>/xlsx-<versión>.tgz` (ver la versión vigente en `https://cdn.sheetjs.com/xlsx-latest/package/package.json`) y correr las pruebas.
 - Igual (buena práctica), **solo la cuenta del bot** debe tener permiso de edición sobre el Excel (guía, paso 4.2).
 
-## 8. Qué falta / (por confirmar)
+## 9. Qué falta / (por confirmar)
 
 - [x] **Ubicación del Excel real**: `centros-negocio-aic.xlsx` en el SharePoint de jaicoscorp (sitio raíz); enlace en `datos.urlCompartida`. *(12/10/2026)*
 - [ ] **Columnas exactas del Excel real**: revisar "Columnas detectadas en el Excel" en la primera prueba → ajustar `columnas` en `config.json` si hace falta (y confirmar que el estado y los montos se reconocen). *(por confirmar)*
@@ -186,11 +266,12 @@ Todavía **no tenemos el Excel real** (por confirmar sus columnas). Por eso la a
 - [ ] **"Actualizarse"**: confirmar que significa "mostrar siempre lo último del Excel" y no "editar desde la app". *(por confirmar)*
 - [ ] ¿Qué columnas son más importantes para el equipo (para el orden de la tabla y los filtros)? *(por confirmar)*
 - [x] **SheetJS actualizada a 0.20.3** (13/10/2026). Pendiente recomendado: dejar el permiso de edición del Excel solo a la cuenta del bot.
+- [ ] **Versión React + TypeScript en Netlify**: hecha y probada en la PC (13/10/2026); falta subirla (`npm.cmd run preparar-publicacion` → arrastrar `publicar/`) y revisar el punto 1.15 del plan de pruebas. *(por confirmar cuándo se publica)*
 - [ ] **Formato del Excel real**: ¿el código/descripción del centro va en **cada fila**, en **celdas combinadas** o **una sola vez** (con las filas de abajo vacías)? ¿El bot escribe valores o fórmulas? Revisar "Columnas detectadas" y la vista "Por centro". *(por confirmar)*
 - [ ] **Nombre de inicio de sesión (UPN)**: ¿termina en `@aic.pe` / `@jaicoscorp.com` para todo el personal? Lo confirma el administrador de Microsoft 365. *(por confirmar)*
 - [ ] **Permiso para leer el Excel**: probar con una cuenta normal; si a todos les sale "sin permiso" o "No se encontró el Excel", sacar el `driveId` + `itemId` con el **Probador de Graph** (guía 4.3, forma A) y copiarlos en `config.json`. ("Columnas detectadas en el Excel" muestra esos dos valores solo cuando el Excel **sí** cargó: sirve para fijarlos de antemano, no cuando falla.) *(por confirmar)*
 
-## 9. Para pasar de demo a producción (resumen)
+## 10. Para pasar de demo a producción (resumen)
 
 1. ✅ El administrador registra la app en Entra ID (guía, pasos 1 y 3).
 2. **Permiso `Files.Read.All`** (guía, paso 2): confirmar que está en **Permisos de API** y, si la empresa lo exige, que un administrador dio el **consentimiento**. Hacerlo **antes** del paso 6. *(por confirmar)*

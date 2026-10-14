@@ -274,7 +274,7 @@ La app se publica **a mano**: se compila en la PC y se arrastra una carpeta a Ne
 3. Preparar la carpeta:
    ```powershell
    cd C:\dev\AIC\automatizaciones\sitio-web\app
-   npm.cmd run preparar-publicacion   # compila y copia todo a ..\publicar (sin archivos ~$…)
+   npm.cmd run preparar-publicacion   # revisa los tipos (TypeScript), compila y copia todo a ..\publicar (sin archivos ~$…)
    ```
    Al terminar muestra el modo, la fuente de datos y los permisos de `config.json` (deben ser `microsoft`, `graph` y `User.Read, Files.Read.All`).
 4. **https://app.netlify.com** → el sitio `aic-centros-negocio` → **Deploys** → arrastrar la carpeta **`publicar`** al recuadro *"Drag and drop your project folder here"*.
@@ -376,7 +376,7 @@ Cualquier servicio que publique **archivos estáticos con HTTPS** sirve: un serv
 | **¿Se requiere asignación? = Sí** (opcional) | Solo los usuarios/grupos elegidos. | ✅ Sí (lo controla Microsoft). |
 | **Permisos del Excel en SharePoint** + permisos **delegados** | Cada persona solo puede leer el Excel si se lo compartieron. | ✅ Sí: es la protección principal de los datos. |
 | Revisión del **dominio** y de **`tenantsPermitidos`** en la app | Muestra "Tu cuenta no tiene acceso" y borra la sesión local. | ⚠️ Solo comodidad: corre en el navegador del usuario y alguien con conocimientos podría saltársela. Por eso existen las capas de arriba. |
-| **CSP** + "escapar" los datos | Si una celda del Excel trajera código, no se ejecuta. | ✅ Protege a los usuarios de datos raros en el Excel. |
+| **CSP** + "escapar" los datos | Si una celda del Excel trajera código, no se ejecuta. React muestra cada dato del Excel como **texto** (el resaltado de la búsqueda usa `<mark>` de React, nunca HTML armado con los datos). | ✅ Protege a los usuarios de datos raros en el Excel. |
 | Solo el bot puede **editar** el Excel (paso 4.2) | Nadie más puede reemplazarlo por un archivo "trampa". | ✅ Buena práctica (protege contra archivos "trampa"). |
 
 Otros puntos:
