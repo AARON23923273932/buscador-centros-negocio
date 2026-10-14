@@ -312,4 +312,60 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
     expect(aviso.querySelector('span')?.textContent).toBe(texto?.textContent);
     expect(document.activeElement).toBe(reintentar);
   });
+
+  const excelOk = () => new Response(new Uint8Array(EJEMPLO), { headers: { 'last-modified': 'Thu, 08 Oct 2026 21:45:00 GMT' } });
+
+  it('mientras se reintenta sin datos: la tabla dice "Cargando…" y arriba sigue "No se pudieron cargar los datos."', async () => {
+    let responder: (r: Response) => void = () => {};
+    const pedir = vi
+      .fn<() => Promise<Response>>()
+      .mockResolvedValueOnce(new Response('', { status: 404 }))
+      .mockImplementationOnce(() => new Promise((r) => (responder = r)));
+    vi.stubGlobal('fetch', pedir);
+    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    const texto = document.getElementById('texto-actualizado')!;
+    const tabla = document.getElementById('contenedor-tabla')!;
+    await waitFor(() => expect(tabla.textContent).toBe('No hay datos para mostrar. Revisa el mensaje de arriba.'));
+    expect(texto.textContent).toBe('No se pudieron cargar los datos.');
+
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Reintentar' }));
+    await waitFor(() => expect(tabla.textContent?.trim()).toBe('Cargando datos del Excel…'));
+    expect(texto.textContent).toBe('No se pudieron cargar los datos.');
+
+    await act(async () => responder(excelOk()));
+    await waitFor(() => expect(document.getElementById('contador')?.textContent).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
+    expect(texto.textContent).toMatch(/^Datos actualizados a las \d{2}:\d{2}/);
+  });
+
+  it('si falla una actualización con datos ya cargados: se siguen mostrando y el aviso dice de qué hora son', async () => {
+    const pedir = vi.fn<() => Promise<Response>>().mockResolvedValueOnce(excelOk()).mockResolvedValue(new Response('', { status: 404 }));
+    vi.stubGlobal('fetch', pedir);
+    render(<PantallaApp config={CONFIG} sesion={null} avisar={() => {}} />);
+    const contador = document.getElementById('contador')!;
+    await waitFor(() => expect(contador.textContent).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
+    const hora = document.getElementById('texto-actualizado')?.textContent?.match(/a las (\d{2}:\d{2})/)?.[1];
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+    const aviso = await screen.findByRole('alert');
+    expect(aviso.textContent).toContain(
+      `No se pudo actualizar: No se encontró el archivo de Excel (datos/centros-ejemplo.xlsx). Se siguen mostrando los datos de las ${hora}.`,
+    );
+    expect(contador.textContent).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)');
+  });
+
+  it('al volver a la pestaña después de mucho tiempo, vuelve a leer el Excel', async () => {
+    const pedir = vi.fn(async () => excelOk());
+    vi.stubGlobal('fetch', pedir);
+    render(<PantallaApp config={{ ...CONFIG, autoActualizarMinutos: 10 }} sesion={null} avisar={() => {}} />);
+    await waitFor(() => expect(document.getElementById('contador')?.textContent).toMatch(/^Mostrando/));
+    expect(pedir).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new Event('visibilitychange')); // recién leído: no hace nada
+    expect(pedir).toHaveBeenCalledTimes(1);
+
+    const ahora = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(ahora + 11 * 60 * 1000); // 11 minutos después
+    document.dispatchEvent(new Event('visibilitychange'));
+    await waitFor(() => expect(pedir).toHaveBeenCalledTimes(2));
+  });
 });

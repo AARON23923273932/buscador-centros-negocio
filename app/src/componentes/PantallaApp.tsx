@@ -174,7 +174,8 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
 
   // ---- Textos ----
   let actualizado = 'Cargando datos del Excel…';
-  if (!datos && excel.falloSinDatos) actualizado = 'No se pudieron cargar los datos.';
+  // ('error' o 'reintentando': la última lectura falló; mientras se reintenta, el texto no cambia.)
+  if (!datos && excel.sinDatos !== 'cargando') actualizado = 'No se pudieron cargar los datos.';
   else if (excel.ultimaConsulta) actualizado = textoActualizado(excel.ultimaConsulta, excel.archivo?.modificado, config.autoActualizarMinutos);
 
   // Misma función mientras no cambien los resultados (si no, memo() de las tablas no serviría).

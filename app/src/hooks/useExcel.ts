@@ -6,7 +6,7 @@
 // liviano) y solo lo descarga de nuevo si cambió.
 // =============================================================================
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Sesion } from '../logica/auth.ts';
 import type { Config } from '../logica/config.ts';
 import { descargarExcel, leerLibro } from '../logica/datos.ts';
@@ -42,13 +42,15 @@ export interface EstadoExcel {
   archivo: InfoArchivo | null;
   /** Última vez que se revisó el Excel. */
   ultimaConsulta: Date | null;
-  /** Cantidad de centros del Excel completo. */
-  totalCentros: number;
   cargando: boolean;
-  /** Mientras no hay datos, la tabla muestra "Cargando…" o "No hay datos para mostrar". */
-  sinDatos: 'cargando' | 'error';
-  /** La última lectura falló y no hay datos que mostrar ("No se pudieron cargar los datos."). */
-  falloSinDatos: boolean;
+  /**
+   * Qué mostrar mientras NO hay datos (cuando ya hay datos no se usa: se siguen mostrando aunque falle una actualización):
+   *  - 'cargando':     primera lectura → tabla "Cargando datos del Excel…", arriba "Cargando datos del Excel…"
+   *  - 'error':        la lectura falló → tabla "No hay datos para mostrar…", arriba "No se pudieron cargar los datos."
+   *  - 'reintentando': se pulsó "Reintentar"/"Actualizar" después del error → tabla "Cargando…", arriba sigue
+   *                    "No se pudieron cargar los datos." (igual que la versión anterior)
+   */
+  sinDatos: 'cargando' | 'error' | 'reintentando';
   error: AvisoError | null;
 }
 
@@ -60,15 +62,19 @@ interface Opciones {
   alCargar: (datos: ResultadoLectura) => void;
 }
 
-export function useExcel({ config, sesion, avisar, alCargar }: Opciones): EstadoExcel & { cargar: (motivo: MotivoCarga) => Promise<void> } {
+export interface Excel extends EstadoExcel {
+  /** Cantidad de centros del Excel completo (se calcula de "datos"). */
+  totalCentros: number;
+  cargar: (motivo: MotivoCarga) => Promise<void>;
+}
+
+export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Excel {
   const [estado, setEstado] = useState<EstadoExcel>(() => ({
     datos: null,
     archivo: null,
     ultimaConsulta: null,
-    totalCentros: 0,
     cargando: true, // la carga inicial empieza enseguida
     sinDatos: 'cargando',
-    falloSinDatos: false,
     // Si Microsoft devolvió un error al iniciar sesión (ej. falta aprobar un permiso), se muestra arriba.
     error: sesion?.errorLogin ? { mensaje: sesion.errorLogin, acciones: [], id: 0 } : null,
   }));
@@ -78,29 +84,29 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Estado
   useLayoutEffect(() => {
     actual.current = { config, sesion, avisar, alCargar };
   });
-  const memoria = useRef<{ cargando: boolean; archivo: InfoArchivo | null; hayDatos: boolean; ultimaConsulta: Date | null; idError: number }>({
-    cargando: false,
-    archivo: null,
-    hayDatos: false,
-    ultimaConsulta: null,
-    idError: 0,
-  });
+  // Solo lo que el código asíncrono necesita saber AL INSTANTE (el estado de React se actualiza después):
+  //  - cargando: para no empezar dos lecturas a la vez (ej. "Actualizar" justo cuando corre la automática);
+  //  - eTag: la "versión" del Excel leído, para saber en la auto-actualización si cambió.
+  const memoria = useRef<{ cargando: boolean; eTag: string | null }>({ cargando: false, eTag: null });
 
   // (El tipo se escribe explícito porque la función se usa a sí misma en el botón "Reintentar".)
   const cargar: (motivo: MotivoCarga) => Promise<void> = useCallback(async (motivo: MotivoCarga): Promise<void> => {
     const m = memoria.current;
     if (m.cargando) return;
     m.cargando = true;
-    setEstado((e) => ({ ...e, cargando: true, sinDatos: !e.datos && motivo !== 'auto' ? 'cargando' : e.sinDatos }));
+    setEstado((e) => ({
+      ...e,
+      cargando: true,
+      sinDatos: !e.datos && motivo !== 'auto' ? (e.sinDatos === 'cargando' ? 'cargando' : 'reintentando') : e.sinDatos,
+    }));
     const { config: cfg, sesion: s } = actual.current;
     const obtenerToken = s ? () => s.obtenerToken({ interactivo: motivo !== 'auto' }) : null;
     try {
       // Auto-actualización con el Excel real: si no cambió (mismo eTag), no se descarga.
-      if (motivo === 'auto' && cfg.datos.fuente === 'graph' && m.archivo?.eTag && obtenerToken) {
+      if (motivo === 'auto' && cfg.datos.fuente === 'graph' && m.eTag && obtenerToken) {
         const meta = await obtenerMetadatos(cfg.datos, await obtenerToken());
-        if (meta.eTag && meta.eTag === m.archivo.eTag) {
+        if (meta.eTag && meta.eTag === m.eTag) {
           const ultimaConsulta = new Date();
-          m.ultimaConsulta = ultimaConsulta;
           setEstado((e) => ({ ...e, ultimaConsulta, error: null }));
           return;
         }
@@ -122,24 +128,21 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Estado
         itemId: archivo.itemId || null,
         origen: archivo.origen || null,
       };
+      m.eTag = info.eTag;
       const ultimaConsulta = new Date();
-      Object.assign(m, { archivo: info, hayDatos: true, ultimaConsulta });
-      setEstado((e) => ({
-        ...e,
-        datos,
-        archivo: info,
-        ultimaConsulta,
-        totalCentros: agruparPorCentro(datos.filas).length,
-        falloSinDatos: false,
-        error: null,
-      }));
+      setEstado((e) => ({ ...e, datos, archivo: info, ultimaConsulta, error: null }));
       actual.current.alCargar(datos);
       if (motivo === 'manual') actual.current.avisar('Datos actualizados');
     } catch (e) {
       console.error('Error al cargar el Excel:', e);
-      m.idError += 1;
-      const error: AvisoError = { ...avisoDeError(e, s, () => void cargar('manual'), m.hayDatos ? m.ultimaConsulta : null), id: m.idError };
-      setEstado((prev) => (prev.datos ? { ...prev, error } : { ...prev, error, sinDatos: 'error', falloSinDatos: true }));
+      const reintentar = () => void cargar('manual');
+      setEstado((prev) => {
+        // Si ya había datos, se siguen mostrando: el aviso dice de qué hora son.
+        const aviso = avisoDeError(e, s, reintentar, prev.datos ? prev.ultimaConsulta : null);
+        // id nuevo en cada error (aunque el mensaje se repita) para que el lector de pantalla lo vuelva a anunciar.
+        const error: AvisoError = { ...aviso, id: (prev.error?.id ?? 0) + 1 };
+        return prev.datos ? { ...prev, error } : { ...prev, error, sinDatos: 'error' };
+      });
     } finally {
       m.cargando = false;
       setEstado((e) => ({ ...e, cargando: false }));
@@ -152,26 +155,34 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Estado
   }, [cargar]);
 
   // Auto-actualización cada N minutos (solo con la pestaña a la vista).
-  const minutos = Number(config.autoActualizarMinutos);
+  const minutos = config.autoActualizarMinutos;
+  const intervalo = minutos > 0 ? Math.max(3000, minutos * 60 * 1000) : 0;
   useEffect(() => {
-    if (!(minutos > 0)) return;
-    const intervalo = Math.max(3000, minutos * 60 * 1000);
+    if (!intervalo) return;
     const id = setInterval(() => {
       if (document.visibilityState === 'visible') void cargar('auto');
     }, intervalo);
-    // Si la pestaña estuvo escondida mucho tiempo, actualizar al volver.
+    return () => clearInterval(id);
+  }, [intervalo, cargar]);
+
+  // Si la pestaña estuvo escondida mucho tiempo, actualizar al volver.
+  const { ultimaConsulta } = estado;
+  useEffect(() => {
+    if (!intervalo) return;
     const alVolver = () => {
-      const u = memoria.current.ultimaConsulta;
-      if (document.visibilityState === 'visible' && u && Date.now() - u.getTime() > intervalo) void cargar('auto');
+      if (document.visibilityState === 'visible' && ultimaConsulta && Date.now() - ultimaConsulta.getTime() > intervalo) {
+        void cargar('auto');
+      }
     };
     document.addEventListener('visibilitychange', alVolver);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener('visibilitychange', alVolver);
-    };
-  }, [minutos, cargar]);
+    return () => document.removeEventListener('visibilitychange', alVolver);
+  }, [intervalo, ultimaConsulta, cargar]);
 
-  return { ...estado, cargar };
+  // Cantidad de centros del Excel completo: se calcula de los datos (no se guarda aparte).
+  const { datos } = estado;
+  const totalCentros = useMemo(() => (datos ? agruparPorCentro(datos.filas).length : 0), [datos]);
+
+  return { ...estado, totalCentros, cargar };
 }
 
 /**
