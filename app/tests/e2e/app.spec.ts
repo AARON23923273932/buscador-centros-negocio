@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import * as XLSX from 'xlsx/xlsx.mjs';
+import { abrir, usarExcel, vigilarErrores } from './ayuda.ts';
 import { usarConfigPruebas, type CambiosConfig } from './config-pruebas.ts';
 
 const TOTAL_FILAS = 80;
@@ -19,33 +20,8 @@ const normalizar = (s: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-/** Junta errores de la página (incluye violaciones de la política de seguridad CSP). */
-function vigilarErrores(page: Page) {
-  const errores: string[] = [];
-  page.on('pageerror', (e) => errores.push(`pageerror: ${e.message}`));
-  page.on('console', (m) => {
-    if (m.type() === 'error') errores.push(`console: ${m.text()}`);
-  });
-  return errores;
-}
-
 /** Configuración de pruebas con cambios (sin tocar el archivo real). Tiene prioridad sobre la de beforeEach. */
 const usarConfig = (page: Page, cambios: CambiosConfig) => usarConfigPruebas(page, cambios);
-
-/** Reemplaza el Excel de ejemplo por uno armado en la prueba. */
-async function usarExcel(page: Page, matriz: unknown[][]) {
-  const libro = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(matriz), 'Hoja1');
-  const cuerpo = Buffer.from(XLSX.write(libro, { type: 'array', bookType: 'xlsx' }));
-  await page.route('**/datos/centros-ejemplo.xlsx', (ruta) =>
-    ruta.fulfill({ body: cuerpo, contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
-  );
-}
-
-async function abrir(page: Page, ruta = '/') {
-  await page.goto(ruta);
-  await expect(page.locator('#contador')).toContainText(/Mostrando|Sin /);
-}
 
 const filas = (page: Page) => page.locator('#tabla-resultados > tbody > tr:not(.fila-vacia)');
 const celdasDeColumna = (page: Page, n: number) =>
@@ -202,7 +178,9 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await page.getByLabel('Cliente', { exact: true }).selectOption({ index: 1 });
     await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
     await expect(page).toHaveURL(/q=cableado/);
-    await expect(page).toHaveURL(/vista=centro/);
+    // Con React Router la vista es la ruta (/centros), ya no el parámetro ?vista=centro.
+    await expect(page).toHaveURL(/\/centros\?/);
+    await expect(page).not.toHaveURL(/vista=/);
     await expect(page).toHaveURL(/cliente=/);
     const enlace = page.url();
     const valorCliente = await page.getByLabel('Cliente', { exact: true }).inputValue();
@@ -682,6 +660,28 @@ test.describe('Modo Microsoft (sin conectarse a Microsoft)', () => {
     await expect(page.locator('#btn-tema')).toBeVisible(); // el botón de tema también está antes de iniciar sesión
     await expect(page.locator('#pantalla-app')).toBeHidden();
     expect(errores).toEqual([]);
+  });
+
+  test('todas las rutas piden iniciar sesión (también el detalle y una que no existe)', async ({ page }) => {
+    let descargas = 0;
+    page.on('request', (r) => {
+      if (/centros-ejemplo\.xlsx|sharepoint\.com/.test(r.url())) descargas++;
+    });
+    await usarConfig(page, {
+      modo: 'microsoft',
+      microsoft: { clientId: '11111111-2222-3333-4444-555555555555', tenantId: 'aaaaaaaa-0000-0000-0000-000000000001' },
+    });
+    for (const ruta of ['/ordenes?q=cableado', '/centros', '/centros/CN-0005', '/no-existe']) {
+      await page.goto(ruta);
+      await expect(page.getByRole('button', { name: 'Iniciar sesión con Microsoft' })).toBeVisible();
+      await expect(page.locator('#pantalla-app, #detalle-centro, #pantalla-no-encontrada')).toHaveCount(0);
+      // La dirección no se toca antes de iniciar sesión: MSAL vuelve a ESA misma después.
+      expect(new URL(page.url()).pathname + new URL(page.url()).search).toBe(ruta);
+      // Cambio de Gustavo: el botón recibe el foco (Enter inicia sesión) pero sin el anillo al cargar la página.
+      await expect(page.locator('#btn-login')).toBeFocused();
+      expect(await page.locator('#btn-login').evaluate((b) => b.matches(':focus-visible'))).toBe(false);
+    }
+    expect(descargas).toBe(0);
   });
 
   test('si falta el clientId explica qué configurar', async ({ page }) => {

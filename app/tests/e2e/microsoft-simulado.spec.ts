@@ -180,9 +180,12 @@ async function simularMicrosoft(
   return { registro, clientInfo };
 }
 
-/** Pulsa "Iniciar sesión" y simula que Microsoft devuelve al usuario a redirect.html. */
-async function iniciarSesionSimulada(page: Page, sim: Awaited<ReturnType<typeof simularMicrosoft>>) {
-  await page.goto('/?q=cableado');
+/**
+ * Abre la app en "ruta", pulsa "Iniciar sesión" y simula que Microsoft devuelve al usuario a redirect.html
+ * (que lo lleva de vuelta a la dirección desde donde pulsó el botón).
+ */
+async function iniciarSesionSimulada(page: Page, sim: Awaited<ReturnType<typeof simularMicrosoft>>, ruta = '/?q=cableado') {
+  await page.goto(ruta);
   await page.getByRole('button', { name: 'Iniciar sesión con Microsoft' }).click();
   await expect.poll(() => sim.registro.autorizacion !== null).toBe(true);
   const aut = sim.registro.autorizacion!;
@@ -222,7 +225,8 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     await expect(page.locator('#texto-actualizado')).toContainText('Excel modificado el 08/10/2026');
     // La búsqueda del enlace original se conservó tras volver de Microsoft.
     await expect(page.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
-    await expect(page).toHaveURL(/\?q=cableado$/);
+    // Volvió a la dirección del enlace ("/?q=cableado") y la app la llevó a la lista /ordenes con la misma búsqueda.
+    await expect(page).toHaveURL(/\/ordenes\?q=cableado$/);
 
     // Graph se llamó con el token y el enlace codificado; la descarga fue por el enlace temporal.
     expect(sim.registro.graph[0].url).toMatch(/\/v1\.0\/shares\/u!.+\/driveItem$/);
@@ -233,6 +237,33 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     await page.getByRole('button', { name: 'Cerrar sesión' }).click();
     await expect.poll(() => sim.registro.cierreSesion !== null).toBe(true);
     expect(sim.registro.cierreSesion?.searchParams.get('post_logout_redirect_uri')).toMatch(/127\.0\.0\.1:\d+\/$/);
+    expect(errores).toEqual([]);
+  });
+
+  test('desde una ruta anidada (/centros/CN-0005?q=cableado): al volver de Microsoft queda en esa MISMA ruta', async ({ page }) => {
+    const errores: string[] = [];
+    page.on('pageerror', (e) => errores.push(e.message));
+    const sim = await simularMicrosoft(page, { correo: 'persona.prueba@aic.pe' });
+    // Antes de iniciar sesión, la ruta anidada también muestra la bienvenida (el login protege todas las rutas).
+    await iniciarSesionSimulada(page, sim, '/centros/CN-0005?q=cableado');
+
+    // La página puente es la de la raíz de la app (la registrada en Entra ID), no /centros/redirect.html.
+    const puente = new URL(sim.registro.autorizacion!.searchParams.get('redirect_uri') ?? '');
+    expect(puente.pathname).toBe('/redirect.html');
+
+    // De vuelta en el detalle del centro, con la búsqueda en la dirección.
+    await expect(page.getByRole('heading', { level: 2, name: 'Centro de negocio CN-0005' })).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/centros\/CN-0005\?q=cableado$/);
+    await expect(page.locator('#correo-usuario')).toHaveText('persona.prueba@aic.pe');
+    await expect(page.locator('#tabla-detalle tbody tr')).toHaveCount(3);
+    expect(sim.registro.descargas).toBe(1);
+
+    // "Volver a la lista" lleva a la lista con la misma búsqueda (sin volver a descargar el Excel).
+    await page.getByRole('link', { name: 'Volver a la lista' }).click();
+    await expect(page).toHaveURL(/\/centros\?q=cableado$/);
+    await expect(page.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
+    await expect(page.locator('#contador')).toContainText('centros');
+    expect(sim.registro.descargas).toBe(1);
     expect(errores).toEqual([]);
   });
 
