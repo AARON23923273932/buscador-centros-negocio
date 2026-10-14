@@ -586,6 +586,48 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
   });
 });
 
+// Mientras se descarga el código (con red lenta, sobre todo en el celular) se ve el HTML fijo de index.html.
+// Debe tener la cabecera y ser igual a lo primero que dibuja React: así nada "salta" al cargar.
+const CODIGO_DE_LA_APP = /\/assets\/.+\.js$/;
+for (const [nombre, viewport] of [
+  ['escritorio', { width: 1280, height: 720 }],
+  ['celular', { width: 375, height: 812 }],
+] as const) {
+  test.describe(`Antes de que cargue el código (${nombre})`, () => {
+    test.use({ viewport });
+
+    test('la cabecera y el botón ☀️/🌙 se ven desde el primer momento y la tarjeta "Cargando…" no salta', async ({ page }) => {
+      // 1) Sin el código de la app: solo el HTML de index.html (lo que se ve con una red lenta).
+      await page.route(CODIGO_DE_LA_APP, (ruta) => ruta.abort());
+      await page.goto('/');
+      await expect(page.getByRole('banner')).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Buscador de centros de negocio' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Cambiar a modo oscuro' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Saltar al buscador' })).toBeAttached();
+      const tarjeta = page.locator('.tarjeta-centro');
+      await expect(tarjeta).toContainText('Cargando…');
+      const sinReact = await tarjeta.boundingBox();
+
+      // 2) Con el código, pero config.json todavía no llega: React ya reemplazó el HTML por su primera pantalla.
+      await page.unroute(CODIGO_DE_LA_APP);
+      await page.route('**/config.json', () => {}); // no responde
+      await page.reload();
+      await page.waitForFunction(() => Object.keys(document.querySelector('.cabecera') ?? {}).some((k) => k.startsWith('__react')));
+      await expect(page.getByRole('heading', { level: 1, name: 'Buscador de centros de negocio' })).toBeVisible();
+      expect(await tarjeta.boundingBox()).toEqual(sinReact);
+    });
+  });
+}
+
+test('antes de que cargue el código, el botón de tema ya muestra el ícono del modo del sistema (oscuro)', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.route(CODIGO_DE_LA_APP, (ruta) => ruta.abort());
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-tema-efectivo', 'oscuro');
+  await expect(page.locator('#btn-tema .icono-sol')).toBeVisible();
+  await expect(page.locator('#btn-tema .icono-luna')).toBeHidden();
+});
+
 test.describe('Celular (375 px)', () => {
   test.use({ viewport: { width: 375, height: 812 }, hasTouch: true });
 
