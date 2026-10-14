@@ -7,8 +7,8 @@
     1. Más margen a los lados: el contenido va en una columna centrada de ancho cómodo
        (--ancho-contenido) con margen lateral generoso (--margen-lateral). En el celular, 16 px.
     2. Contornos menos agresivos: bordes de 1 px de color suave (--borde-control) y, al llegar con el
-       teclado, un anillo suave (--anillo) en vez del contorno grueso de 3 px. Solo con :focus-visible
-       (no al hacer clic con el mouse).
+       teclado, el borde en azul + un anillo de 2 px (--anillo) en vez del contorno grueso de 3 px. Solo con
+       :focus-visible (no al hacer clic con el mouse). El anillo contrasta al menos 3:1 con el fondo.
     3. Íconos alineados: todos son SVG de 16–18 px (clase "icono") centrados con inline-flex.
    ============================================================================= */
 
@@ -37,8 +37,9 @@
   --info: #174a9c;
   --info-fondo: #e7effc;
   --foco: #1d5bbf;
-  /* Anillo de foco: el primario semitransparente (va junto con el borde en color primario). */
-  --anillo: rgba(29, 91, 191, 0.32);
+  /* Anillo de foco (2 px, junto al borde en color primario): el primario un poco transparente. Con 0,7 contrasta
+     3,2:1 con el fondo y 3,4:1 con el blanco de las tarjetas (mínimo recomendado para indicadores: 3:1). */
+  --anillo: rgba(29, 91, 191, 0.7);
   --sombra: 0 1px 2px rgba(16, 24, 40, 0.05);
   --radio: 10px;
   --fuente: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -77,7 +78,7 @@
     --info: #a9c6ff;
     --info-fondo: #18243b;
     --foco: #79a8ff;
-    --anillo: rgba(121, 168, 255, 0.4);
+    --anillo: rgba(121, 168, 255, 0.6); /* 3,6:1 con el fondo y 3,3:1 con las tarjetas */
     --sombra: 0 1px 2px rgba(0, 0, 0, 0.35);
     --flecha-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a6afbe' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
   }
@@ -107,7 +108,7 @@
   --info: #a9c6ff;
   --info-fondo: #18243b;
   --foco: #79a8ff;
-  --anillo: rgba(121, 168, 255, 0.4);
+  --anillo: rgba(121, 168, 255, 0.6);
   --sombra: 0 1px 2px rgba(0, 0, 0, 0.35);
   --flecha-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a6afbe' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
 }
@@ -159,8 +160,10 @@ a {
 /* ---------- Foco (teclado) ----------
    Solo con :focus-visible: el navegador lo muestra al llegar con el teclado, no al hacer clic con el mouse.
    General (enlaces, textos): un contorno fino de 2 px. Controles con borde (botones, cajas, desplegables):
-   borde en color primario + anillo suave alrededor (más abajo). El contorno transparente hace que el foco
-   se siga viendo en el modo de alto contraste de Windows (ahí no se dibujan sombras). */
+   borde en color primario + anillo de 2 px alrededor. El contorno transparente hace que el foco se siga
+   viendo en el modo de alto contraste de Windows (ahí no se dibujan sombras).
+   Las reglas :hover de esos controles llevan :not(:focus-visible): con el mouse encima de un control que
+   tiene el foco del teclado, el borde sigue azul. */
 :focus-visible {
   outline: 2px solid var(--foco);
   outline-offset: 2px;
@@ -178,7 +181,20 @@ a {
   outline: 2px solid transparent;
   outline-offset: 2px;
   border-color: var(--primario);
-  box-shadow: 0 0 0 3px var(--anillo);
+  box-shadow: 0 0 0 2px var(--anillo);
+}
+/* Cajas de texto y desplegables: Chromium los marca :focus-visible también al hacer clic con el mouse.
+   Si lo último que se usó fue el mouse (<html data-modalidad="puntero">, ver src/logica/modalidad.ts),
+   solo queda el borde azul (dice dónde se va a escribir), sin el anillo. */
+:root[data-modalidad='puntero'] #buscador:focus-visible,
+:root[data-modalidad='puntero'] .campo input:focus-visible,
+:root[data-modalidad='puntero'] .campo select:focus-visible,
+:root[data-modalidad='puntero'] #tam-pagina:focus-visible {
+  box-shadow: none;
+}
+/* "Saltar al contenido" lleva el foco a <main> (para seguir con Tab desde ahí): no se remarca toda la página. */
+#principal:focus {
+  outline: none;
 }
 
 .solo-lectores {
@@ -339,6 +355,8 @@ a {
 }
 .btn-tema:hover {
   background: var(--superficie-2);
+}
+.btn-tema:hover:not(:focus-visible) {
   border-color: var(--borde-fuerte);
 }
 /* Se muestra el ícono del modo AL QUE se cambia: luna en claro, sol en oscuro. */
@@ -482,11 +500,12 @@ a {
   border-color: var(--primario-hover);
   color: var(--primario-texto);
 }
-/* Botón principal con el foco: el anillo va por fuera y una línea clara por dentro (se ve sobre el azul). */
+/* Botón principal con el foco: su borde ya es azul (no cambia), así que el anillo va separado del botón por
+   una línea del color de la tarjeta y es sólido (contrasta con el fondo y con el relleno azul). */
 .btn-primario:focus-visible {
   box-shadow:
-    inset 0 0 0 1px var(--superficie),
-    0 0 0 3px var(--anillo);
+    0 0 0 1px var(--superficie),
+    0 0 0 3px var(--foco);
 }
 .btn-grande {
   min-height: 46px;
@@ -586,7 +605,7 @@ a {
   border-radius: var(--radio);
   box-shadow: var(--sombra);
 }
-#buscador:hover {
+#buscador:hover:not(:focus) {
   border-color: var(--borde-fuerte);
 }
 #buscador:focus {
@@ -669,9 +688,9 @@ a {
   border: 1px solid var(--borde-control);
   border-radius: 8px;
 }
-.campo input:hover:not(:disabled),
-.campo select:hover:not(:disabled),
-#tam-pagina:hover {
+.campo input:hover:not(:disabled, :focus-visible),
+.campo select:hover:not(:disabled, :focus-visible),
+#tam-pagina:hover:not(:focus-visible) {
   border-color: var(--borde-fuerte);
 }
 /* Desplegables con flecha propia (la del sistema cambia de tamaño y altura según el navegador). */
@@ -720,7 +739,7 @@ a {
 /* Con el teclado sobre "Por orden / Por centro": el mismo anillo que los demás controles. */
 .selector-vista:has(input:focus-visible) {
   border-color: var(--primario);
-  box-shadow: 0 0 0 3px var(--anillo);
+  box-shadow: 0 0 0 2px var(--anillo);
   outline: 2px solid transparent;
 }
 .opcion-vista {
@@ -928,11 +947,17 @@ a {
   cursor: pointer;
   opacity: 0.75;
 }
-.btn-copiar:hover,
-.btn-copiar:focus-visible {
+.btn-copiar:hover {
   opacity: 1;
   color: var(--primario);
   border-color: var(--borde);
+  background: var(--superficie);
+}
+/* Con el teclado: como los demás controles (borde azul + anillo). Va después de :hover para ganarle. */
+.btn-copiar:focus-visible {
+  opacity: 1;
+  color: var(--primario);
+  border-color: var(--primario);
   background: var(--superficie);
 }
 
@@ -943,14 +968,18 @@ a {
 .fila-centro {
   cursor: pointer;
 }
-/* Botón de la flecha: centrado con la primera línea de texto de la fila (no la hace más alta). */
+/* Botón de la flecha: centrado con el código del centro de su fila, sin hacerla más alta. Se apoya en el borde
+   de arriba de la línea (vertical-align: top) y sobresale 3 px arriba y 5 px abajo: así ocupa 20 px, lo mismo que
+   la línea de texto, y su centro coincide con el del código (letra monoespaciada más chica, apoyada en la misma
+   base que el resto de la fila: su centro queda ~1,5 px más abajo que el centro de la línea). */
 .btn-expandir {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  vertical-align: top;
   width: 28px;
   height: 28px;
-  margin: -4px 0;
+  margin: -3px 0 -5px;
   padding: 0;
   border: 1px solid var(--borde);
   border-radius: 6px;
@@ -958,7 +987,7 @@ a {
   color: var(--texto);
   cursor: pointer;
 }
-.btn-expandir:hover {
+.btn-expandir:hover:not(:focus-visible) {
   border-color: var(--borde-fuerte);
 }
 .icono-expandir {

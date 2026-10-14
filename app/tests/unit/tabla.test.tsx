@@ -3,6 +3,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { ContenidoCelda } from '../../src/componentes/Celdas.tsx';
+import { IconoOrden } from '../../src/componentes/Iconos.tsx';
 import { Paginacion } from '../../src/componentes/Paginacion.tsx';
 import { TablaCentros } from '../../src/componentes/TablaCentros.tsx';
 import { TablaOrdenes } from '../../src/componentes/TablaOrdenes.tsx';
@@ -42,6 +43,35 @@ describe('TablaOrdenes', () => {
   it('muestra un mensaje si no hay resultados', () => {
     const vacia = renderToStaticMarkup(<TablaOrdenes columnas={COLUMNAS} filas={[]} terminosDe={sinTerminos} ordenarPor="" direccion="asc" />);
     expect(vacia).toContain('No hay resultados');
+  });
+});
+
+describe('IconoOrden (indicador ▲▼ de los títulos)', () => {
+  /** Las flechas que dibuja: "arriba" / "abajo" y si van tenues. */
+  const flechas = (aria: 'none' | 'ascending' | 'descending') =>
+    [...renderToStaticMarkup(<IconoOrden aria={aria} />).matchAll(/<path[^>]*d="M12 (4\.5|19\.5)[^"]*"[^>]*>/g)].map((m) => ({
+      flecha: m[1] === '4.5' ? 'arriba' : 'abajo',
+      tenue: /opacity="0\.55"/.test(m[0]),
+    }));
+
+  it('ascendente: solo la flecha de arriba; descendente: solo la de abajo (ambas marcadas)', () => {
+    expect(flechas('ascending')).toEqual([{ flecha: 'arriba', tenue: false }]);
+    expect(flechas('descending')).toEqual([{ flecha: 'abajo', tenue: false }]);
+  });
+
+  it('sin ordenar: las dos flechas, tenues', () => {
+    expect(flechas('none')).toEqual([
+      { flecha: 'arriba', tenue: true },
+      { flecha: 'abajo', tenue: true },
+    ]);
+  });
+
+  it('el título ordenado lleva el ícono que coincide con su aria-sort', () => {
+    const html = renderToStaticMarkup(<TablaOrdenes columnas={COLUMNAS} filas={FILAS} terminosDe={sinTerminos} ordenarPor="cliente" direccion="asc" />);
+    const celda = /<th[^>]*aria-sort="ascending"[^>]*>[\s\S]*?<\/th>/.exec(html)?.[0] ?? '';
+    expect(celda).toContain('data-orden="cliente"');
+    expect(celda).toContain('d="M12 4.5');
+    expect(celda).not.toContain('d="M12 19.5');
   });
 });
 

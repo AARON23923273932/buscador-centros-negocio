@@ -1,7 +1,8 @@
 // Cambios de diseño pedidos por el supervisor (Gustavo, 14/10/2026), medidos en Chromium:
 //   1. Más margen a los lados: el contenido no usa todo el ancho de la pantalla.
-//   2. Contornos menos agresivos: bordes de 1 px y un anillo suave al llegar con el teclado (no con el mouse).
-//   3. Íconos alineados con su texto (mismo tamaño, sin desfase vertical).
+//   2. Contornos menos agresivos: bordes de 1 px y un anillo suave al llegar con el teclado (no con el mouse),
+//      que contrasta al menos 3:1 con el fondo en claro y en oscuro.
+//   3. Íconos alineados con su texto (mismo tamaño, desfase vertical de 1 px o menos).
 import { expect, test, type Page } from '@playwright/test';
 import { abrir } from './ayuda.ts';
 import { usarConfigPruebas } from './config-pruebas.ts';
@@ -30,6 +31,49 @@ async function desfase(page: Page, selectorIcono: string, selectorTexto: string)
     [selectorIcono, selectorTexto] as const,
   );
 }
+
+/** Lleva el foco a un control CON EL TECLADO (Shift+Tab y Tab), como lo haría una persona. */
+async function llegarConTeclado(page: Page, selector: string) {
+  await page.locator(selector).first().focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(page.locator(selector).first()).toBeFocused();
+}
+
+/** Borde, sombra (anillo) y :focus-visible del elemento con el foco. */
+const estiloFoco = (page: Page) =>
+  page.evaluate(() => {
+    const el = document.activeElement!;
+    const e = getComputedStyle(el);
+    return { visible: el.matches(':focus-visible'), borde: e.borderTopColor, sombra: e.boxShadow };
+  });
+
+/** Contraste (WCAG) del anillo (--anillo, semitransparente) dibujado sobre el fondo de la página y sobre las tarjetas. */
+const contrastesAnillo = (page: Page) =>
+  page.evaluate(() => {
+    const rgba = (texto: string) => {
+      const prueba = document.createElement('div');
+      prueba.style.color = texto;
+      document.body.append(prueba);
+      const valores = getComputedStyle(prueba).color.match(/[\d.]+/g)!.map(Number);
+      prueba.remove();
+      return [valores[0]!, valores[1]!, valores[2]!, valores[3] ?? 1];
+    };
+    const variable = (nombre: string) => rgba(getComputedStyle(document.documentElement).getPropertyValue(nombre).trim());
+    const luz = ([r, g, b]: number[]) => {
+      const lineal = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * lineal(r!) + 0.7152 * lineal(g!) + 0.0722 * lineal(b!);
+    };
+    const contraste = (a: number[], b: number[]) => {
+      const [x, y] = [luz(a), luz(b)].sort((m, n) => n - m);
+      return (x! + 0.05) / (y! + 0.05);
+    };
+    const anillo = variable('--anillo');
+    const sobre = (fondo: number[]) => fondo.slice(0, 3).map((c, i) => anillo[3]! * anillo[i]! + (1 - anillo[3]!) * c);
+    const fondo = variable('--fondo');
+    const tarjeta = variable('--superficie');
+    return { fondo: contraste(sobre(fondo), fondo), tarjeta: contraste(sobre(tarjeta), tarjeta) };
+  });
 
 test.describe('Diseño (pedido del supervisor)', () => {
   test('1. más margen a los lados: el contenido va centrado con un ancho máximo cómodo', async ({ page }) => {
@@ -76,7 +120,7 @@ test.describe('Diseño (pedido del supervisor)', () => {
     expect(conMouse.visible).toBe(false);
     expect(conMouse.sombra).toBe('none');
 
-    // Con el teclado: borde primario + anillo semitransparente (no el contorno de 3 px de antes).
+    // Con el teclado: borde primario + anillo de 2 px (no el contorno de 3 px de antes).
     await page.getByLabel('Filas por página').focus();
     await page.keyboard.press('Tab');
     const exportar = page.getByRole('button', { name: 'Exportar a Excel' });
@@ -86,9 +130,13 @@ test.describe('Diseño (pedido del supervisor)', () => {
       return { visible: b.matches(':focus-visible'), sombra: e.boxShadow, borde: e.borderTopColor, contorno: e.outlineColor };
     });
     expect(conTeclado.visible).toBe(true);
-    expect(conTeclado.sombra).toMatch(/rgba\(29, 91, 191, 0\.32\) 0px 0px 0px 3px/);
+    expect(conTeclado.sombra).toBe('rgba(29, 91, 191, 0.7) 0px 0px 0px 2px');
     expect(conTeclado.borde).toBe('rgb(29, 91, 191)');
     expect(conTeclado.contorno).toBe('rgba(0, 0, 0, 0)'); // transparente: solo se ve en alto contraste de Windows
+    // El anillo se distingue: al menos 3:1 con el fondo de la página y con el blanco de las tarjetas.
+    const contraste = await contrastesAnillo(page);
+    expect(contraste.fondo).toBeGreaterThanOrEqual(3);
+    expect(contraste.tarjeta).toBeGreaterThanOrEqual(3);
 
     // Enlaces (sin borde): contorno fino de 2 px, bien visible.
     await page.getByRole('link', { name: 'CN-0001' }).first().focus();
@@ -123,8 +171,15 @@ test.describe('Diseño (pedido del supervisor)', () => {
       return { visible: b.matches(':focus-visible'), sombra: e.boxShadow, borde: e.borderTopColor };
     });
     expect(conTeclado.visible).toBe(true);
-    expect(conTeclado.sombra).toMatch(/rgba\(121, 168, 255, 0\.4\) 0px 0px 0px 3px/);
+    expect(conTeclado.sombra).toBe('rgba(121, 168, 255, 0.6) 0px 0px 0px 2px');
     expect(conTeclado.borde).toBe('rgb(121, 168, 255)');
+    const contraste = await contrastesAnillo(page);
+    expect(contraste.fondo).toBeGreaterThanOrEqual(3);
+    expect(contraste.tarjeta).toBeGreaterThanOrEqual(3);
+
+    // El botón "copiar" de cada fila: el mismo borde azul con el teclado.
+    await llegarConTeclado(page, '#tabla-resultados .btn-copiar');
+    expect(await estiloFoco(page)).toEqual({ visible: true, borde: 'rgb(121, 168, 255)', sombra: 'rgba(121, 168, 255, 0.6) 0px 0px 0px 2px' });
 
     // Enlace del código: contorno de 2 px en el mismo azul claro.
     await page.getByRole('link', { name: 'CN-0001' }).first().focus();
@@ -135,6 +190,63 @@ test.describe('Diseño (pedido del supervisor)', () => {
       return { ancho: e.outlineWidth, estilo: e.outlineStyle, color: e.outlineColor };
     });
     expect(enlace).toEqual({ ancho: '2px', estilo: 'solid', color: 'rgb(121, 168, 255)' });
+  });
+
+  test('2. el foco se ve en TODOS los controles con borde: "copiar" de cada fila y botón principal', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await abrir(page, '/ordenes');
+    // "Copiar" (uno por fila: lo que más se recorre con Tab): borde azul + anillo, como los demás.
+    await llegarConTeclado(page, '#tabla-resultados .btn-copiar');
+    expect(await estiloFoco(page)).toEqual({ visible: true, borde: 'rgb(29, 91, 191)', sombra: 'rgba(29, 91, 191, 0.7) 0px 0px 0px 2px' });
+    // Con el mouse, solo el borde gris del :hover (sin anillo).
+    await page.locator('#tabla-resultados .btn-copiar').nth(1).hover();
+    const conMouse = await page.locator('#tabla-resultados .btn-copiar').nth(1).evaluate((b) => getComputedStyle(b).borderTopColor);
+    expect(conMouse).toBe('rgb(214, 219, 227)');
+
+    // Botón principal ("Ir al buscador", "Iniciar sesión"): su borde ya es azul, así que el anillo va separado
+    // del botón por una línea blanca y es sólido.
+    await page.goto('/no-existe');
+    await llegarConTeclado(page, '#enlace-ir-al-buscador');
+    expect(await estiloFoco(page)).toEqual({
+      visible: true,
+      borde: 'rgb(29, 91, 191)',
+      sombra: 'rgb(255, 255, 255) 0px 0px 0px 1px, rgb(29, 91, 191) 0px 0px 0px 3px',
+    });
+  });
+
+  test('2. con el mouse ENCIMA de un control que tiene el foco del teclado, el borde sigue azul', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await abrir(page, '/ordenes');
+    for (const selector of ['#f-cliente', '#f-codigo', '#tam-pagina', '#btn-tema', '#tabla-resultados .btn-copiar']) {
+      await llegarConTeclado(page, selector);
+      await page.locator(selector).first().hover();
+      expect(await estiloFoco(page), selector).toEqual({ visible: true, borde: 'rgb(29, 91, 191)', sombra: 'rgba(29, 91, 191, 0.7) 0px 0px 0px 2px' });
+    }
+    await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
+    await llegarConTeclado(page, '.fila-centro .btn-expandir');
+    await page.locator('.fila-centro .btn-expandir').first().hover();
+    expect((await estiloFoco(page)).borde).toBe('rgb(29, 91, 191)');
+  });
+
+  test('2. al hacer CLIC en una caja de texto o un desplegable no aparece el anillo (sí con Tab)', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await abrir(page, '/ordenes');
+    for (const selector of ['#buscador', '#f-codigo', '#f-cliente', '#tam-pagina']) {
+      await page.locator(selector).click();
+      if (selector.startsWith('#f-cliente') || selector === '#tam-pagina') await page.keyboard.press('Escape'); // cierra la lista
+      await expect(page.locator(selector)).toBeFocused();
+      // Solo el borde azul (dice dónde se escribe o qué se eligió), sin el anillo.
+      expect(await estiloFoco(page), selector).toMatchObject({ borde: 'rgb(29, 91, 191)', sombra: 'none' });
+    }
+    // Escribir no hace aparecer el anillo a la mitad.
+    await page.locator('#f-codigo').click();
+    await page.keyboard.type('cn');
+    expect((await estiloFoco(page)).sombra).toBe('none');
+    // Con Tab, el anillo vuelve.
+    await page.keyboard.press('Tab');
+    expect((await estiloFoco(page)).sombra).toBe('rgba(29, 91, 191, 0.7) 0px 0px 0px 2px');
+    await llegarConTeclado(page, '#f-cliente');
+    expect(await estiloFoco(page)).toEqual({ visible: true, borde: 'rgb(29, 91, 191)', sombra: 'rgba(29, 91, 191, 0.7) 0px 0px 0px 2px' });
   });
 
   test('3. el logo de Microsoft del botón "Iniciar sesión" va alineado con su texto', async ({ page }) => {
@@ -148,7 +260,7 @@ test.describe('Diseño (pedido del supervisor)', () => {
     await expect(page.locator('#btn-login')).toBeVisible();
     const m = await desfase(page, '#btn-login svg', '#btn-login');
     expect(m.tamano).toEqual([18, 18]);
-    expect(m.desfase).toBeLessThanOrEqual(1.5);
+    expect(m.desfase).toBeLessThanOrEqual(1);
   });
 
   test('3. íconos del mismo tamaño y alineados con su texto', async ({ page }) => {
@@ -168,11 +280,24 @@ test.describe('Diseño (pedido del supervisor)', () => {
       expect(m.tamano[0], nombre).toBeGreaterThanOrEqual(16);
       expect(m.tamano[0], nombre).toBeLessThanOrEqual(18);
       expect(m.tamano[1], nombre).toBe(m.tamano[0]);
-      expect(m.desfase, nombre).toBeLessThanOrEqual(1.5);
+      expect(m.desfase, nombre).toBeLessThanOrEqual(1);
     }
-    // El código (con su botón copiar) queda en la misma línea que el texto de las demás celdas de la fila.
-    const fila = await desfase(page, '#tabla-resultados tbody tr td:nth-child(1) .codigo', '#tabla-resultados tbody tr td:nth-child(5)');
-    expect(fila.desfase).toBeLessThanOrEqual(2);
+    // El código (con su botón copiar) queda en la misma línea que el texto de las demás celdas de la fila. Va en
+    // letra monoespaciada más chica, así que se compara la BASE de las letras (la línea donde se apoyan), no el
+    // centro: un elemento vacío "inline-block" se apoya justo en esa línea.
+    const bases = await page.evaluate(() => {
+      const base = (el: Element) => {
+        const marca = document.createElement('span');
+        marca.style.cssText = 'display:inline-block;width:0;height:0';
+        el.prepend(marca);
+        const y = marca.getBoundingClientRect().bottom;
+        marca.remove();
+        return y;
+      };
+      const fila = document.querySelector('#tabla-resultados tbody tr')!;
+      return Math.abs(base(fila.querySelector('td:nth-child(1) .codigo')!) - base(fila.querySelector('td:nth-child(5)')!));
+    });
+    expect(bases).toBeLessThanOrEqual(1);
 
     // Desplegables: flecha propia (SVG), igual en todos.
     for (const selector of ['#f-cliente', '#f-tipo', '#f-estado', '#tam-pagina']) {
@@ -188,7 +313,17 @@ test.describe('Diseño (pedido del supervisor)', () => {
     await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
     const expandir = await desfase(page, '.fila-centro .btn-expandir svg', '.fila-centro .codigo');
     expect(expandir.tamano).toEqual([16, 16]);
-    expect(expandir.desfase).toBeLessThanOrEqual(2);
+    expect(expandir.desfase).toBeLessThanOrEqual(1);
+    // …y la fila no se hace más alta por el botón (mismo alto que una fila sin él).
+    const altos = await page.evaluate(() => {
+      const fila = document.querySelector('.fila-centro')!;
+      const alto = fila.getBoundingClientRect().height;
+      fila.querySelector<HTMLElement>('.btn-expandir')!.style.display = 'none';
+      const sinBoton = fila.getBoundingClientRect().height;
+      fila.querySelector<HTMLElement>('.btn-expandir')!.style.display = '';
+      return { alto, sinBoton };
+    });
+    expect(altos.alto).toBe(altos.sinBoton);
   });
 
   test('3. en el celular el botón "Filtros" también lleva su ícono alineado', async ({ page }) => {
@@ -196,6 +331,6 @@ test.describe('Diseño (pedido del supervisor)', () => {
     await abrir(page, '/ordenes');
     const m = await desfase(page, '#btn-mostrar-filtros svg', '#btn-mostrar-filtros');
     expect(m.tamano).toEqual([16, 16]);
-    expect(m.desfase).toBeLessThanOrEqual(1.5);
+    expect(m.desfase).toBeLessThanOrEqual(1);
   });
 });

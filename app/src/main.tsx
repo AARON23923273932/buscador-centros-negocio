@@ -5,6 +5,10 @@ import { createRoot } from 'react-dom/client';
 import './estilos.css';
 import { App } from './App.tsx';
 import { Enrutador } from './componentes/Enrutador.tsx';
+import { vigilarModalidad } from './logica/modalidad.ts';
+
+// Mouse o teclado: con el mouse no se dibuja el anillo de foco en cajas y desplegables (ver logica/modalidad.ts).
+vigilarModalidad();
 
 const raiz = document.getElementById('raiz');
 if (raiz) {
