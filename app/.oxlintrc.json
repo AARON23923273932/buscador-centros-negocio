@@ -1,0 +1,20 @@
+{
+  // Revisión automática del código ("linter") con oxlint: npm run lint (también corre dentro de npm run build).
+  //
+  // Lo más importante son las reglas de los hooks de React, que TypeScript no revisa:
+  //  - rules-of-hooks: los use…() se llaman siempre, en el mismo orden (nunca dentro de un if o un bucle);
+  //  - exhaustive-deps: useEffect/useMemo/useCallback declaran todo lo que usan (si no, trabajan con datos viejos).
+  // Además, la categoría "correctness": código que con seguridad está mal o no sirve.
+  //
+  // Por qué oxlint y no ESLint + typescript-eslint: typescript-eslint necesita TypeScript < 6.1 (usa su API de
+  // JavaScript) y el proyecto usa TypeScript 7, que ya no la trae. oxlint no depende de TypeScript, entiende
+  // .ts/.tsx solo y trae las mismas reglas de react-hooks (con los mismos nombres).
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc", "unicorn"],
+  "categories": { "correctness": "error" },
+  "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error"
+  },
+  "ignorePatterns": ["dist/**", "test-results/**", "playwright-report/**"]
+}

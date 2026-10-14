@@ -89,16 +89,16 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Excel 
   //  - eTag: la "versión" del Excel leído, para saber en la auto-actualización si cambió.
   const memoria = useRef<{ cargando: boolean; eTag: string | null }>({ cargando: false, eTag: null });
 
-  // (El tipo se escribe explícito porque la función se usa a sí misma en el botón "Reintentar".)
-  const cargar: (motivo: MotivoCarga) => Promise<void> = useCallback(async (motivo: MotivoCarga): Promise<void> => {
+  // Función con nombre ("function cargar"): se usa a sí misma en el botón "Reintentar" del aviso de error.
+  const cargar = useCallback(async function cargar(motivo: MotivoCarga): Promise<void> {
     const m = memoria.current;
     if (m.cargando) return;
     m.cargando = true;
-    setEstado((e) => ({
-      ...e,
-      cargando: true,
-      sinDatos: !e.datos && motivo !== 'auto' ? (e.sinDatos === 'cargando' ? 'cargando' : 'reintentando') : e.sinDatos,
-    }));
+    setEstado((e) => {
+      const sinDatos = !e.datos && motivo !== 'auto' ? (e.sinDatos === 'cargando' ? 'cargando' : 'reintentando') : e.sinDatos;
+      // Si nada cambia (la carga inicial ya empieza en "cargando"), se devuelve el mismo estado: React no redibuja.
+      return e.cargando && e.sinDatos === sinDatos ? e : { ...e, cargando: true, sinDatos };
+    });
     const { config: cfg, sesion: s } = actual.current;
     const obtenerToken = s ? () => s.obtenerToken({ interactivo: motivo !== 'auto' }) : null;
     try {
@@ -149,8 +149,11 @@ export function useExcel({ config, sesion, avisar, alCargar }: Opciones): Excel 
     }
   }, []);
 
-  // Carga inicial.
+  // Carga inicial: el efecto empieza la descarga del Excel (un sistema externo), que es justo para lo que
+  // sirven los efectos. El aviso de la regla es porque cargar() marca "cargando" al empezar; en la carga
+  // inicial el estado ya empieza así y no cambia (ver arriba), así que no hay un render de más.
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- inicia la lectura del Excel (ver el comentario de arriba)
     void cargar('inicial');
   }, [cargar]);
 

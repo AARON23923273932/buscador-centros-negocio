@@ -82,7 +82,7 @@ interface Cfb {
 export function cambiarXmlHoja(bytes: Uint8Array, cambiar: (xml: string) => string): Uint8Array {
   const CFB = XLSX.CFB as Cfb;
   const zip = CFB.read(bytes, { type: 'array' });
-  const i = zip.FullPaths.findIndex((p) => /xl\/worksheets\/sheet1\.xml$/.test(p));
+  const i = zip.FullPaths.findIndex((p) => p.endsWith('xl/worksheets/sheet1.xml'));
   const entrada = zip.FileIndex[i];
   const xml = cambiar(new TextDecoder().decode(entrada.content));
   entrada.content = new TextEncoder().encode(xml);

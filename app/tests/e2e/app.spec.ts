@@ -136,7 +136,7 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     const cliente = page.getByLabel('Cliente', { exact: true });
     const opciones = await cliente.locator('option').allInnerTexts();
     expect(opciones[0]).toBe('Todos');
-    expect(opciones.slice(1)).toEqual([...opciones.slice(1)].sort((a, b) => a.localeCompare(b, 'es')));
+    expect(opciones.slice(1)).toEqual(opciones.slice(1).sort((a, b) => a.localeCompare(b, 'es')));
     expect(opciones).toContain('Inmobiliaria Demo Ñandú E.I.R.L.');
 
     await cliente.selectOption('Cliente Demo B S.A.');
