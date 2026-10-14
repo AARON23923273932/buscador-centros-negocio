@@ -1,0 +1,28 @@
+{
+  // TypeScript de la app (lo que corre en el navegador: src/).
+  // "npm run typecheck" revisa los tipos con este archivo y con tsconfig.node.json (pruebas y configuración).
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+
+    // Revisión estricta: sin "any" implícitos, null/undefined revisados, etc.
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+
+    // TypeScript solo revisa; quien compila es Vite.
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}

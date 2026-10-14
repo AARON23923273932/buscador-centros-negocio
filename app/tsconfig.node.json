@@ -1,0 +1,11 @@
+{
+  // TypeScript de lo que corre en Node: pruebas (Vitest y Playwright) y archivos de configuración.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    // Las pruebas y vite.config.ts importan los scripts .mjs de scripts/ (se leen sus tipos, no se revisan).
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["tests", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+}
