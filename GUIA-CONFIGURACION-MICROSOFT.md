@@ -321,6 +321,7 @@ Sirve justo para este tipo de app (página estática), da HTTPS automático y un
 6. Abrir la dirección y probar (ver "Lista de verificación").
 
 El archivo `staticwebapp.config.json` (ya incluido en `dist/`) agrega cabeceras de seguridad, evita que `config.json` quede guardado en caché y hace lo mismo que `_redirects` en Netlify: con `navigationFallback`, toda dirección que no sea un archivo (ej. `/centros/A2338PY01`) entrega `index.html`, salvo `assets/…`, `config.json`, `redirect.html` y demás archivos (si faltaran, responden "no encontrado" en vez de la página).
+- **Caché:** en Azure, las reglas de `routes` **no se aplican** a lo que entrega `navigationFallback` (documentación de Microsoft, "Fallback routes"): una regla para `/index.html` no alcanzaría a `/ordenes` ni a `/centros/…`. Por eso `Cache-Control: no-cache` (el navegador pregunta siempre si hay una versión nueva) va en **`globalHeaders`**, que vale para toda respuesta, y solo `assets/…` (archivos con huella en el nombre, que nunca cambian) lo cambia por una caché larga. Si algún día se publica en Azure, comprobarlo con `curl.exe -I https://<dirección>/centros/<código>` (debe decir `Cache-Control: no-cache`).
 
 **Para cambiar algo después** (con Netlify, cambiar "`swa deploy …`" por "`npm.cmd run preparar-publicacion` y arrastrar `publicar/`"):
 - Solo configuración → editar **`app/public/config.json`**, `npm run build` y volver a ejecutar `swa deploy …`. (No editar `dist/config.json` ni `publicar/config.json`: se pierden en el siguiente `npm run build` / `preparar-publicacion`.)
@@ -333,9 +334,10 @@ El archivo `staticwebapp.config.json` (ya incluido en `dist/`) agrega cabeceras 
 ### Otras opciones de hosting
 Cualquier servicio que publique **archivos estáticos con HTTPS** sirve: un servidor web de la empresa (IIS, Nginx), Azure Storage (sitio web estático), Netlify, etc. Requisitos:
 - Publicar el **contenido** de `dist/` tal cual (incluye `index.html`, `redirect.html`, `config.json`, `assets/`).
+- **Publicar en la raíz del dominio** (ej. `https://buscador.aic.pe/`), no en una subcarpeta (`https://servidor/buscador/`): desde que la app tiene rutas, pide sus archivos desde `/` (`base: '/'` en `app/vite.config.ts`). Para una subcarpeta hay que cambiar `base` y la regla de rutas (ver "Rutas de la app y `_redirects`", arriba) antes de compilar.
 - **HTTPS obligatorio** (Microsoft no acepta direcciones `http://` salvo `localhost`).
 - Que `config.json` no se guarde en caché por mucho tiempo.
-- **Rutas de la app** (`/ordenes`, `/centros/<código>`…): toda dirección que **no** sea un archivo debe entregar `index.html` (en IIS, una regla de *URL Rewrite*; en Nginx, `try_files $uri /index.html;`). Sin eso, abrir un enlace a un centro o recargar la página da error 404.
+- **Rutas de la app** (`/ordenes`, `/centros/<código>`…): toda dirección que **no** sea un archivo debe entregar `index.html` con código 200 (en IIS, una regla de *URL Rewrite*; en Nginx, `try_files $uri /index.html;`). Sin eso, abrir un enlace a un centro o recargar la página da error 404. **Azure Storage (sitio web estático) no puede hacerlo:** solo permite usar `index.html` como su "documento de error", que llega con código **404** en vez de 200 (la app se ve, pero cada ruta cuenta como "página inexistente" para el navegador, los proxies y los monitoreos). Para esta app es mejor Azure Static Web Apps o Netlify.
 - Registrar `https://<dirección>/redirect.html` y `https://<dirección>/` en Entra ID.
 - Opcional: quitar `datos/centros-ejemplo.xlsx` de `dist/` en producción (son datos ficticios, pero no hacen falta).
 

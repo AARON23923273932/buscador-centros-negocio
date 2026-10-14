@@ -1,6 +1,6 @@
 # ✅ Plan de pruebas — Buscador de centros de negocio
 
-> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (320 unitarias de lógica y componentes + 62 en navegador, al 14/10/2026, ya con **React Router** y los cambios de diseño de Gustavo) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
+> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (334 unitarias de lógica y componentes + 68 en navegador, al 14/10/2026, ya con **React Router** y los cambios de diseño de Gustavo) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
 > Marca `[x]` lo que pase. Si algo falla, anota qué viste (o toma captura) y me lo pasas.
 
 **Cómo abrir la app en tu PC:**
@@ -29,7 +29,7 @@ Objetivo: confirmar que **hace lo que pidieron** y que es fácil de usar.
 - [ ] 1.9 Copiar la dirección de la página con un filtro puesto (ej. `…/centros?q=cableado&estado=Abierta`), pegarla en otra pestaña → sale el mismo filtro y la misma vista.
 - [ ] 1.10 Achicar la ventana a tamaño celular (o F12 → ícono de celular) → se puede usar.
 - [ ] 1.11 Filtro **Estado**: es una lista para elegir (no se escribe) con los valores del Excel (*Abierta*, *Cerrada*, *En ejecución*…). Elegir uno → todas las filas tienen ese estado; queda en la dirección (`?estado=…`) y **Limpiar filtros** lo quita. **Tipo de orden** también es una lista para elegir.
-- [ ] 1.12 Las columnas **Monto** y **Moneda** **no** aparecen: ni en la tabla, ni al abrir un centro en "Por centro de negocio", ni en el Excel exportado. Buscar `USD` no encuentra nada.
+- [ ] 1.12 Las columnas **Monto** y **Moneda** **no** aparecen: ni en la tabla, ni al abrir un centro en "Por centro de negocio", ni en el detalle `/centros/<código>`, ni en el Excel exportado. Buscar `USD` no encuentra nada.
 - [ ] 1.13 Al final, **"Columnas detectadas en el Excel"** dice "Columnas ocultas: Monto (…), Moneda (…)".
 - [ ] 1.14 **Tu opinión:** ¿falta alguna columna, filtro o algo que el jefe pidió? ¿algún texto confuso?
 - [ ] 1.15 **Versión React + TypeScript (13/10/2026):** todo lo de 1.1–1.13 se ve y funciona **igual que antes** (mismos textos, colores, botón ☀️/🌙, teclado: `/`, Tab, "Saltar a la paginación").
@@ -46,13 +46,14 @@ Objetivo: confirmar que **hace lo que pidieron** y que es fácil de usar.
 - [ ] 1.16 **Rutas con React Router (14/10/2026, pedido de Gustavo):** cada pantalla tiene su dirección.
   - [ ] 1.16.1 Abrir `http://localhost:5173/?q=cableado` → la dirección pasa a **`/ordenes?q=cableado`** y la búsqueda se mantiene.
   - [ ] 1.16.2 **Por orden / Por centro de negocio** → la dirección cambia entre **`/ordenes`** y **`/centros`** sin perder la búsqueda ni los filtros. El botón **atrás** del navegador vuelve a la vista anterior con sus filtros (y su orden de columnas).
-  - [ ] 1.16.3 Clic en un **código de centro** (está subrayado) → **`/centros/<código>`**: se ven el código, la descripción, el/los cliente(s), el/los estado(s), el N° de órdenes y la tabla con **todas** sus órdenes. **Volver a la lista** regresa a la lista con los mismos filtros. El ícono de **copiar** al lado del código sigue copiando (y no abre el detalle).
+  - [ ] 1.16.3 Clic en un **código de centro** (está subrayado) → **`/centros/<código>`**: se ven el código, la descripción, el/los cliente(s), el/los estado(s), el N° de órdenes y la tabla con **todas** sus órdenes. **Volver a la lista** regresa a la lista con los mismos filtros. El ícono de **copiar** al lado del código sigue copiando (y no abre el detalle). En el detalle **no** aparecen Monto ni Moneda.
+    - Con el **teclado**: llegar al código con **Tab**, **Enter**, después **Shift+Tab** hasta "Volver a la lista" y **Enter** → en la lista, el foco (contorno azul) queda **en el mismo código** que se abrió. También si antes se usa el enlace "Saltar al contenido" (Tab al inicio de la página): "Volver" sigue regresando a la lista de origen.
   - [ ] 1.16.4 En el detalle, **recargar (F5)** → sigue el mismo centro. Escribir en la dirección un código que no existe (`/centros/NO-EXISTE`) → mensaje claro "No se encontró el centro de negocio…".
   - [ ] 1.16.5 Una dirección que no es de la app (`http://localhost:5173/hola`) → **"Página no encontrada"** con el botón **Ir al buscador**.
   - [ ] 1.16.6 Un enlace **viejo** `http://localhost:5173/?vista=centro&q=cableado` → lleva a **`/centros?q=cableado`**.
 - [ ] 1.17 **Diseño (14/10/2026, pedido de Gustavo):**
   - [ ] 1.17.1 **Más margen a los lados:** en una pantalla grande el contenido (avisos, buscador, filtros, tabla, pie) va en una columna centrada con espacio a los lados, alineada con la cabecera; en el celular queda un margen de 16 px y la página no se mueve de costado (la tabla sí tiene su propio desplazamiento).
-  - [ ] 1.17.2 **Contornos menos agresivos:** cajas, desplegables, botones y la tabla tienen bordes finos y suaves. Al hacer **clic** con el mouse en un botón **no** aparece contorno; al moverse con **Tab** aparece un **anillo azul suave** que se ve bien en claro y en oscuro. En la pantalla "Bienvenido" (login) el botón no aparece remarcado al abrir la página.
+  - [ ] 1.17.2 **Contornos menos agresivos:** cajas, desplegables, botones y la tabla tienen bordes finos y suaves. Al hacer **clic** con el mouse en un botón **no** aparece contorno (en una caja de texto o un desplegable solo se pone azul el borde); al moverse con **Tab** aparece un **anillo azul suave** que se ve bien en claro y en oscuro, también en el botón **copiar** de cada fila y si el mouse queda encima del control. En la pantalla "Bienvenido" (login) el botón no aparece remarcado al abrir la página.
   - [ ] 1.17.3 **Íconos alineados** con su texto (acercar con **Ctrl + rueda** para revisar): lupa y "×" del buscador, flechas de los desplegables, copiar junto al código, ▲▼ de los títulos, flecha de "Por centro", Actualizar, Exportar, Filtros (celular), ☀️/🌙, flechas de la paginación y el logo de Microsoft del botón de login.
 
 ---
