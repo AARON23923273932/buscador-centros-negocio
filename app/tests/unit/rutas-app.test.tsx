@@ -18,9 +18,13 @@ const CONFIG: Config = { ...structuredClone(CONFIG_POR_DEFECTO), autoActualizarM
 const PROPS = { config: CONFIG, sesion: null, avisar: () => {} };
 
 let pedidos: string[] = [];
+/** window.scrollTo (el detalle sube al inicio de la página): jsdom no lo implementa y lo avisa en la consola. */
+let subirAlInicio: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   pedidos = [];
   vi.spyOn(console, 'error').mockImplementation(() => {});
+  subirAlInicio = vi.fn();
+  vi.stubGlobal('scrollTo', subirAlInicio);
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
@@ -60,6 +64,9 @@ describe('rutas de la aplicación', () => {
     expect(location.search).toBe('?q=cn0005');
     expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Centro de negocio CN-0005');
     expect(document.querySelectorAll('#tabla-detalle tbody tr')).toHaveLength(3);
+    // Al abrir el detalle se ve desde arriba y el foco va a su título (lo anuncia el lector de pantalla).
+    expect(subirAlInicio).toHaveBeenCalledWith(0, 0);
+    expect(document.activeElement?.id).toBe('titulo-detalle');
 
     fireEvent.click(screen.getByRole('link', { name: 'Volver a la lista' }));
     await waitFor(() => expect(location.pathname + location.search).toBe('/ordenes?q=cn0005'));

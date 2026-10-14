@@ -1,6 +1,6 @@
 # ✅ Plan de pruebas — Buscador de centros de negocio
 
-> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (320 unitarias de lógica y componentes + 60 en navegador, al 14/10/2026, ya con **React Router** y los cambios de diseño de Gustavo) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
+> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (320 unitarias de lógica y componentes + 62 en navegador, al 14/10/2026, ya con **React Router** y los cambios de diseño de Gustavo) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
 > Marca `[x]` lo que pase. Si algo falla, anota qué viste (o toma captura) y me lo pasas.
 
 **Cómo abrir la app en tu PC:**

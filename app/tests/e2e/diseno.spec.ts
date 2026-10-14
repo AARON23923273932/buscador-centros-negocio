@@ -101,6 +101,56 @@ test.describe('Diseño (pedido del supervisor)', () => {
     expect(enlace).toEqual({ clase: 'codigo enlace-codigo', ancho: '2px', estilo: 'solid' });
   });
 
+  test('2. en modo oscuro el anillo de foco también se ve con el teclado (y no con el mouse)', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await abrir(page, '/ordenes');
+    expect(await page.evaluate(() => document.documentElement.dataset.temaEfectivo)).toBe('oscuro');
+
+    const actualizar = page.getByRole('button', { name: 'Actualizar' });
+    await actualizar.click();
+    expect(await actualizar.evaluate((b) => ({ visible: b.matches(':focus-visible'), sombra: getComputedStyle(b).boxShadow }))).toEqual({
+      visible: false,
+      sombra: 'none',
+    });
+
+    // Con el teclado: borde y anillo en el azul claro del modo oscuro (se distingue sobre el fondo oscuro).
+    await page.getByLabel('Filas por página').focus();
+    await page.keyboard.press('Tab');
+    const exportar = page.getByRole('button', { name: 'Exportar a Excel' });
+    await expect(exportar).toBeFocused();
+    const conTeclado = await exportar.evaluate((b) => {
+      const e = getComputedStyle(b);
+      return { visible: b.matches(':focus-visible'), sombra: e.boxShadow, borde: e.borderTopColor };
+    });
+    expect(conTeclado.visible).toBe(true);
+    expect(conTeclado.sombra).toMatch(/rgba\(121, 168, 255, 0\.4\) 0px 0px 0px 3px/);
+    expect(conTeclado.borde).toBe('rgb(121, 168, 255)');
+
+    // Enlace del código: contorno de 2 px en el mismo azul claro.
+    await page.getByRole('link', { name: 'CN-0001' }).first().focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    const enlace = await page.evaluate(() => {
+      const e = getComputedStyle(document.activeElement!);
+      return { ancho: e.outlineWidth, estilo: e.outlineStyle, color: e.outlineColor };
+    });
+    expect(enlace).toEqual({ ancho: '2px', estilo: 'solid', color: 'rgb(121, 168, 255)' });
+  });
+
+  test('3. el logo de Microsoft del botón "Iniciar sesión" va alineado con su texto', async ({ page }) => {
+    // Nada sale a internet durante la prueba.
+    await page.route(/^https:\/\/(login\.microsoftonline\.com|graph\.microsoft\.com)\//, (r) => r.abort());
+    await usarConfigPruebas(page, {
+      modo: 'microsoft',
+      microsoft: { clientId: '11111111-2222-3333-4444-555555555555', tenantId: 'aaaaaaaa-0000-0000-0000-000000000001' },
+    });
+    await page.goto('/ordenes');
+    await expect(page.locator('#btn-login')).toBeVisible();
+    const m = await desfase(page, '#btn-login svg', '#btn-login');
+    expect(m.tamano).toEqual([18, 18]);
+    expect(m.desfase).toBeLessThanOrEqual(1.5);
+  });
+
   test('3. íconos del mismo tamaño y alineados con su texto', async ({ page }) => {
     await abrir(page, '/ordenes?q=cn-000');
     const casos: [string, string, string][] = [
