@@ -22,8 +22,16 @@ export async function usarExcel(page: Page, matriz: unknown[][]) {
   );
 }
 
-/** Abre una dirección de la app y espera a que el Excel se haya leído (lista: contador; detalle: título). */
+/**
+ * Abre una dirección de la app y espera a que el Excel se haya leído: en las listas (/, /ordenes, /centros),
+ * al contador; en el detalle de un centro (/centros/<código>), a la ficha o al mensaje "No se encontró…"
+ * (el título del detalle aparece antes de leer el Excel: no sirve para esperar).
+ */
 export async function abrir(page: Page, ruta = '/') {
   await page.goto(ruta);
-  await expect(page.locator('#contador')).toContainText(/Mostrando|Sin /);
+  if (/^\/centros\/[^?#]/i.test(ruta)) {
+    await expect(page.locator('#ficha-centro, #centro-no-encontrado')).toBeVisible();
+  } else {
+    await expect(page.locator('#contador')).toContainText(/Mostrando|Sin /);
+  }
 }

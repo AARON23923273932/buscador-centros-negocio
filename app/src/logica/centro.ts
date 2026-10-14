@@ -18,6 +18,11 @@ export function buscarCentro(filas: readonly Fila[], codigo: string): Grupo | nu
   return agruparPorCentro(suyas)[0] ?? null;
 }
 
+/** ¿Es el mismo código de centro? Se comparan igual que en buscarCentro (sin importar mayúsculas, tildes ni espacios). */
+export function mismoCodigo(a: string, b: string): boolean {
+  return normalizarTexto(a) === normalizarTexto(b);
+}
+
 /** Estados distintos de las órdenes del centro (ej. ["Abierta", "Cerrada"]), sin repetir ni vacíos. */
 export function estadosDeCentro(grupo: Pick<Grupo, 'filas'>): string[] {
   return valoresUnicos(grupo.filas, 'estado');

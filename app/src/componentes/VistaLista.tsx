@@ -17,9 +17,10 @@
 //  Lo comprueba tests/unit/rendimiento.test.tsx.
 // =============================================================================
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useGuardarEnUrl } from '../hooks/useEstadoUrl.ts';
+import { mismoCodigo } from '../logica/centro.ts';
 import { TAMANOS_PAGINA } from '../logica/estado-url.ts';
 import { contarFiltrosActivos } from '../logica/filtros.ts';
 import { destinoCompatible, rutaDeVista, vistaDeRuta, type Destino } from '../logica/rutas.ts';
@@ -34,7 +35,7 @@ import { TablaCentros } from './TablaCentros.tsx';
 import { TablaOrdenes } from './TablaOrdenes.tsx';
 
 export function VistaLista() {
-  const { porDefecto, excel, busqueda, expandidos, alternarCentro, copiar, avisar } = useContextoApp();
+  const { porDefecto, excel, busqueda, expandidos, alternarCentro, anotarCentroAbierto, retomarCentroAbierto, copiar, avisar } = useContextoApp();
   const ubicacion = useLocation();
   const { estado, setEstado } = busqueda;
   const { datos, cargando } = excel;
@@ -82,6 +83,32 @@ export function VistaLista() {
   }, [paginaReal, estado.pagina, setEstado]);
   // La búsqueda queda en la query de la dirección (no mientras se va a otra ruta: no se escribe encima).
   useGuardarEnUrl(!redirigir && datos && paginaReal !== undefined ? { ...estado, pagina: paginaReal } : null, porDefecto, busqueda.marcarEscrita);
+
+  // Al volver del detalle de un centro ("Volver a la lista" o el botón atrás del navegador), el foco regresa al
+  // enlace del código que lo abrió (o, si se abrió con un enlace directo, al primer enlace de ese centro); si ya
+  // no está en la página, al buscador. Sin esto quedaría en <body> y quien usa el teclado tendría que empezar
+  // otra vez desde arriba.
+  const hayTabla = !!vista;
+  const redirigiendo = !!redirigir;
+  useEffect(() => {
+    if (!hayTabla || redirigiendo) return;
+    const abierto = retomarCentroAbierto();
+    if (!abierto) return;
+    const enlaces = [...(contenedorTabla.current?.querySelectorAll<HTMLAnchorElement>('a.enlace-codigo') ?? [])];
+    const delCentro = (a: HTMLAnchorElement | undefined) => !!a && mismoCodigo(a.textContent ?? '', abierto.codigo);
+    const mismo = enlaces[abierto.indice];
+    const enlace = delCentro(mismo) ? mismo : enlaces.find(delCentro);
+    (enlace ?? buscador.current)?.focus();
+  }, [retomarCentroAbierto, hayTabla, redirigiendo]);
+
+  /** Recuerda qué enlace de código abre el detalle (no con Ctrl, Shift o la rueda: esos abren otra pestaña). */
+  const recordarEnlace = (ev: MouseEvent<HTMLDivElement>) => {
+    if (ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || !(ev.target instanceof Element)) return;
+    const enlace = ev.target.closest('a.enlace-codigo');
+    if (!enlace) return;
+    const enlaces = [...ev.currentTarget.querySelectorAll('a.enlace-codigo')];
+    anotarCentroAbierto({ codigo: enlace.textContent ?? '', indice: enlaces.indexOf(enlace) });
+  };
 
   // ---- Acciones ----
   const limpiarFiltros = () => {
@@ -237,6 +264,7 @@ export function VistaLista() {
         aria-label="Resultados"
         tabIndex={0}
         aria-busy={cargando}
+        onClickCapture={recordarEnlace}
       >
         {tabla}
       </div>

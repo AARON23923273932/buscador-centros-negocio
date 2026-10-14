@@ -104,6 +104,17 @@ test.describe('Rutas (React Router)', () => {
     // TODAS las órdenes del centro (los filtros de la lista no se aplican en el detalle).
     await expect(page.locator('#tabla-detalle tbody tr')).toHaveCount(3);
     await expect(page.locator('#tabla-detalle')).toContainText('Compra');
+    // Las columnas ocultas (Monto, Moneda) tampoco aparecen en el detalle.
+    expect((await page.locator('#tabla-detalle thead th').allInnerTexts()).map((t) => t.trim())).toEqual([
+      'Código',
+      'Descripción del centro de negocio',
+      'Cliente',
+      'N° Orden',
+      'Tipo de orden',
+      'Fecha de creación',
+      'Estado',
+    ]);
+    for (const oculto of ['Monto', 'Moneda', 'PEN', 'USD']) await expect(page.locator('#detalle-centro')).not.toContainText(oculto);
     // Dentro del detalle el código ya no es enlace, pero se puede copiar.
     await expect(page.locator('#detalle-centro .enlace-codigo')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Copiar código CN-0005' }).first()).toBeVisible();
@@ -146,7 +157,10 @@ test.describe('Rutas (React Router)', () => {
     await expect(page).toHaveURL(/\/ordenes\?q=cn0005$/);
   });
 
-  test('enlace directo al detalle y al recargar: funciona (el servidor responde index.html en /centros/…)', async ({ page }) => {
+  // El servidor de estas pruebas es "vite preview", que ya responde index.html en cualquier ruta: esta prueba
+  // revisa la APP (lee la ruta al cargar, pide config.json desde la raíz…), no la regla de Netlify. Esa regla
+  // (public/_redirects) se revisa en tests/unit/despliegue.test.ts y, ya publicada, en el punto 6.5 del plan.
+  test('enlace directo al detalle y al recargar: la app abre el detalle (servidor de prueba: vite preview)', async ({ page }) => {
     const errores = vigilarErrores(page);
     const descargas = contarDescargas(page);
     const respuesta = await page.goto('/centros/CN-0005?q=cableado');
@@ -178,6 +192,9 @@ test.describe('Rutas (React Router)', () => {
       ['CN/01 #A', 'Centro raro', 'Cliente Demo A', 'OC-1'],
       ['CN/01 #A', 'Centro raro', 'Cliente Demo A', 'OC-2'],
       ['A2338PY01', 'Centro normal', 'Cliente Demo B', 'OC-3'],
+      ['50%2F', 'Centro con por ciento', 'Cliente Demo C', 'OC-4'],
+      ['.', 'Centro punto', 'Cliente Demo C', 'OC-5'],
+      ['..', 'Centro dos puntos', 'Cliente Demo C', 'OC-6'],
     ]);
     await abrir(page, '/ordenes');
     await page.getByRole('link', { name: 'CN/01 #A' }).first().click();
@@ -189,6 +206,88 @@ test.describe('Rutas (React Router)', () => {
     // Sin importar mayúsculas: /centros/a2338py01 encuentra A2338PY01.
     await page.goto('/centros/a2338py01');
     await expect(page.getByRole('heading', { level: 2, name: 'Centro de negocio A2338PY01' })).toBeVisible();
+
+    // Un código con el texto "%2F": React Router (useParams) lo convertiría en "/"; el detalle lo lee de la dirección.
+    await abrir(page, '/ordenes');
+    await page.getByRole('link', { name: '50%2F', exact: true }).click();
+    await expect(page).toHaveURL(/\/centros\/50%252F$/);
+    await expect(page.getByRole('heading', { level: 2, name: 'Centro de negocio 50%2F' })).toBeVisible();
+    await expect(page.locator('#tabla-detalle tbody tr')).toHaveCount(1);
+    await page.reload();
+    await expect(page.locator('#tabla-detalle tbody tr')).toHaveCount(1);
+
+    // "." y "..": el navegador los tomaría como carpetas (".." llevaría a "/"): van sin enlace, pero se copian.
+    await abrir(page, '/ordenes');
+    for (const [codigo, exacto] of [['.', /^\.$/], ['..', /^\.\.$/]] as const) {
+      await expect(page.getByRole('link', { name: codigo, exact: true })).toHaveCount(0);
+      await expect(page.locator('#tabla-resultados span.codigo').filter({ hasText: exacto })).toHaveCount(1);
+      await expect(page.getByRole('button', { name: `Copiar código ${codigo}`, exact: true })).toBeVisible();
+    }
+  });
+
+  test('con el teclado: al volver del detalle, el foco regresa al enlace que lo abrió (no se pierde)', async ({ page }) => {
+    await abrir(page, '/ordenes?q=cn0005');
+    // CN-0005 está en 3 filas: se abre desde la SEGUNDA y el foco debe volver a esa (no a la primera).
+    const enlaces = page.locator('#tabla-resultados a.enlace-codigo');
+    await expect(enlaces).toHaveCount(3);
+    await enlaces.nth(0).focus();
+    await page.keyboard.press('Tab'); // botón copiar
+    await page.keyboard.press('Tab'); // enlace de la segunda fila
+    await expect(enlaces.nth(1)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#titulo-detalle')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(page.locator('#btn-volver')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/ordenes\?q=cn0005$/);
+    await expect(enlaces.nth(1)).toBeFocused();
+    expect(await enlaces.nth(1).evaluate((a) => a.matches(':focus-visible'))).toBe(true); // se ve el contorno
+
+    // Igual con el botón atrás del navegador.
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#titulo-detalle')).toBeFocused();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/ordenes\?q=cn0005$/);
+    await expect(enlaces.nth(1)).toBeFocused();
+
+    // Detalle abierto con un enlace directo (no desde la lista): "Volver" lleva a /centros y el foco va al
+    // enlace de ese centro…
+    await abrir(page, '/centros/CN-0005?q=cn0005');
+    await page.locator('#btn-volver').focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/centros\?q=cn0005$/);
+    await expect(page.locator('#tabla-resultados a.enlace-codigo', { hasText: 'CN-0005' })).toBeFocused();
+    // …o, si no está en la lista (otra búsqueda), al buscador: nunca queda perdido en la página.
+    await abrir(page, '/centros/CN-0005?q=cableado');
+    await page.locator('#btn-volver').focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/centros\?q=cableado$/);
+    await expect(page.getByLabel('Buscar', { exact: true })).toBeFocused();
+  });
+
+  test('"Saltar al contenido" en el detalle no cambia la dirección: "Volver" sigue regresando a la lista de origen', async ({ page }) => {
+    await abrir(page, '/ordenes?q=cn0005');
+    // En la lista: "Saltar al buscador" lleva el foco al buscador sin agregar "#buscador" a la dirección.
+    await page.getByRole('link', { name: 'Saltar al buscador' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByLabel('Buscar', { exact: true })).toBeFocused();
+    await expect(page).toHaveURL(/\/ordenes\?q=cn0005$/);
+
+    await page.getByRole('link', { name: 'CN-0005' }).first().click();
+    await expect(page).toHaveURL(/\/centros\/CN-0005\?q=cn0005$/);
+    const historial = await page.evaluate(() => history.length);
+    await page.getByRole('link', { name: 'Saltar al contenido' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#principal')).toBeFocused();
+    await expect(page).toHaveURL(/\/centros\/CN-0005\?q=cn0005$/); // sin "#principal"
+    expect(await page.evaluate(() => history.length)).toBe(historial); // sin una entrada más en el historial
+    await page.keyboard.press('Tab'); // sigue desde el contenido
+    await expect(page.locator('#btn-actualizar')).toBeFocused();
+
+    await page.getByRole('link', { name: 'Volver a la lista' }).click();
+    await expect(page).toHaveURL(/\/ordenes\?q=cn0005$/); // la lista de origen (antes: /centros?q=cn0005)
+    await expect(page.locator('input[name="vista"][value="orden"]')).toBeChecked();
+    expect(await page.evaluate(() => history.length)).toBe(historial); // volvió atrás: no agregó otra entrada
   });
 
   test('"Página no encontrada" para cualquier otra dirección, con enlace al buscador', async ({ page }) => {

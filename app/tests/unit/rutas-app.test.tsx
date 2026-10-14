@@ -22,7 +22,8 @@ let pedidos: string[] = [];
 let subirAlInicio: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   pedidos = [];
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  // Sin silenciar console.error: si React o React Router reportan un error, la prueba falla (ver afterEach).
+  vi.spyOn(console, 'error');
   subirAlInicio = vi.fn();
   vi.stubGlobal('scrollTo', subirAlInicio);
   vi.stubGlobal(
@@ -35,6 +36,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  expect(console.error).not.toHaveBeenCalled();
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -143,6 +145,19 @@ describe('enlace del código del centro', () => {
     );
     expect(enDetalle).not.toContain('<a ');
     expect(renderToStaticMarkup(<ContenidoCelda columna={{ campo: 'codigoCentro' }} celda={{ t: 'CN-1' }} terminos={[]} />)).not.toContain('<a ');
+  });
+
+  it('los códigos "." y ".." van sin enlace (el navegador los tomaría como carpetas), pero se pueden copiar', () => {
+    for (const codigo of ['.', '..']) {
+      const html = renderToStaticMarkup(
+        <MemoryRouter initialEntries={['/ordenes']}>
+          <ContenidoCelda columna={{ campo: 'codigoCentro' }} celda={{ t: codigo }} terminos={[]} />
+        </MemoryRouter>,
+      );
+      expect(html, codigo).not.toContain('<a ');
+      expect(html, codigo).toContain(`<span class="codigo">${codigo}</span>`);
+      expect(html, codigo).toContain(`aria-label="Copiar código ${codigo}"`);
+    }
   });
 
   it('el clic en "copiar" copia y NO abre el detalle; el clic en el código sí', () => {

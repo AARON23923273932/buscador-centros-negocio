@@ -1,8 +1,10 @@
 // Rutas de la app (logica/rutas.ts) y detalle de un centro (logica/centro.ts): funciones puras.
 import { describe, expect, it } from 'vitest';
-import { buscarCentro, estadosDeCentro } from '../../src/logica/centro.ts';
+import { buscarCentro, estadosDeCentro, mismoCodigo } from '../../src/logica/centro.ts';
 import { prepararFila } from '../../src/logica/filtros.ts';
 import {
+  codigoDeRuta,
+  codigoEnlazable,
   destinoCompatible,
   RUTA_CENTROS,
   RUTA_ORDENES,
@@ -29,6 +31,27 @@ describe('rutas', () => {
     expect(rutaDetalleCentro('A2338PY01')).toBe('/centros/A2338PY01');
     expect(rutaDetalleCentro('CN/01 #A?')).toBe('/centros/CN%2F01%20%23A%3F');
     expect(decodeURIComponent(rutaDetalleCentro('Ñandú 1').split('/')[2] ?? '')).toBe('Ñandú 1');
+  });
+
+  it('el código del detalle se lee de la dirección decodificando UNA vez (un "%2F" escrito en el código no se vuelve "/")', () => {
+    for (const codigo of ['A2338PY01', 'CN/01 #A?', '50%2F', '100%', 'Ñandú-ó', 'a+b&c', ' . ']) {
+      expect(codigoDeRuta(rutaDetalleCentro(codigo)), codigo).toBe(codigo);
+    }
+    expect(codigoDeRuta('/centros/50%252F')).toBe('50%2F'); // React Router (useParams) daría "50/"
+    expect(codigoDeRuta('/Centros/CN-0005/')).toBe('CN-0005'); // con "/" final o mayúsculas (React Router la acepta)
+    expect(codigoDeRuta('/centros/%C3%B1and%C3%BA')).toBe('ñandú'); // pegada en el navegador sin codificar
+    expect(codigoDeRuta('/centros/50%')).toBe('50%'); // "%" suelto: tal cual, sin error
+    // No es un detalle.
+    expect(codigoDeRuta('/centros')).toBeNull();
+    expect(codigoDeRuta('/centros/')).toBeNull();
+    expect(codigoDeRuta('/centros/A/extra')).toBeNull();
+    expect(codigoDeRuta('/ordenes/A')).toBeNull();
+  });
+
+  it('"." y ".." no pueden ir en una dirección (el navegador los toma como carpetas): esos códigos van sin enlace', () => {
+    expect(codigoEnlazable('.')).toBe(false);
+    expect(codigoEnlazable('..')).toBe(false);
+    for (const codigo of ['A2338PY01', '...', '.5', 'CN.01', '%2E']) expect(codigoEnlazable(codigo), codigo).toBe(true);
   });
 
   it('"/" lleva a /ordenes con la misma búsqueda; ?vista=centro (enlaces viejos) lleva a /centros', () => {
@@ -76,6 +99,11 @@ describe('detalle de un centro (buscarCentro)', () => {
     filaDePrueba(4, { codigoCentro: 'a2338py01', descripcionCentro: 'Centro A', cliente: 'Cliente 3', ordenCompra: 'OS-7', estado: 'abierta' }),
     filaDePrueba(5, { codigoCentro: 'A2338PY01', descripcionCentro: 'Centro A', cliente: 'Cliente 1', ordenCompra: 'OS-8', estado: 'Cerrada' }),
   ].map(prepararFila);
+
+  it('mismoCodigo: compara como buscarCentro (al volver del detalle se busca el enlace de ese centro)', () => {
+    expect(mismoCodigo('A2338PY01', ' a2338py01 ')).toBe(true);
+    expect(mismoCodigo('CN-0005', 'CN-0006')).toBe(false);
+  });
 
   it('junta TODAS las filas del centro, sin importar mayúsculas ni espacios de más', () => {
     const g = buscarCentro(FILAS, '  a2338PY01 ');

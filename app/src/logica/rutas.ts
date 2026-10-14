@@ -57,6 +57,30 @@ export function rutaDetalleCentro(codigo: string): string {
   return `${RUTA_CENTROS}/${encodeURIComponent(codigo)}`;
 }
 
+/**
+ * ¿El código puede ir en una dirección? "." y ".." no: el navegador los toma como "esta carpeta" y "la carpeta
+ * de arriba" (aunque vayan como %2E) y el enlace llevaría a otra pantalla. Esos códigos se muestran sin enlace.
+ */
+export function codigoEnlazable(codigo: string): boolean {
+  return codigo !== '.' && codigo !== '..';
+}
+
+/**
+ * Código del centro a partir de la ruta /centros/<código> (tal como está en la dirección, codificada).
+ * Se decodifica UNA vez, igual que lo codificó rutaDetalleCentro(). (useParams() de React Router no sirve
+ * para esto: convierte un "%2F" escrito en el código en "/", y "50%2F" quedaría "50/".)
+ * Devuelve null si la ruta no es la de un detalle.
+ */
+export function codigoDeRuta(ruta: string): string | null {
+  const segmento = /^\/centros\/([^/]+)\/*$/i.exec(ruta)?.[1];
+  if (segmento === undefined) return null;
+  try {
+    return decodeURIComponent(segmento);
+  } catch {
+    return segmento; // "%" suelto (enlace mal copiado): se busca tal cual
+  }
+}
+
 /** Ruta + query (lo que se le pasa a navigate() o a <Navigate to>). */
 export interface Destino {
   pathname: string;

@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { buscarCentro, estadosDeCentro } from '../logica/centro.ts';
 import { numero } from '../logica/formato.ts';
-import { rutaVolver, type EstadoNavegacion } from '../logica/rutas.ts';
+import { codigoDeRuta, rutaVolver, type EstadoNavegacion } from '../logica/rutas.ts';
 import { claseColumna } from '../logica/tabla.ts';
 import { ContenidoCelda, FilasDatos } from './Celdas.tsx';
 import { IconoVolver } from './Iconos.tsx';
@@ -46,19 +46,25 @@ function VolverALista() {
 }
 
 export function DetalleCentro() {
-  const { excel, copiar } = useContextoApp();
-  const { codigo = '' } = useParams();
+  const { excel, copiar, anotarCentroAbierto } = useContextoApp();
+  // El código sale de la dirección tal cual (decodificada una vez): useParams() convertiría un "%2F" escrito en
+  // el código en "/" (ver codigoDeRuta). useParams() queda de respaldo.
+  const { pathname } = useLocation();
+  const { codigo: codigoParametro = '' } = useParams();
+  const codigo = codigoDeRuta(pathname) ?? codigoParametro;
   const { datos } = excel;
   const grupo = useMemo(() => (datos ? buscarCentro(datos.filas, codigo) : null), [datos, codigo]);
   const estados = useMemo(() => (grupo ? estadosDeCentro(grupo) : []), [grupo]);
   const conEstado = !!datos && 'estado' in datos.mapa;
 
   // Al abrir el detalle: arriba de la página y el foco en el título (lo anuncia el lector de pantalla).
+  // Se anota el centro: al volver a la lista, el foco irá a su enlace (ver VistaLista).
   const titulo = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     window.scrollTo(0, 0);
     titulo.current?.focus({ preventScroll: true });
-  }, [codigo]);
+    anotarCentroAbierto({ codigo, indice: -1 });
+  }, [codigo, anotarCentroAbierto]);
 
   let contenido;
   if (!datos) {

@@ -12,7 +12,7 @@
 // Microsoft y la persona vuelve a ESA misma (ej. /centros/A2338PY01?q=cableado).
 // =============================================================================
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type MouseEvent, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { useArranque } from './hooks/useArranque.ts';
 import { useAvisoFlotante } from './hooks/useAvisoFlotante.ts';
@@ -33,6 +33,19 @@ const REINTENTAR = { texto: 'Reintentar', principal: true, accion: () => locatio
 
 /** Ejecuta una acción de Microsoft (la página se va a Microsoft; si falla, queda en la consola). */
 const irAMicrosoft = (accion: () => Promise<void>) => () => void accion().catch((e: unknown) => console.error(e));
+
+/**
+ * "Saltar al buscador / al contenido": lleva el foco SIN cambiar la dirección. Un enlace "#principal" normal
+ * agregaría una entrada "…#principal" al historial sin el estado de React Router (desde qué lista se abrió el
+ * detalle), y "Volver a la lista" ya no volvería a esa lista.
+ */
+function saltarA(ev: MouseEvent<HTMLAnchorElement>, id: string) {
+  const destino = document.getElementById(id) ?? document.getElementById('principal');
+  if (!destino) return;
+  ev.preventDefault();
+  if (!destino.matches('a[href], button, input, select, textarea, [tabindex]')) destino.tabIndex = -1; // <main>
+  destino.focus();
+}
 
 export function App() {
   // El botón ☀️/🌙 funciona en todas las pantallas (también antes de iniciar sesión).
@@ -119,7 +132,7 @@ export function App() {
 
   return (
     <>
-      <a className="saltar" href={conBuscador ? '#buscador' : '#principal'}>
+      <a className="saltar" href={conBuscador ? '#buscador' : '#principal'} onClick={(ev) => saltarA(ev, conBuscador ? 'buscador' : 'principal')}>
         {conBuscador ? 'Saltar al buscador' : 'Saltar al contenido'}
       </a>
       <Cabecera

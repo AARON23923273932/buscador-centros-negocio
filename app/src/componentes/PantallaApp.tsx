@@ -13,13 +13,14 @@
 // Lo comprueba tests/unit/rendimiento.test.tsx.
 // =============================================================================
 
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { Outlet, useOutletContext } from 'react-router';
 import type { Avisar } from '../hooks/useAvisoFlotante.ts';
 import { useBusqueda, type Busqueda } from '../hooks/useBusqueda.ts';
 import { useExcel, type Excel } from '../hooks/useExcel.ts';
 import type { Sesion } from '../logica/auth.ts';
 import type { Config } from '../logica/config.ts';
+import { mismoCodigo } from '../logica/centro.ts';
 import { TAMANOS_PAGINA } from '../logica/estado-url.ts';
 import { copiarTexto } from '../logica/portapapeles.ts';
 import { textoActualizado } from '../logica/vista.ts';
@@ -45,8 +46,27 @@ export interface ContextoApp {
   /** Centros abiertos en la vista "Por centro" (se conservan al actualizar los datos y al volver del detalle). */
   expandidos: ReadonlySet<string>;
   alternarCentro: (clave: string) => void;
+  /**
+   * El centro cuyo detalle se abrió: la lista anota el enlace que se usó (código + posición entre los enlaces
+   * de la tabla) y el detalle anota su código (posición -1, si se abrió con un enlace directo). Al volver, la
+   * lista lo retoma (una sola vez) y le devuelve el foco a ese enlace, o al buscador si ya no está en la página.
+   * Así quien usa el teclado sigue donde estaba.
+   */
+  anotarCentroAbierto: (abierto: CentroAbierto) => void;
+  /** El enlace anotado (y lo borra), o null si no se abrió ningún detalle desde la lista. */
+  retomarCentroAbierto: () => CentroAbierto | null;
   copiar: AlCopiar;
   avisar: Avisar;
+}
+
+/** Qué enlace de la lista abrió el detalle (ver ContextoApp.anotarCentroAbierto). */
+export interface CentroAbierto {
+  codigo: string;
+  /**
+   * Posición del enlace entre los enlaces de código de la tabla (el mismo código puede estar en varias filas);
+   * -1 = no se sabe (lo anotó el detalle).
+   */
+  indice: number;
 }
 
 /** Para las rutas que van dentro de PantallaApp (VistaLista, DetalleCentro). */
@@ -58,6 +78,17 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
   const porDefecto = TAMANOS_PAGINA.includes(Number(config.filasPorPagina)) ? Number(config.filasPorPagina) : 50;
   const busqueda = useBusqueda(porDefecto);
   const [expandidos, setExpandidos] = useState<ReadonlySet<string>>(() => new Set());
+  const centroAbierto = useRef<CentroAbierto | null>(null);
+  const anotarCentroAbierto = useCallback((abierto: CentroAbierto) => {
+    // El detalle (posición -1) no reemplaza el enlace exacto que anotó la lista para ese mismo centro.
+    if (abierto.indice < 0 && centroAbierto.current && mismoCodigo(centroAbierto.current.codigo, abierto.codigo)) return;
+    centroAbierto.current = abierto;
+  }, []);
+  const retomarCentroAbierto = useCallback(() => {
+    const abierto = centroAbierto.current;
+    centroAbierto.current = null;
+    return abierto;
+  }, []);
 
   const excel = useExcel({ config, sesion, avisar, alCargar: busqueda.ajustarAColumnas });
   const { datos, cargando } = excel;
@@ -78,8 +109,8 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
   }, []);
 
   const contexto = useMemo<ContextoApp>(
-    () => ({ config, porDefecto, excel, busqueda, expandidos, alternarCentro, copiar, avisar }),
-    [config, porDefecto, excel, busqueda, expandidos, alternarCentro, copiar, avisar],
+    () => ({ config, porDefecto, excel, busqueda, expandidos, alternarCentro, anotarCentroAbierto, retomarCentroAbierto, copiar, avisar }),
+    [config, porDefecto, excel, busqueda, expandidos, alternarCentro, anotarCentroAbierto, retomarCentroAbierto, copiar, avisar],
   );
 
   // ---- Textos ----

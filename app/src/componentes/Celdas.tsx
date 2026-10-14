@@ -2,7 +2,7 @@
 // y el mensaje "No hay resultados".
 import { memo, type ReactNode } from 'react';
 import { Link, useInRouterContext, useLocation } from 'react-router';
-import { rutaDetalleCentro, type EstadoNavegacion } from '../logica/rutas.ts';
+import { codigoEnlazable, rutaDetalleCentro, type EstadoNavegacion } from '../logica/rutas.ts';
 import type { Celda, Columna, Direccion, Fila } from '../logica/tipos.ts';
 import { claseColumna, estadoOrden } from '../logica/tabla.ts';
 import { IconoCopiar, IconoOrden } from './Iconos.tsx';
@@ -60,10 +60,13 @@ function EnlaceCentro({ codigo, children }: { codigo: string; children: ReactNod
   );
 }
 
-/** Texto del código: enlace al detalle (dentro de la app) o texto simple (en el detalle, o sin React Router). */
+/**
+ * Texto del código: enlace al detalle (dentro de la app) o texto simple (en el detalle, sin React Router, o
+ * con un código que no puede ir en una dirección: "." y "..", ver codigoEnlazable).
+ */
 function TextoCodigo({ codigo, enlazar, children }: { codigo: string; enlazar: boolean; children: ReactNode }) {
   const conRutas = useInRouterContext();
-  if (enlazar && conRutas) return <EnlaceCentro codigo={codigo}>{children}</EnlaceCentro>;
+  if (enlazar && conRutas && codigoEnlazable(codigo)) return <EnlaceCentro codigo={codigo}>{children}</EnlaceCentro>;
   return <span className="codigo">{children}</span>;
 }
 
