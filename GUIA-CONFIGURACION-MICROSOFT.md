@@ -250,8 +250,9 @@ Si `config.json` tiene un error de escritura (una coma de más, comillas faltant
 **Probar en la computadora antes de publicar:**
 ```powershell
 cd C:\dev\AIC\automatizaciones\sitio-web\app
-npm run dev        # http://localhost:5173 → "Iniciar sesión con Microsoft" (configuración real)
-npm run dev:demo   # http://localhost:5173 → modo demo (sin login, Excel de ejemplo), sin tocar config.json
+npm.cmd ci             # la primera vez y cada vez que cambie package-lock.json (instala las librerías)
+npm.cmd run dev        # http://localhost:5173 → "Iniciar sesión con Microsoft" (configuración real)
+npm.cmd run dev:demo   # http://localhost:5173 → modo demo (sin login, Excel de ejemplo), sin tocar config.json
 ```
 - La app siempre usa el puerto **5173** (y `npm run preview`, el **4173**), porque son los registrados en Entra ID. Si ese puerto está ocupado (por ejemplo, otro `npm run dev` abierto), Vite **avisa y no arranca** en vez de usar otro puerto: cerrar el otro programa y volver a intentar.
 - Si PowerShell responde *"No se puede cargar el archivo …\npm.ps1 porque la ejecución de scripts está deshabilitada en este sistema"*, ver el recuadro "PowerShell bloquea npm" del paso 6.
@@ -274,7 +275,7 @@ La app se publica **a mano**: se compila en la PC y se arrastra una carpeta a Ne
 3. Preparar la carpeta:
    ```powershell
    cd C:\dev\AIC\automatizaciones\sitio-web\app
-   npm.cmd run preparar-publicacion   # revisa los tipos (TypeScript), compila y copia todo a ..\publicar (sin archivos ~$…)
+   npm.cmd run preparar-publicacion   # revisa tipos (TypeScript) y reglas de React (lint), compila y copia todo a ..\publicar (sin archivos ~$…)
    ```
    Al terminar muestra el modo, la fuente de datos y los permisos de `config.json` (deben ser `microsoft`, `graph` y `User.Read, Files.Read.All`).
 4. **https://app.netlify.com** → el sitio `aic-centros-negocio` → **Deploys** → arrastrar la carpeta **`publicar`** al recuadro *"Drag and drop your project folder here"*.
@@ -288,7 +289,7 @@ Sirve justo para este tipo de app (página estática), da HTTPS automático y un
 1. **Compilar la app** (después de llenar `app/public/config.json`):
    ```powershell
    cd C:\dev\AIC\automatizaciones\sitio-web\app
-   npm run build      # revisa los tipos (TypeScript) y crea la carpeta dist/ (es lo único que se publica), con config.json incluido
+   npm.cmd run build   # revisa tipos y reglas de React y crea la carpeta dist/ (es lo único que se publica), con config.json incluido
    ```
 2. **Crear el recurso** (una sola vez): https://portal.azure.com → **Crear un recurso → Static Web App** →
    - Suscripción y grupo de recursos de la empresa *(por confirmar cuál)*.
@@ -298,9 +299,9 @@ Sirve justo para este tipo de app (página estática), da HTTPS automático y un
    > El token es **secreto**: no guardarlo en archivos del proyecto ni enviarlo por chat.
 4. **Subir la carpeta `dist/`** con la herramienta oficial de Static Web Apps (se instala una vez):
    ```powershell
-   npm install -g @azure/static-web-apps-cli
+   npm.cmd install -g @azure/static-web-apps-cli
    cd C:\dev\AIC\automatizaciones\sitio-web\app
-   swa deploy ./dist --env production --deployment-token <TOKEN>
+   swa.cmd deploy ./dist --env production --deployment-token <TOKEN>
    ```
    Al terminar muestra la dirección de la app.
 5. **Registrar la dirección final en Entra ID** (paso 1.6): agregar `https://<dirección>/redirect.html` y `https://<dirección>/` como URI de redirección **SPA**.
@@ -310,9 +311,10 @@ El archivo `staticwebapp.config.json` (ya incluido en `dist/`) agrega cabeceras 
 
 **Para cambiar algo después** (con Netlify, cambiar "`swa deploy …`" por "`npm.cmd run preparar-publicacion` y arrastrar `publicar/`"):
 - Solo configuración → editar **`app/public/config.json`**, `npm run build` y volver a ejecutar `swa deploy …`. (No editar `dist/config.json` ni `publicar/config.json`: se pierden en el siguiente `npm run build` / `preparar-publicacion`.)
-- Código → `npm run typecheck`, `npm test`, `npm run test:e2e`, `npm run build` y `swa deploy …`. (El código es React + TypeScript; `npm run build` también revisa los tipos y no compila si hay un error.)
+- Código → `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:e2e`, `npm run build` y `swa deploy …`. (El código es React + TypeScript; `npm run build` también revisa los tipos y las reglas de React, y no compila si hay un error.)
+  - Si se actualizó el código (por ejemplo, al pasar a la versión React + TypeScript), ejecutar antes `npm.cmd ci`: instala las librerías nuevas de `package-lock.json`.
   - Las pruebas usan **su propia configuración de demostración** (no la de `public/config.json`), así que pasan aunque `config.json` ya tenga los valores de producción.
-  - En una PC nueva, antes del primer `npm run test:e2e`, ejecutar una vez `npx playwright install chromium` (descarga el navegador que usan las pruebas; `npm install` no lo trae).
+  - En una PC nueva, antes del primer `npm run test:e2e`, ejecutar una vez `npx.cmd playwright install chromium` (descarga el navegador que usan las pruebas; `npm.cmd ci` no lo trae).
   - Como `npm run test:e2e` vuelve a compilar `dist/`, ejecutar `npm run build` al final (justo antes de `swa deploy`) es lo más seguro.
 
 ### Otras opciones de hosting
@@ -363,8 +365,9 @@ Cualquier servicio que publique **archivos estáticos con HTTPS** sirve: un serv
 | "Falta configurar la aplicación" | Falta un dato en `config.json` o tiene la forma equivocada. | La pantalla dice qué corregir. Paso 5. |
 | "No se encontraron estas columnas en el Excel" | Los títulos del Excel real tienen otros nombres, o se leyó otra hoja. | Agregar los nombres en `columnas`, fijar `filaEncabezado` o elegir la hoja en `datos.hoja` (el aviso muestra las hojas del Excel). |
 | PowerShell: "…npm.ps1 no se puede cargar…" | La política de ejecución de PowerShell bloquea scripts. | Recuadro "PowerShell bloquea npm o swa" (paso 6). |
-| `npm run test:e2e`: "Executable doesn't exist… run npx playwright install" | En esa PC no está el navegador de pruebas. | `npx playwright install chromium` (una vez). |
-| `npm run build` (o `preparar-publicacion`) se detiene con `error TS…` | TypeScript encontró un error de tipos en el código (la app no se compila para no publicar algo roto). | Lo corrige quien mantiene el código (`npm run typecheck` muestra el archivo y la línea). No es un problema de `config.json`. |
+| `npm run test:e2e`: "Executable doesn't exist… run npx playwright install" | En esa PC no está el navegador de pruebas. | `npx.cmd playwright install chromium` (una vez). |
+| `npm run build` (o `preparar-publicacion`) se detiene con `error TS…` o con un error de oxlint (ej. `react-hooks(exhaustive-deps)`) | TypeScript o la revisión de reglas de React (`lint`) encontró un error en el código (la app no se compila para no publicar algo roto). | Lo corrige quien mantiene el código (`npm run typecheck` / `npm run lint` muestran el archivo y la línea). No es un problema de `config.json`. |
+| `npm run build`, `dev` o `preparar-publicacion` falla con *"'tsc' no se reconoce…"*, *"'oxlint' no se reconoce…"* o *"Cannot find module 'react'"* | La carpeta `app/node_modules` es de antes de un cambio de librerías (por ejemplo, de la versión JavaScript, antes de React + TypeScript). | `npm.cmd ci` dentro de `app/` (instala exactamente lo de `package-lock.json`) y volver a intentar. |
 
 ---
 

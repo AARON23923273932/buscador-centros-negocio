@@ -4,7 +4,7 @@
 > La app está en [`app/`](app/). La guía para conectarla a Microsoft 365 está en [`GUIA-CONFIGURACION-MICROSOFT.md`](GUIA-CONFIGURACION-MICROSOFT.md). Las pruebas manuales para entregarla están en [`pruebas/plan-de-pruebas.md`](pruebas/plan-de-pruebas.md).
 
 ## Estado actual (13/10/2026)
-- **Código migrado a React 19 + TypeScript (estricto)** *(13/10/2026, pedido del supervisor: "priorizar el uso de TypeScript y una librería como React por temas de escalabilidad")*. La app **se ve y funciona igual** (mismos textos, diseño, login, filtros, exportar…): lo comprueban las mismas 39 pruebas en navegador, sin cambiar sus selectores, y 268 pruebas unitarias (antes 234). Detalle en las secciones 7 y 8. Para que Netlify muestre esta versión hay que volver a publicar (`npm.cmd run preparar-publicacion` y arrastrar `publicar/`).
+- **Código migrado a React 19 + TypeScript (estricto)** *(13/10/2026, pedido del supervisor: "priorizar el uso de TypeScript y una librería como React por temas de escalabilidad")*. La app **se ve y funciona igual** (mismos textos, diseño, login, filtros, exportar…), **también mientras carga**: la cabecera y el botón ☀️/🌙 se ven desde el primer momento, como antes. Lo comprueban las 39 pruebas en navegador de antes (sin cambiar sus selectores) + 3 nuevas de la pantalla de carga, y 297 pruebas unitarias (antes 234). Además, `npm run lint` revisa las reglas de React. Detalle en las secciones 7 y 8. Para que Netlify muestre esta versión hay que volver a publicar (`npm.cmd run preparar-publicacion` y arrastrar `publicar/`).
 - **Publicada en Netlify:** https://aic-centros-negocio.netlify.app (en línea siempre, no depende de la PC).
 - **Login con Microsoft activo:** app "Buscador de centros de negocio" registrada en Entra ID (tenant JAICOS CORP S.A.C.). Solo entran cuentas `@aic.pe` y `@jaicoscorp.com`. Permisos (solo lectura): al **iniciar sesión** solo se pide `User.Read`; `Files.Read.All` se pide **al leer el Excel**.
 - **Datos: conectada al Excel real** `centros-negocio-aic.xlsx` (SharePoint de jaicoscorp, sitio raíz) por su enlace (`"fuente": "graph"`, `datos.urlCompartida` en `config.json`). El enlace es la **dirección del navegador** de Excel Online (`…/_layouts/15/Doc.aspx?sourcedoc=…&file=…`): si Microsoft Graph no lo abre como "enlace para compartir", la app **busca el archivo** en las bibliotecas de ese sitio por su identificador y su nombre (detalle en la guía, paso 4.3).
@@ -53,9 +53,11 @@ Requisitos: **Node.js** (ya instalado: v24) — es el programa que ejecuta las h
 
 ```powershell
 cd C:\dev\AIC\automatizaciones\sitio-web\app
-npm install          # solo la primera vez: descarga las librerías (carpeta node_modules)
-npm run dev:demo     # demo (sin login, Excel de ejemplo) → http://localhost:5173
+npm.cmd ci             # la primera vez y cada vez que cambie package-lock.json (ej. al pasar a la versión React + TypeScript)
+npm.cmd run dev:demo   # demo (sin login, Excel de ejemplo) → http://localhost:5173
 ```
+
+`npm.cmd ci` descarga las librerías (carpeta `node_modules`) exactamente en las versiones de `package-lock.json`. Si después de actualizar el código algo falla con *"'tsc' no se reconoce…"*, *"'oxlint' no se reconoce…"* o *"Cannot find module 'react'"*, es que faltan librerías nuevas: volver a ejecutar `npm.cmd ci`.
 
 `npm run dev` (sin `:demo`) usa la configuración real: pide **Iniciar sesión con Microsoft** y lee el **Excel real** (sirve para probar el login en la PC; la dirección `http://localhost:5173/redirect.html` está registrada en Entra ID, guía paso 1).
 
@@ -69,16 +71,17 @@ Todos los comandos (siempre dentro de `app/`; en PowerShell, `npm.cmd` en vez de
 |---|---|
 | `npm run dev` | La app con la **configuración real** (login de Microsoft + Excel real) en http://localhost:5173. Los cambios en el código se ven al instante. |
 | `npm run dev:demo` | La app en **modo demo** (sin login, Excel de ejemplo) en http://localhost:5173, sin tocar `config.json`. |
-| `npm run typecheck` | Revisa los **tipos de TypeScript** de todo el código (app, pruebas y configuración) sin compilar nada. Si algo no encaja (ej. una función recibe un número donde esperaba texto), muestra el archivo y la línea. |
-| `npm test` | Pruebas **unitarias** con Vitest (268): la lógica (búsqueda, filtros, lectura del Excel, Graph, reglas de acceso…) y los componentes de React (buscador, tabla, paginación, botón de tema…), sin abrir un navegador. |
-| `npm run test:e2e` | Pruebas **de punta a punta** con Playwright (39): compila, abre la app en Chromium y hace clic como una persona (modo demo + un inicio de sesión de Microsoft **simulado**, sin internet). Usan su propia configuración de demostración (`tests/e2e/config-pruebas.ts`), así que pasan igual aunque `config.json` ya tenga los valores de producción. **En una PC nueva**, antes de la primera vez: `npx playwright install chromium` (descarga el navegador de pruebas; `npm install` no lo trae). |
-| `npm run build` | "Compila" la app: primero ejecuta `typecheck` (si hay un error de tipos, **se detiene** y no compila) y después crea la carpeta `dist/` con Vite. |
+| `npm run typecheck` | Revisa los **tipos de TypeScript** de todo el código (app, pruebas, configuración y los scripts `.mjs`) sin compilar nada. Si algo no encaja (ej. una función recibe un número donde esperaba texto), muestra el archivo y la línea. |
+| `npm run lint` | Revisión automática del código con **oxlint** (`.oxlintrc.json`): sobre todo las **reglas de los hooks de React** que TypeScript no revisa (ej. un `useEffect` que usa un dato y no lo declara). Muestra el archivo, la línea y cómo arreglarlo. |
+| `npm test` | Pruebas **unitarias** con Vitest (297): la lógica (búsqueda, filtros, lectura del Excel, Graph, reglas de acceso…) y los componentes de React (buscador, tabla, paginación, botón de tema, avisos…), sin abrir un navegador. También revisan que escribir en el buscador no vuelva a dibujar la tabla, que la app funcione dentro de `<StrictMode>` y que la pantalla de carga de `index.html` sea igual a la de React. |
+| `npm run test:e2e` | Pruebas **de punta a punta** con Playwright (42): compila, abre la app en Chromium y hace clic como una persona (modo demo + un inicio de sesión de Microsoft **simulado**, sin internet). Usan su propia configuración de demostración (`tests/e2e/config-pruebas.ts`), así que pasan igual aunque `config.json` ya tenga los valores de producción. **En una PC nueva**, antes de la primera vez: `npx.cmd playwright install chromium` (descarga el navegador de pruebas; `npm.cmd ci` no lo trae). |
+| `npm run build` | "Compila" la app: primero ejecuta `typecheck` y `lint` (si hay un error, **se detiene** y no compila) y después crea la carpeta `dist/` con Vite. |
 | `npm run preparar-publicacion` | Ejecuta `build` y deja la copia **lista para Netlify** en `publicar/` (sin archivos temporales de Office `~$…`). Al final muestra el modo, la fuente de datos y los permisos de `config.json`. |
 | `npm run preview` | Muestra la versión compilada (`dist/`) en http://localhost:4173 con la configuración real. |
 | `npm run preview:demo` | Lo mismo, pero en modo demo. |
 | `npm run generar-ejemplo` | Vuelve a crear el Excel de ejemplo con datos ficticios. |
 
-Antes de publicar un cambio de código: `npm run typecheck` → `npm test` → `npm run test:e2e` → `npm run preparar-publicacion`.
+Antes de publicar un cambio de código: `npm run typecheck` → `npm run lint` → `npm test` → `npm run test:e2e` → `npm run preparar-publicacion`.
 
 Para cerrar `npm run dev` o `npm run preview`: **Ctrl + C** en la terminal.
 
@@ -100,27 +103,28 @@ ERP ──(bot)──► Excel en SharePoint/OneDrive ──(Microsoft Graph, co
 **No: todo corre en el navegador (SPA).** El login lo hace Microsoft (MSAL) y el Excel se lee con Microsoft Graph usando el token de la persona (permisos delegados); no hay backend ni secretos que custodiar.
 
 ```
-                 ┌───────────────────────────────────────────────────────────┐
-                 │  Navegador de la persona (aquí corre TODA la app: React)  │
-                 └───────────────────────────────────────────────────────────┘
-  1. Abre la página  │  ▲ index.html, assets/*.js, config.json (archivos fijos)
-                     ▼  │
-                 Netlify (solo entrega archivos; no ejecuta código)
-
-  2. "Iniciar sesión │  ▲ vuelve por redirect.html; MSAL recibe el token de la persona
-     con Microsoft"  ▼  │
-                 login.microsoftonline.com (Entra ID: ¿cuenta de la empresa?)
-
-  3. Pide el Excel   │  ▲ el archivo .xlsx (solo si a la persona le compartieron el Excel)
-     con ese token   ▼  │
-                 graph.microsoft.com ──► SharePoint (Excel que llena el bot)
-
-  4. Lee el Excel (SheetJS), busca, filtra, ordena y exporta: todo dentro del navegador.
+┌─────────────────────────────┐
+│ Navegador de la persona     │ 1. pide la página ────────────────────► Netlify
+│                             │ ◄── index.html, assets/*.js, config.json (archivos fijos)
+│ Aquí corre TODA la app      │
+│ (React): lee el Excel       │ 2. "Iniciar sesión con Microsoft" ────► login.microsoftonline.com (Entra ID)
+│ (SheetJS), busca, filtra,   │ ◄── token de la persona (vuelve por redirect.html)
+│ ordena y exporta.           │
+│                             │ 3. "¿dónde está el Excel?" + token ───► graph.microsoft.com
+│                             │ ◄── nombre, fecha y un enlace temporal de descarga
+│                             │
+│                             │ 4. descarga con ese enlace ───────────► *.sharepoint.com
+│                             │ ◄── el archivo .xlsx (si a la persona le compartieron el Excel)
+│                             │
+└─────────────────────────────┘
 ```
+
+Cada flecha sale **del navegador** y su respuesta **vuelve al navegador**: no es una cadena (Netlify no le pasa nada a Microsoft ni Graph le "reenvía" el Excel a la app). Netlify y Microsoft son servicios de terceros; ninguno es un servidor propio de AIC.
 
 En simple:
 - **SPA** ("aplicación de página única"): la página se descarga una vez y después todo pasa en el navegador. Netlify es como una carpeta compartida en internet: solo entrega los archivos de `publicar/`.
 - **Backend** (servidor propio): un programa que corre en una computadora de la empresa o en la nube, recibe pedidos y guarda claves. **Esta app no tiene**: no hay nada que mantener encendido, actualizar ni proteger aparte de los archivos publicados.
+- **La descarga del Excel va directo del navegador a SharePoint** (`*.sharepoint.com`), con un enlace temporal (dura pocos minutos) que entrega Graph: ningún servidor propio interviene ni guarda una copia del archivo.
 - **Token**: un "pase" temporal que Microsoft le da a la persona al iniciar sesión. La app lo usa para pedirle el Excel a Graph **en nombre de esa persona** (eso son los **permisos delegados**): Graph solo entrega lo que esa persona ya puede abrir en SharePoint. El token vence solo y nunca sale del navegador más que hacia Microsoft.
 - **Sin secretos:** el `clientId` y el `tenantId` de `config.json` son datos **públicos** (identifican la app, no dan acceso). La app no usa contraseñas de aplicación ni "client secret" (ver la guía, "Conceptos en 1 minuto" y "Seguridad: qué protege qué").
 
@@ -140,7 +144,8 @@ sitio-web/
 ├── pruebas/plan-de-pruebas.md         ← pruebas que hace una persona antes de entregar (con casillas)
 ├── publicar/                          ← copia lista para Netlify (la crea npm run preparar-publicacion; no se edita)
 └── app/                               ← la aplicación (React 19 + TypeScript)
-    ├── index.html                     ← la página: solo <div id="raiz"> (con "Cargando…"); React dibuja todo lo demás
+    ├── index.html                     ← la página: <div id="raiz"> con la cabecera y "Cargando…" (lo que se ve mientras
+    │                                     baja el código, igual a lo primero que dibuja React: no hay salto al cargar)
     ├── redirect.html                  ← página "puente" a la que vuelve Microsoft tras el inicio de sesión (sin React)
     ├── public/                        ← se copia tal cual a dist/
     │   ├── config.json                ← CONFIGURACIÓN (la única copia que se edita; npm run build la copia a dist/)
@@ -175,27 +180,33 @@ sitio-web/
     │   │   └── useAvisoFlotante.ts, useMediaQuery.ts
     │   └── logica/                    ← reglas SIN pantalla (TypeScript puro; se prueban sin navegador)
     │       ├── tipos.ts               ← "forma" de los datos: Fila, Celda, Columna, ResultadoLectura, Filtros…
-    │       ├── config.ts              ← lee config.json y revisa que esté completo (tipo Config)
+    │       ├── config.ts              ← lee config.json (ConfigSinValidar) y lo revisa: revisarConfig() → Config
     │       ├── auth.ts                ← inicio de sesión con Microsoft (MSAL v5; tipo Sesion)
     │       ├── acceso.ts              ← reglas de quién puede entrar (dominios, tenant)
     │       ├── graph.ts               ← lee el Excel desde SharePoint/OneDrive (Microsoft Graph; ErrorDatos, respuestas tipadas)
     │       ├── datos.ts               ← abre el Excel y limpia/ordena las filas (SheetJS)
     │       ├── filtros.ts             ← buscar, filtrar, ordenar, agrupar, paginar (funciones puras)
-    │       ├── vista.ts               ← qué se ve: filas de la página, contador, filtros disponibles
+    │       ├── vista.ts               ← qué se ve: resultados (filtrar/ordenar) → página y contador, filtros disponibles
     │       ├── tabla.ts, formato.ts   ← reglas de la tabla (▲▼, aria-sort, contador) y formato de horas/fechas
     │       ├── estado-url.ts          ← convierte la búsqueda en dirección y viceversa
     │       ├── exportar.ts            ← descarga a Excel
-    │       └── tema.ts, portapapeles.ts ← reglas del modo claro/oscuro y "copiar código"
+    │       ├── tema.ts, portapapeles.ts ← reglas del modo claro/oscuro y "copiar código"
+    │       └── listas.ts              ← en(lista, i): leer una posición que se sabe que existe (ver noUncheckedIndexedAccess)
     ├── scripts/
     │   ├── generar-ejemplo.mjs        ← crea el Excel de ejemplo
     │   ├── preparar-publicacion.mjs   ← compila y copia a publicar/ (npm run preparar-publicacion)
     │   ├── archivos-temporales.mjs    ← deja afuera los "~$…" que crea Excel (llevan tu nombre de usuario)
     │   └── config-demo.mjs            ← modo demo en la PC sin tocar config.json (npm run dev:demo)
     ├── tests/unit/                    ← pruebas unitarias (Vitest, .ts/.tsx); graph-resolver.test.ts = cómo se encuentra
-    │                                     el Excel real; componentes.test.tsx = componentes de React con clics y teclado
+    │                                     el Excel real; componentes.test.tsx = componentes de React con clics y teclado;
+    │                                     rendimiento.test.tsx = escribir no redibuja la tabla; strictmode.test.tsx = la app
+    │                                     dentro de <StrictMode>; pagina-inicial.test.tsx = index.html igual a React;
+    │                                     tipos.test.tsx = tipos que deben dar error; lint.test.ts, codigo-fuente.test.ts
+    │                                     y documentacion.test.ts = revisiones del código y de esta documentación
     ├── tests/e2e/                     ← pruebas en navegador (Playwright, .ts); config-pruebas.ts = su configuración fija
-    ├── tsconfig.json                  ← reglas de TypeScript para src/ (modo estricto)
-    ├── tsconfig.node.json             ← reglas de TypeScript para pruebas y archivos de configuración
+    ├── tsconfig.json                  ← reglas de TypeScript para src/ (modo estricto + noUncheckedIndexedAccess)
+    ├── tsconfig.node.json             ← reglas de TypeScript para pruebas, configuración y scripts .mjs (con JSDoc)
+    ├── .oxlintrc.json                 ← reglas de npm run lint (hooks de React y errores seguros)
     ├── vite.config.ts                 ← compilación: React, política de seguridad CSP, sin "~$…", modo demo
     ├── vitest.config.ts / playwright.config.ts
     └── package.json                   ← lista de librerías y comandos
@@ -242,10 +253,14 @@ Decisiones de la migración:
 
 | Decisión | Por qué |
 |---|---|
-| **TypeScript 7.0.2** (la estable actual) | Se probó con Vite 8, Vitest 5 y Playwright 1.61 y todo funciona (`typecheck`, pruebas y `build`), así que **no hizo falta** bajar a la 5.x. TypeScript solo **revisa** (`noEmit`): quien convierte el código a JavaScript es Vite, así que la versión de TypeScript no cambia lo que se publica. |
+| **TypeScript 7.0.2** (la estable actual) | Se probó con Vite 8, Vitest 5 y Playwright 1.61 y todo funciona (`typecheck`, pruebas y `build`), así que **no hizo falta** bajar a la 5.x. TypeScript solo **revisa** (`noEmit`): quien convierte el código a JavaScript es Vite, así que la versión de TypeScript no cambia lo que se publica. (Única consecuencia: ESLint + typescript-eslint no funciona con TypeScript 7; por eso el linter es oxlint, ver abajo.) |
+| **Tipos estrictos de verdad** (`noUncheckedIndexedAccess`, `ConfigSinValidar`, `Direccion`…) | Además de `strict`: `lista[i]` puede no existir y TypeScript obliga a revisarlo; `config.json` llega como `ConfigSinValidar` y solo `revisarConfig()` lo convierte en `Config` (no se puede usar sin revisar); la dirección de orden solo puede ser `"asc"`/`"desc"`. `tests/unit/tipos.test.tsx` comprueba que esos errores sigan apareciendo. |
+| **oxlint** para revisar las reglas de React (`npm run lint`, dentro de `build`) | Las reglas de los hooks (`rules-of-hooks`, `exhaustive-deps`) no las revisa TypeScript y un error ahí hace que la pantalla muestre datos viejos. El estándar es ESLint + typescript-eslint, pero typescript-eslint exige TypeScript < 6.1; oxlint no depende de TypeScript y trae las mismas reglas. |
+| **La tabla no se redibuja al escribir** (`memo`, `useCallback`, resultados aparte de la página) | Lo escrito en el buscador se aplica 200 ms después; mientras tanto solo cambia la caja de texto. Las tablas, la paginación y "Columnas detectadas" están en `memo()` con props estables, y cambiar de página no vuelve a filtrar ni ordenar todas las filas. Importa en el celular con el Excel real (miles de filas). Lo revisa `tests/unit/rendimiento.test.tsx`. |
+| **`index.html` con la cabecera y "Cargando…"** | Es lo que se ve mientras baja el código (con React pesa más que antes): igual a lo primero que dibuja React, así nada salta al cargar y el botón ☀️/🌙 ya muestra el ícono correcto (`tema-inicial.js`). Lo revisan `pagina-inicial.test.tsx` y 3 pruebas en navegador. |
 | **`@azure/msal-browser` v5 directo (sin `@azure/msal-react`)** | El inicio de sesión ya estaba resuelto y probado con msal-browser (`logica/auth.ts`): vuelta por la página puente `redirect.html` (MSAL v5), revisión de dominios `aic.pe`/`jaicoscorp.com` y del tenant **después** del login, `Files.Read.All` pedido recién al leer el Excel y mensajes claros si falta el consentimiento. msal-react obliga a envolver toda la app en su `MsalProvider` (MSAL se cargaría también en modo demo, que hoy no lo descarga) y no agrega nada de eso; la app solo necesita saber "en qué fase está el arranque", y eso lo da el hook `useArranque`. Menos piezas = menos cosas que actualizar. |
 | **Estado con React puro (hooks), sin Redux ni otra librería** | El estado es poco y claro: (1) la **búsqueda** (texto, filtros, vista, orden, página) vive en `useBusqueda` y se copia a la dirección (`useEstadoUrl`), así el enlace se puede compartir; (2) los **datos del Excel** viven en `useExcel` (carga, Actualizar, auto-actualización); (3) el **arranque** (`useArranque`) es una sola variable con la fase (`cargando`, `login`, `denegado`, `app`…) y TypeScript obliga a tratar cada una. Lo que se ve (filas, contador, opciones de los filtros) se **calcula** con funciones puras de `logica/vista.ts`, que se prueban sin navegador. |
-| **Mismos ids, textos y `aria-*`** | Las 39 pruebas en navegador (Playwright) son el "contrato" de comportamiento: pasan **sin cambiar ningún selector** (solo se les agregaron tipos al pasarlas a `.ts`). `estilos.css` no cambió (salvo un comentario). |
+| **Mismos ids, textos y `aria-*`** | Las 39 pruebas en navegador (Playwright) son el "contrato" de comportamiento: pasan **sin cambiar ningún selector** (solo se les agregaron tipos al pasarlas a `.ts`; después se sumaron 3 de la pantalla de carga). `estilos.css` no cambió (salvo un comentario). Los avisos (`#aviso-flotante`, `#aviso-error`) vuelven a leerse en voz alta aunque el mensaje se repita, como antes. |
 | **`redirect.html` sin React** | Es una página puente mínima: solo le pasa la respuesta de Microsoft a la app (`src/redirect.ts`). Así carga rápido y no depende de la app. |
 
 **Sobre SheetJS:** la versión de npm (0.18.5) tiene 2 avisos de seguridad de nivel **alto** ("prototype pollution" y "ReDoS") que se activan con un Excel **hecho a propósito para atacar**. Por eso la app usa la **0.20.3**, instalada desde el sitio oficial:

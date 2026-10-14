@@ -1,11 +1,12 @@
 # ✅ Plan de pruebas — Buscador de centros de negocio
 
-> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (268 unitarias de lógica y componentes + 39 en navegador, al 13/10/2026, ya con la versión **React + TypeScript**) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
+> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (297 unitarias de lógica y componentes + 42 en navegador, al 13/10/2026, ya con la versión **React + TypeScript**) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
 > Marca `[x]` lo que pase. Si algo falla, anota qué viste (o toma captura) y me lo pasas.
 
 **Cómo abrir la app en tu PC:**
 ```
 cd C:\dev\AIC\automatizaciones\sitio-web\app
+npm.cmd ci               # la primera vez y cada vez que cambie package-lock.json (instala las librerías)
 npm.cmd run dev:demo     # Etapas 1 y 2: modo demo (sin login, Excel de ejemplo)
 npm.cmd run dev          # Etapa 4: configuración real (login con Microsoft + Excel real)
 ```
@@ -32,6 +33,16 @@ Objetivo: confirmar que **hace lo que pidieron** y que es fácil de usar.
 - [ ] 1.13 Al final, **"Columnas detectadas en el Excel"** dice "Columnas ocultas: Monto (…), Moneda (…)".
 - [ ] 1.14 **Tu opinión:** ¿falta alguna columna, filtro o algo que el jefe pidió? ¿algún texto confuso?
 - [ ] 1.15 **Versión React + TypeScript (13/10/2026):** todo lo de 1.1–1.13 se ve y funciona **igual que antes** (mismos textos, colores, botón ☀️/🌙, teclado: `/`, Tab, "Saltar a la paginación").
+  **Cómo ver la versión anterior (JavaScript) al lado de la nueva**, las dos en modo demo:
+  ```
+  cd C:/dev/AIC/automatizaciones/sitio-web
+  git worktree add --detach ../sitio-web-anterior ee86217   # copia aparte de la última versión JavaScript (no toca esta carpeta)
+  cd ../sitio-web-anterior/app
+  npm.cmd ci                                 # sus librerías (las de antes)
+  npx.cmd vite --mode demo --port 5174       # versión ANTERIOR → http://localhost:5174
+  ```
+  En otra terminal, la versión nueva: `npm.cmd run dev:demo` en `sitio-web/app` → http://localhost:5173. Comparar las dos pestañas. Al terminar: **Ctrl + C** en las dos terminales y, desde `sitio-web`, `git worktree remove ../sitio-web-anterior`. (Otra opción: comparar con https://aic-centros-negocio.netlify.app **antes** de volver a publicar; esa tiene login y el Excel real.)
+  - [ ] 1.15.1 **Pantalla de carga:** recargar con **red lenta** (F12 → pestaña **Red** / *Network* → cambiar "Sin limitación" por **3G lento** / *Slow 3G*) → la cabecera, el título y el botón ☀️/🌙 se ven **desde el primer momento** (antes de "Cargando…" no hay una pantalla sin cabecera) y la tarjeta "Cargando…" no salta hacia abajo al terminar de cargar. Volver a poner "Sin limitación" al terminar.
 
 ---
 
