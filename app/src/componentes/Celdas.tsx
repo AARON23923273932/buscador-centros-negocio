@@ -1,5 +1,6 @@
 // Piezas comunes de las dos tablas: título que ordena, contenido de una celda, filas de datos
 // y el mensaje "No hay resultados".
+import { memo } from 'react';
 import type { Celda, Columna, Fila } from '../logica/tipos.ts';
 import { claseColumna, estadoOrden } from '../logica/tabla.ts';
 import { IconoCopiar } from './Iconos.tsx';
@@ -82,8 +83,11 @@ export function ContenidoCelda({
   return contenido;
 }
 
-/** Filas de datos (una por fila del Excel). */
-export function FilasDatos({
+/**
+ * Filas de datos (una por fila del Excel).
+ * memo(): en la vista "Por centro", abrir o cerrar un centro no vuelve a dibujar las órdenes de los otros centros abiertos.
+ */
+export const FilasDatos = memo(function FilasDatos({
   columnas,
   filas,
   terminosDe,
@@ -107,7 +111,7 @@ export function FilasDatos({
       ))}
     </>
   );
-}
+});
 
 /** "No hay resultados…" o "El Excel no tiene filas con datos todavía." */
 export function FilaSinResultados({ columnas, hayDatos }: { columnas: number; hayDatos: boolean }) {

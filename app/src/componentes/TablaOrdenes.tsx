@@ -1,4 +1,6 @@
 // Tabla "Por orden": una fila por cada fila del Excel.
+// memo(): no se vuelve a dibujar si sus props no cambian (ej. mientras se escribe en el buscador).
+import { memo } from 'react';
 import { claseColumna } from '../logica/tabla.ts';
 import type { Columna, Fila } from '../logica/tipos.ts';
 import { EncabezadoOrdenable, FilasDatos, FilaSinResultados, type AlCopiar } from './Celdas.tsx';
@@ -16,7 +18,7 @@ interface Props {
   alCopiar?: AlCopiar;
 }
 
-export function TablaOrdenes({ columnas, filas, terminosDe, ordenarPor, direccion, hayDatos = true, alOrdenar, alCopiar }: Props) {
+export const TablaOrdenes = memo(function TablaOrdenes({ columnas, filas, terminosDe, ordenarPor, direccion, hayDatos = true, alOrdenar, alCopiar }: Props) {
   if (!columnas.length) {
     return <p className="tabla-vacia">El Excel no tiene columnas con datos.</p>;
   }
@@ -47,4 +49,4 @@ export function TablaOrdenes({ columnas, filas, terminosDe, ordenarPor, direccio
       </tbody>
     </table>
   );
-}
+});

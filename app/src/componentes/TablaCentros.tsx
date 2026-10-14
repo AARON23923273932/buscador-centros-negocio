@@ -1,5 +1,6 @@
 // Tabla "Por centro de negocio": una fila por centro que se abre para ver sus órdenes.
-import { Fragment, type MouseEvent } from 'react';
+// memo(): no se vuelve a dibujar si sus props no cambian (ej. mientras se escribe en el buscador).
+import { Fragment, memo, type MouseEvent } from 'react';
 import { numero } from '../logica/formato.ts';
 import { claseColumna } from '../logica/tabla.ts';
 import type { Columna, Grupo } from '../logica/tipos.ts';
@@ -24,7 +25,7 @@ interface Props {
   alCopiar?: AlCopiar;
 }
 
-export function TablaCentros({
+export const TablaCentros = memo(function TablaCentros({
   grupos,
   columnas,
   terminos,
@@ -126,4 +127,4 @@ export function TablaCentros({
       </tbody>
     </table>
   );
-}
+});

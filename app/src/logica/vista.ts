@@ -93,59 +93,66 @@ export function ajustarEstadoAColumnas(estado: EstadoBusqueda, datos: ResultadoL
   return e;
 }
 
-/** Lo que muestra la tabla: filas (vista "Por orden") o centros (vista "Por centro"), ya paginados. */
-interface BaseVista {
+/** Lo que eligió la persona, menos la página y las filas por página (lo que cambia QUÉ resultados hay). */
+export type CriteriosVista = Omit<EstadoBusqueda, 'pagina' | 'tamano'>;
+
+/** Resultados ya buscados, filtrados, ordenados (y agrupados), todavía sin cortar en páginas. */
+interface BaseResultados {
   /** Palabras del buscador (normalizadas). */
   terminos: string[];
   /** Lo escrito en los filtros "contiene" (normalizado), por campo: también se resalta en su columna. */
   porCampo: Partial<Record<Campo, string>>;
   /** Todas las filas filtradas y ordenadas (lo que se exporta). */
   filas: Fila[];
-  /** Texto del contador ("Mostrando 1–50 de 63 resultados (de 80 en total)"). */
-  contador: string;
+  /** Total del Excel completo, para "de N en total" (filas, o centros en la vista "Por centro"). */
+  totalGeneral: number;
 }
+export type Resultados = (BaseResultados & { tipo: 'orden'; grupos: null }) | (BaseResultados & { tipo: 'centro'; grupos: Grupo[] });
+
+/** Lo que muestra la tabla: filas (vista "Por orden") o centros (vista "Por centro"), ya paginados. */
 export type VistaCalculada =
-  | (BaseVista & { tipo: 'orden'; pagina: Pagina<Fila>; grupos: null })
-  | (BaseVista & { tipo: 'centro'; pagina: Pagina<Grupo>; grupos: Grupo[] });
+  | (Resultados & { tipo: 'orden'; pagina: Pagina<Fila>; contador: string })
+  | (Resultados & { tipo: 'centro'; pagina: Pagina<Grupo>; contador: string });
 
 /**
- * Busca, filtra, ordena, agrupa y pagina.
+ * Busca, filtra, ordena y agrupa (el trabajo pesado: recorre todas las filas del Excel).
+ * No depende de la página: cambiar de página o de filas por página no lo repite (ver paginarResultados).
+ * @param totalCentros  cantidad de centros del Excel completo (para "de N en total" en la vista por centro)
+ */
+export function calcularResultados(datos: ResultadoLectura, criterios: CriteriosVista, totalCentros: number): Resultados {
+  const filtradas = filtrarFilas(datos.filas, criterios);
+  const terminos = dividirTerminos(criterios.q);
+  const porCampo: Partial<Record<Campo, string>> = {
+    codigoCentro: normalizarTexto(criterios.codigo),
+    descripcionCentro: normalizarTexto(criterios.descripcion),
+    ordenCompra: normalizarTexto(criterios.orden),
+  };
+
+  if (criterios.vista === 'centro') {
+    const grupos = ordenarGrupos(agruparPorCentro(filtradas), criterios.ordenarPor, criterios.direccion);
+    return { tipo: 'centro', grupos, filas: grupos.flatMap((g) => g.filas), terminos, porCampo, totalGeneral: totalCentros };
+  }
+  const col = datos.columnas.find((c) => c.clave === criterios.ordenarPor);
+  const ordenadas = col ? ordenarFilas(filtradas, col.indice, criterios.direccion) : filtradas;
+  return { tipo: 'orden', grupos: null, filas: ordenadas, terminos, porCampo, totalGeneral: datos.filas.length };
+}
+
+/** Corta los resultados en páginas y arma el contador (trabajo liviano). */
+export function paginarResultados(resultados: Resultados, pagina: number, tamano: number): VistaCalculada {
+  if (resultados.tipo === 'centro') {
+    const p = paginar(resultados.grupos, pagina, tamano);
+    return { ...resultados, pagina: p, contador: textoContador(p, resultados.totalGeneral, 'centro') };
+  }
+  const p = paginar(resultados.filas, pagina, tamano);
+  return { ...resultados, pagina: p, contador: textoContador(p, resultados.totalGeneral, 'orden') };
+}
+
+/**
+ * Busca, filtra, ordena, agrupa y pagina (calcularResultados + paginarResultados).
  * @param totalCentros  cantidad de centros del Excel completo (para "de N en total" en la vista por centro)
  */
 export function calcularVista(datos: ResultadoLectura, estado: EstadoBusqueda, totalCentros: number): VistaCalculada {
-  const filtradas = filtrarFilas(datos.filas, estado);
-  const terminos = dividirTerminos(estado.q);
-  const porCampo: Partial<Record<Campo, string>> = {
-    codigoCentro: normalizarTexto(estado.codigo),
-    descripcionCentro: normalizarTexto(estado.descripcion),
-    ordenCompra: normalizarTexto(estado.orden),
-  };
-
-  if (estado.vista === 'centro') {
-    const grupos = ordenarGrupos(agruparPorCentro(filtradas), estado.ordenarPor, estado.direccion);
-    const pagina = paginar(grupos, estado.pagina, estado.tamano);
-    return {
-      tipo: 'centro',
-      pagina,
-      grupos,
-      filas: grupos.flatMap((g) => g.filas),
-      terminos,
-      porCampo,
-      contador: textoContador(pagina, totalCentros, 'centro'),
-    };
-  }
-  const col = datos.columnas.find((c) => c.clave === estado.ordenarPor);
-  const ordenadas = col ? ordenarFilas(filtradas, col.indice, estado.direccion) : filtradas;
-  const pagina = paginar(ordenadas, estado.pagina, estado.tamano);
-  return {
-    tipo: 'orden',
-    pagina,
-    grupos: null,
-    filas: ordenadas,
-    terminos,
-    porCampo,
-    contador: textoContador(pagina, datos.filas.length, 'orden'),
-  };
+  return paginarResultados(calcularResultados(datos, estado, totalCentros), estado.pagina, estado.tamano);
 }
 
 /** Palabras que se resaltan en una columna: las del buscador + lo escrito en el filtro de esa columna. */

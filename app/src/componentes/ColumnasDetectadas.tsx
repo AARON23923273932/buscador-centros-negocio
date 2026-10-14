@@ -1,5 +1,6 @@
 // "Columnas detectadas en el Excel": qué columna usó la app para cada cosa, cuáles ocultó y
 // (con el Excel real) dónde está el archivo en SharePoint/OneDrive (para fijarlo en config.json).
+import { memo } from 'react';
 import type { InfoArchivo } from '../hooks/useExcel.ts';
 import { NOMBRES_CAMPOS } from '../logica/filtros.ts';
 import type { OrigenExcel, ResultadoLectura } from '../logica/tipos.ts';
@@ -33,7 +34,14 @@ function UbicacionExcel({ archivo }: { archivo: InfoArchivo | null }) {
   );
 }
 
-export function ColumnasDetectadas({ datos: d, archivo }: { datos: ResultadoLectura; archivo: InfoArchivo | null }) {
+/** memo(): solo se vuelve a dibujar al leer otra vez el Excel. */
+export const ColumnasDetectadas = memo(function ColumnasDetectadas({
+  datos: d,
+  archivo,
+}: {
+  datos: ResultadoLectura;
+  archivo: InfoArchivo | null;
+}) {
   return (
     <>
       <p>
@@ -76,4 +84,4 @@ export function ColumnasDetectadas({ datos: d, archivo }: { datos: ResultadoLect
       </div>
     </>
   );
-}
+});

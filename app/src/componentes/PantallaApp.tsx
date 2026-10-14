@@ -2,10 +2,20 @@
 // PantallaApp — La aplicación: buscador, filtros, tabla, paginación y "Columnas detectadas".
 //
 //   Excel (useExcel) + lo que eligió la persona (useBusqueda)
-//        ──► calcularVista() ──► tabla, contador y paginación ──► URL (useGuardarEnUrl)
+//        ──► calcularResultados() ──► paginarResultados() ──► tabla, contador y paginación
+//        ──► URL (useGuardarEnUrl)
+//
+// Rendimiento (con miles de filas, sobre todo en el celular):
+//  - Escribir en el buscador o en un filtro "contiene" solo cambia lo que se ve en la caja
+//    (useBusqueda.borradores): la tabla, la paginación y "Columnas detectadas" están envueltas en
+//    memo() y reciben siempre las mismas props, así que NO se vuelven a dibujar hasta que el filtro
+//    se aplica (200 ms después de la última tecla).
+//  - Cambiar de página (o de filas por página) no vuelve a buscar ni a ordenar: solo corta otra página.
+//  - Esta pantalla también está en memo(): el aviso flotante y el botón ☀️/🌙 (estado de App) no la redibujan.
+//  Lo comprueba tests/unit/rendimiento.test.tsx.
 // =============================================================================
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Avisar } from '../hooks/useAvisoFlotante.ts';
 import { useBusqueda } from '../hooks/useBusqueda.ts';
 import { useGuardarEnUrl } from '../hooks/useEstadoUrl.ts';
@@ -13,13 +23,14 @@ import { useExcel } from '../hooks/useExcel.ts';
 import type { Sesion } from '../logica/auth.ts';
 import type { Config } from '../logica/config.ts';
 import { TAMANOS_PAGINA } from '../logica/estado-url.ts';
-import { contarFiltrosActivos, sePuedeFiltrar } from '../logica/filtros.ts';
+import { contarFiltrosActivos } from '../logica/filtros.ts';
 import { copiarTexto } from '../logica/portapapeles.ts';
 import type { Columna } from '../logica/tipos.ts';
 import {
-  calcularVista,
+  calcularResultados,
   estadoControles,
   opcionesDesplegables,
+  paginarResultados,
   terminosDeColumna,
   textoActualizado,
   vistaCentroDisponible,
@@ -41,7 +52,7 @@ interface Props {
   avisar: Avisar;
 }
 
-export function PantallaApp({ config, sesion, avisar }: Props) {
+export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }: Props) {
   const porDefecto = TAMANOS_PAGINA.includes(Number(config.filasPorPagina)) ? Number(config.filasPorPagina) : 50;
   const busqueda = useBusqueda(porDefecto);
   const { estado, setEstado } = busqueda;
@@ -58,7 +69,24 @@ export function PantallaApp({ config, sesion, avisar }: Props) {
   const { datos, cargando } = excel;
 
   // ---- Lo que se ve (se recalcula solo cuando cambian los datos o lo elegido) ----
-  const vista = useMemo(() => (datos ? calcularVista(datos, estado, excel.totalCentros) : null), [datos, estado, excel.totalCentros]);
+  // 1) Buscar, filtrar, ordenar y agrupar: solo si cambian los datos, la búsqueda, los filtros, la vista o el orden.
+  const { q, cliente, codigo, descripcion, orden, tipo, estado: filtroEstado, vista: tipoVista, ordenarPor, direccion } = estado;
+  const resultados = useMemo(
+    () =>
+      datos
+        ? calcularResultados(
+            datos,
+            { q, cliente, codigo, descripcion, orden, tipo, estado: filtroEstado, vista: tipoVista, ordenarPor, direccion },
+            excel.totalCentros,
+          )
+        : null,
+    [datos, q, cliente, codigo, descripcion, orden, tipo, filtroEstado, tipoVista, ordenarPor, direccion, excel.totalCentros],
+  );
+  // 2) Cortar la página: lo único que cambia al pasar de página o al elegir otras "Filas por página".
+  const vista = useMemo(
+    () => (resultados ? paginarResultados(resultados, estado.pagina, estado.tamano) : null),
+    [resultados, estado.pagina, estado.tamano],
+  );
   const controles = useMemo(() => estadoControles(datos), [datos]);
   const opciones = useMemo(() => opcionesDesplegables(datos), [datos]);
   const activos = contarFiltrosActivos(estado);
@@ -101,10 +129,14 @@ export function PantallaApp({ config, sesion, avisar }: Props) {
     });
   }, []);
 
-  const irAPagina = (pagina: number) => {
-    busqueda.irAPagina(pagina);
-    if (contenedorTabla.current) contenedorTabla.current.scrollTop = 0;
-  };
+  const { irAPagina: irAPaginaBusqueda } = busqueda;
+  const irAPagina = useCallback(
+    (pagina: number) => {
+      irAPaginaBusqueda(pagina);
+      if (contenedorTabla.current) contenedorTabla.current.scrollTop = 0;
+    },
+    [irAPaginaBusqueda],
+  );
 
   // "Saltar a la paginación": con teclado, evita pasar por todos los botones de la tabla.
   const saltarAPaginacion = () => {
@@ -145,7 +177,11 @@ export function PantallaApp({ config, sesion, avisar }: Props) {
   if (!datos && excel.falloSinDatos) actualizado = 'No se pudieron cargar los datos.';
   else if (excel.ultimaConsulta) actualizado = textoActualizado(excel.ultimaConsulta, excel.archivo?.modificado, config.autoActualizarMinutos);
 
-  const terminosDe = (columna: Pick<Columna, 'campo'>) => (vista ? terminosDeColumna(vista.terminos, vista.porCampo, columna) : []);
+  // Misma función mientras no cambien los resultados (si no, memo() de las tablas no serviría).
+  const terminosDe = useCallback(
+    (columna: Pick<Columna, 'campo'>) => (resultados ? terminosDeColumna(resultados.terminos, resultados.porCampo, columna) : []),
+    [resultados],
+  );
 
   let tabla;
   if (datos && vista) {
@@ -225,8 +261,8 @@ export function PantallaApp({ config, sesion, avisar }: Props) {
         borradores={busqueda.borradores}
         controles={controles}
         opciones={opciones}
-        mostrarTipo={datos ? sePuedeFiltrar('tipoOrden', datos.mapa, datos.filas) : false}
-        mostrarEstado={datos ? sePuedeFiltrar('estado', datos.mapa, datos.filas) : false}
+        mostrarTipo={datos ? controles.tipo.disponible : false}
+        mostrarEstado={datos ? controles.estado.disponible : false}
         activos={datos ? activos : null}
         limpiarDesactivado={datos ? activos === 0 && !estado.q : false}
         alEscribir={busqueda.escribir}
@@ -276,4 +312,4 @@ export function PantallaApp({ config, sesion, avisar }: Props) {
       <p className="pie">La información se lee del Excel que llena el bot del ERP. Esta página es solo de consulta (no modifica el Excel).</p>
     </section>
   );
-}
+});

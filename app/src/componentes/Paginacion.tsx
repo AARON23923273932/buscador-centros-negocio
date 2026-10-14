@@ -2,7 +2,7 @@
 //
 // Teclado: si el botón que tenía el foco queda desactivado (ej. "Siguiente" al llegar a la
 // última página), el foco pasa al texto "Página X de Y" para que no se pierda.
-import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { memo, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { numero } from '../logica/formato.ts';
 import type { Pagina } from '../logica/tipos.ts';
 
@@ -14,7 +14,8 @@ interface Props {
   navRef?: RefObject<HTMLElement | null>;
 }
 
-export function Paginacion({ pagina: pag, alIrA, navRef }: Props) {
+/** memo(): no se vuelve a dibujar si no cambia la página (ej. mientras se escribe en el buscador). */
+export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef }: Props) {
   const propio = useRef<HTMLElement | null>(null);
   const nav = navRef ?? propio;
   /** aria-label del botón pulsado mientras tenía el foco (para cuidar el foco después de cambiar de página). */
@@ -94,4 +95,4 @@ export function Paginacion({ pagina: pag, alIrA, navRef }: Props) {
       {botones}
     </nav>
   );
-}
+});

@@ -7,9 +7,11 @@ import { estadoInicial } from '../../src/logica/estado-url.ts';
 import type { EstadoBusqueda } from '../../src/logica/tipos.ts';
 import {
   ajustarEstadoAColumnas,
+  calcularResultados,
   calcularVista,
   estadoControles,
   opcionesDesplegables,
+  paginarResultados,
   terminosDeColumna,
   textoActualizado,
   vistaCentroDisponible,
@@ -103,6 +105,14 @@ describe('calcularVista', () => {
     ]);
     expect(v.filas).toHaveLength(4);
     expect(v.contador).toBe('Mostrando 1–3 de 3 centros (de 3 en total)');
+  });
+  it('los resultados (filtrados y ordenados) se calculan una vez y sirven para todas las páginas', () => {
+    const resultados = calcularResultados(COMPLETO, estado({ ordenarPor: 'ordenCompra' }), 3);
+    const pagina2 = paginarResultados(resultados, 2, 2);
+    expect(pagina2.filas).toBe(resultados.filas); // misma lista: no se volvió a filtrar ni a ordenar
+    expect(pagina2).toEqual(calcularVista(COMPLETO, estado({ ordenarPor: 'ordenCompra', pagina: 2, tamano: 2 }), 3));
+    expect(pagina2.pagina.items.map((f) => f.campos.ordenCompra)).toEqual(['OC-4', 'OS-2']);
+    expect(pagina2.contador).toBe('Mostrando 3–4 de 4 resultados (de 4 en total)');
   });
   it('una página que ya no existe se corrige a la última', () => {
     expect(calcularVista(COMPLETO, estado({ pagina: 9, tamano: 25 }), 3).pagina.pagina).toBe(1);
