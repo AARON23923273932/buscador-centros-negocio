@@ -9,6 +9,7 @@ import { AvisoError, AvisoFlotante } from '../../src/componentes/Avisos.tsx';
 import { BotonTema } from '../../src/componentes/BotonTema.tsx';
 import { Filtros } from '../../src/componentes/Filtros.tsx';
 import { Paginacion } from '../../src/componentes/Paginacion.tsx';
+import { TooltipProvider } from '../../src/components/ui/tooltip.tsx';
 import { useAvisoFlotante } from '../../src/hooks/useAvisoFlotante.ts';
 import { useBusqueda } from '../../src/hooks/useBusqueda.ts';
 import { useTema } from '../../src/hooks/useTema.ts';
@@ -227,9 +228,11 @@ describe('Botón de tema (useTema + BotonTema)', () => {
   function ConBoton() {
     return <BotonTema tema={useTema()} />;
   }
+  // La app tiene un solo TooltipProvider (en App.tsx): aquí se pone alrededor del botón.
+  const conProveedor = { wrapper: TooltipProvider };
 
   it('sin elección sigue al sistema; al pulsar cambia, lo marca en <html> y lo recuerda', () => {
-    render(<ConBoton />);
+    render(<ConBoton />, conProveedor);
     const raiz = document.documentElement;
     expect(raiz.getAttribute('data-tema-efectivo')).toBe('claro'); // jsdom no tiene modo oscuro
     expect(raiz.hasAttribute('data-tema')).toBe(false);
@@ -237,21 +240,34 @@ describe('Botón de tema (useTema + BotonTema)', () => {
     expect(raiz.getAttribute('data-tema')).toBe('oscuro');
     expect(raiz.getAttribute('data-tema-efectivo')).toBe('oscuro');
     expect(localStorage.getItem(CLAVE_TEMA)).toBe('oscuro');
+    // El nombre pasa a ser el del modo al que se cambiaría ahora (lo que lee el lector de pantalla y dice la ayuda).
+    expect(screen.getByRole('button', { name: 'Cambiar a modo claro' }).id).toBe('btn-tema');
+    expect(screen.queryByRole('button', { name: 'Cambiar a modo oscuro' })).toBeNull();
   });
 
-  it('el nombre del botón también se ve como ayuda flotante (Tooltip) al llegar con el teclado', async () => {
+  it('el nombre del botón también se ve como ayuda flotante (Tooltip) al llegar con el teclado, y se actualiza', async () => {
     // Radix mide la ayuda flotante con ResizeObserver, que jsdom no tiene.
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
-    render(<ConBoton />);
+    render(<ConBoton />, conProveedor);
     const boton = screen.getByRole('button', { name: 'Cambiar a modo oscuro' });
     expect(boton.title).toBe(''); // sin "title": no aparecen dos ayudas a la vez
     fireEvent.focus(boton);
     expect((await screen.findByRole('tooltip')).textContent).toBe('Cambiar a modo oscuro');
+    // La ayuda repite el nombre: el botón no la usa como descripción (si no, el lector de pantalla lo diría dos veces).
+    expect(boton.hasAttribute('aria-describedby')).toBe(false);
+    // Al cambiar de modo, la ayuda dice el nombre nuevo.
+    fireEvent.click(boton);
+    expect(boton.getAttribute('aria-label')).toBe('Cambiar a modo claro');
+    fireEvent.blur(boton);
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    fireEvent.focus(boton);
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Cambiar a modo claro');
+    expect(boton.hasAttribute('aria-describedby')).toBe(false);
   });
 
   it('respeta la elección guardada', () => {
     localStorage.setItem(CLAVE_TEMA, 'oscuro');
-    render(<ConBoton />);
+    render(<ConBoton />, conProveedor);
     expect(document.documentElement.getAttribute('data-tema-efectivo')).toBe('oscuro');
   });
 });

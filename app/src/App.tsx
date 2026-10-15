@@ -14,6 +14,7 @@
 
 import { useEffect, type MouseEvent, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { useArranque } from './hooks/useArranque.ts';
 import { useAvisoFlotante } from './hooks/useAvisoFlotante.ts';
 import { useTema } from './hooks/useTema.ts';
@@ -137,8 +138,9 @@ export function App() {
     }
   }
 
+  // Un solo TooltipProvider (ayudas flotantes de shadcn/ui) para toda la app.
   return (
-    <>
+    <TooltipProvider>
       <a
         className={SALTAR}
         href={conBuscador ? '#buscador' : '#principal'}
@@ -157,6 +159,6 @@ export function App() {
         {pantalla}
       </main>
       <AvisoFlotante aviso={aviso} />
-    </>
+    </TooltipProvider>
   );
 }

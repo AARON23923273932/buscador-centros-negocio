@@ -331,6 +331,12 @@
   mark {
     @apply rounded-[2px] bg-marca px-px text-marca-texto;
   }
+  /* Texto seleccionado (también el del buscador al llegar con Tab): colores de la paleta en vez del azul del
+     navegador. Claro: blanco sobre Primary Blue; oscuro: Primary Blue sobre Light Blue. */
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

@@ -284,6 +284,79 @@ test.describe('Guía de estilo oficial de AIC', () => {
     await page.locator(`${selector} > td`).nth(2).hover();
     expect(await fila(page, selector)).toEqual({ fondo: PALETA.lightBlue, raya: raya(PALETA.lightBlue) });
   });
+
+  test('sin colores intermedios: la ayuda flotante y el aviso aparecen sin fundido', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.emulateMedia({ colorScheme: 'light' });
+    await abrir(page, '/ordenes');
+    // Ayuda flotante con el mouse (aparece después de una espera, con la animación de entrada de shadcn/ui).
+    await page.locator('#btn-tema').hover();
+    const ayuda = page.locator('[data-slot="tooltip-content"]');
+    await expect(ayuda).toBeVisible();
+    const entrada = await ayuda.evaluate((el) => {
+      // Se congela la animación en su primer cuadro: así se ve con qué opacidad empieza.
+      for (const a of el.getAnimations()) {
+        a.pause();
+        a.currentTime = 0;
+      }
+      const e = getComputedStyle(el);
+      return { estado: el.getAttribute('data-state'), opacidad: e.opacity, desde: e.getPropertyValue('--tw-enter-opacity').trim() };
+    });
+    expect(entrada.estado).toBe('delayed-open');
+    expect(entrada.opacidad).toBe('1'); // con fade-in-0 empezaba en 0 (colores intermedios por unos 150 ms)
+    expect(['', '1']).toContain(entrada.desde);
+
+    // Aviso flotante ("Código … copiado"): solo se desliza; la opacidad no tiene transición.
+    await page.getByRole('button', { name: /^Copiar código/ }).first().click();
+    const aviso = page.locator('#aviso-flotante');
+    await expect(aviso).toContainText('copiado');
+    const transicion = await aviso.evaluate((el) => getComputedStyle(el).transitionProperty);
+    expect(transicion.split(/,\s*/)).not.toContain('opacity');
+    expect(transicion).toBe('translate');
+  });
+
+  test('texto seleccionado con colores de la paleta (no el azul del navegador)', async ({ page }) => {
+    for (const [tema, fondo, texto] of [
+      ['light', PALETA.primaryBlue, PALETA.white],
+      ['dark', PALETA.lightBlue, PALETA.primaryBlue],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: tema });
+      await abrir(page, '/ordenes');
+      const buscador = page.getByLabel('Buscar', { exact: true });
+      await buscador.fill('3519');
+      await buscador.selectText();
+      const seleccion = await buscador.evaluate((el) => {
+        const e = getComputedStyle(el, '::selection');
+        return { fondo: e.backgroundColor, texto: e.color };
+      });
+      expect(seleccion, tema).toEqual({ fondo, texto });
+      // También en el texto de la página (ej. una celda de la tabla).
+      const celda = await page.locator('#tabla-resultados td').first().evaluate((el) => getComputedStyle(el, '::selection').backgroundColor);
+      expect(celda, tema).toBe(fondo);
+    }
+  });
+
+  test('☀️/🌙: la ayuda flotante no repite el nombre como descripción; "copiar" no lleva ayuda flotante', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await abrir(page, '/ordenes');
+    const tema = page.locator('#btn-tema');
+    await tema.focus();
+    await expect(page.getByRole('tooltip')).toHaveText('Cambiar a modo oscuro');
+    await expect(tema).toHaveAccessibleName('Cambiar a modo oscuro');
+    await expect(tema).not.toHaveAttribute('aria-describedby', /.*/); // nombre y ayuda iguales: no se lee dos veces
+    await expect(tema).toHaveAccessibleDescription('');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+
+    // "Copiar código": sin ayuda flotante (una por fila hacía lento cambiar de página) ni "title" (se leería dos veces).
+    const copiar = page.locator('#tabla-resultados .btn-copiar').first();
+    await copiar.hover();
+    await page.waitForTimeout(600); // más que la espera de la ayuda flotante (300 ms)
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+    await expect(copiar).toHaveAccessibleName(/^Copiar código /);
+    await expect(copiar).toHaveAccessibleDescription('');
+    await expect(copiar).not.toHaveAttribute('title', /.*/);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -372,10 +445,14 @@ for (const tema of ['light', 'dark'] as const) {
     test('lista "Por orden" con búsqueda resaltada, foco con el teclado y ayuda flotante', async ({ page }) => {
       await abrir(page, '/ordenes?q=cn0005');
       expect(await revisarColores(page)).toEqual({ fueraDePaleta: [], bajoContraste: [] });
-      // Con el foco del teclado en "copiar" (anillo + ayuda flotante "Copiar código").
+      // Con el foco del teclado en "copiar" (anillo).
       await page.locator('#tabla-resultados .enlace-codigo').first().focus();
       await page.keyboard.press('Tab');
-      await expect(page.getByRole('tooltip')).toHaveText('Copiar código');
+      await expect(page.locator('#tabla-resultados .btn-copiar').first()).toBeFocused();
+      expect(await revisarColores(page)).toEqual({ fueraDePaleta: [], bajoContraste: [] });
+      // Con el foco del teclado en ☀️/🌙 (anillo + ayuda flotante).
+      await page.locator('#btn-tema').focus();
+      await expect(page.getByRole('tooltip')).toHaveText(tema === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro');
       expect(await revisarColores(page)).toEqual({ fueraDePaleta: [], bajoContraste: [] });
     });
 

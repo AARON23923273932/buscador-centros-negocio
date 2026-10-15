@@ -94,13 +94,16 @@ export function AvisoColumnas({ datos }: { datos: ResultadoLectura | null }) {
  * Mensaje corto flotante (ej. "Código copiado"). Siempre está en la página para que los lectores de pantalla lo lean.
  * key = id del aviso: un mensaje repetido (ej. "Datos actualizados" dos veces) se vuelve a anunciar.
  * Colores: texto blanco sobre negro (al revés en modo oscuro). Está también en index.html.
+ * Aparece y se va SIN fundido (opacity cambia de golpe; solo se desliza): un fundido mostraría por un momento
+ * colores intermedios que no son de la paleta de AIC. Escondido sigue en la página (opacity 0, no "hidden"),
+ * para que el lector de pantalla lea el mensaje.
  */
 export function AvisoFlotante({ aviso }: { aviso: DatosAvisoFlotante }) {
   return (
     <div
       id="aviso-flotante"
       className={cn(
-        'aviso-flotante pointer-events-none fixed bottom-5 left-1/2 z-50 max-w-[calc(100vw-32px)] -translate-x-1/2 translate-y-5 rounded-md bg-foreground px-4 py-2.5 text-sm text-card opacity-0 transition-[opacity,translate] duration-200',
+        'aviso-flotante pointer-events-none fixed bottom-5 left-1/2 z-50 max-w-[calc(100vw-32px)] -translate-x-1/2 translate-y-5 rounded-md bg-foreground px-4 py-2.5 text-sm text-card opacity-0 transition-[translate] duration-200',
         aviso.visible && 'visible translate-y-0 opacity-100',
       )}
       role="status"

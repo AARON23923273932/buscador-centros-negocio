@@ -5,7 +5,6 @@ import { Link, useInRouterContext, useLocation } from 'react-router';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { codigoEnlazable, rutaDetalleCentro, type EstadoNavegacion } from '../logica/rutas.ts';
 import type { Celda, Columna, Direccion, Fila } from '../logica/tipos.ts';
 import { claseColumna, estadoOrden } from '../logica/tabla.ts';
@@ -81,29 +80,26 @@ function TextoCodigo({ codigo, enlazar, children }: { codigo: string; enlazar: b
 
 /**
  * Botón "copiar" junto al código: 26 px que no agrandan la fila (sobresale 3 px arriba y abajo de la línea).
- * Su nombre ("Copiar código …") también se ve como ayuda flotante al pasar el mouse o llegar con el teclado.
+ * Para los lectores de pantalla se llama "Copiar código …" (aria-label). No lleva ayuda flotante (Tooltip): habría
+ * una por fila y, con 250 filas por página, cambiar de página era bastante más lento. Tampoco "title": el lector de
+ * pantalla lo leería otra vez después del nombre. Al copiar, el aviso flotante dice "Código … copiado".
  */
 function BotonCopiar({ texto, alCopiar }: { texto: string; alCopiar?: AlCopiar }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          className="btn-copiar -my-[3px] size-[26px] p-0 text-muted-foreground hover:bg-card hover:text-enlace hover:not-focus-visible:border-border focus-visible:text-enlace print:hidden"
-          data-copiar={texto}
-          aria-label={`Copiar código ${texto}`}
-          onClick={(ev) => {
-            // Que el clic no abra/cierre la fila del centro (vista "Por centro").
-            ev.stopPropagation();
-            alCopiar?.(texto);
-          }}
-        >
-          <IconoCopiar />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>Copiar código</TooltipContent>
-    </Tooltip>
+    <Button
+      type="button"
+      variant="ghost"
+      className="btn-copiar -my-[3px] size-[26px] p-0 text-muted-foreground hover:bg-card hover:text-enlace hover:not-focus-visible:border-border focus-visible:text-enlace print:hidden"
+      data-copiar={texto}
+      aria-label={`Copiar código ${texto}`}
+      onClick={(ev) => {
+        // Que el clic no abra/cierre la fila del centro (vista "Por centro").
+        ev.stopPropagation();
+        alCopiar?.(texto);
+      }}
+    >
+      <IconoCopiar />
+    </Button>
   );
 }
 
