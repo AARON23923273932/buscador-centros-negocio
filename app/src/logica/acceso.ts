@@ -113,10 +113,13 @@ export function construirAuthority(ms: { tenantId?: string } = {}): string {
  * "Conceder consentimiento de administrador" solo aprueba los permisos que YA están en la lista de
  * "Permisos de API" de la app: por eso se pide revisar primero que Files.Read.All esté ahí.
  */
+/** Nombre del registro de la app en Entra ID (lo creó el área de TI para Aaron; ver config.json → microsoft.clientId). */
+export const NOMBRE_APP_ENTRA = 'Automatizacion de procesos Aaron';
+
 export const MENSAJE_CONSENTIMIENTO =
   'Tu organización exige que un administrador apruebe el permiso de lectura de archivos (Files.Read.All) para la app ' +
-  '"Buscador de centros de negocio". Pídeselo a quien administra Microsoft 365: Entra ID → Registros de aplicaciones → ' +
-  'Buscador de centros de negocio → Permisos de API. Ahí debe revisar que "Files.Read.All" (delegado) esté en la lista ' +
+  `"${NOMBRE_APP_ENTRA}". Pídeselo a quien administra Microsoft 365: Entra ID → Registros de aplicaciones → ` +
+  `${NOMBRE_APP_ENTRA} → Permisos de API. Ahí debe revisar que "Files.Read.All" (delegado) esté en la lista ` +
   '(si no está: "+ Agregar un permiso", guía paso 2) y luego pulsar "Conceder consentimiento de administrador". ' +
   'Después vuelve a iniciar sesión.';
 
@@ -165,7 +168,7 @@ export function explicarErrorLogin(error: unknown): string {
     // (flujo de "solicitud de consentimiento de administrador" de Entra ID).
     AADSTS65004:
       'No se aprobaron los permisos de la app. Si pediste la aprobación de un administrador, espera a que la conceda ' +
-      '(Entra ID → Registros de aplicaciones → Buscador de centros de negocio → Permisos de API → "Conceder ' +
+      `(Entra ID → Registros de aplicaciones → ${NOMBRE_APP_ENTRA} → Permisos de API → "Conceder ` +
       'consentimiento de administrador") y vuelve a iniciar sesión. Si cancelaste tú, vuelve a iniciar sesión y ' +
       'acepta los permisos (son solo de lectura).',
     AADSTS50011: 'La dirección de retorno (redirect URI) no está registrada en Entra ID. Revisa la guía de configuración.',

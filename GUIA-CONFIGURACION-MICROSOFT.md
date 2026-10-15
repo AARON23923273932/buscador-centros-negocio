@@ -4,6 +4,8 @@
 > **Tiempo aproximado:** 30 a 60 minutos.
 > **Requisito:** la app ya funciona en modo demo (ver [README.md](README.md)).
 >
+> **App que se usa (14/10/2026):** "Automatizacion de procesos Aaron" (Id. de aplicación `e5d497dc-137e-4d16-8028-cedeffa02f32`), creada por TI. Donde esta guía dice "Buscador de centros de negocio" como nombre del registro en Entra ID, aplica a esa app. Los pasos 1 y 2 (URIs SPA, `Files.Read.All` y consentimiento) los hace quien sea propietario o administrador de esa app.
+>
 > Los nombres de los menús son los del **centro de administración de Microsoft Entra** actual (entra.microsoft.com). Entre paréntesis va el nombre que tenían en el portal anterior, por si todavía se ve así. Pueden variar un poco según el idioma.
 
 ---
@@ -84,7 +86,7 @@
    > - Al leer el Excel, la app la lleva una vez a Microsoft, que muestra *"Se necesita aprobación del administrador"* (*Need admin approval*). Al volver, la app muestra: *"Tu organización exige que un administrador apruebe el permiso de lectura de archivos (Files.Read.All) para la app 'Buscador de centros de negocio'…"* (errores `AADSTS65001`, `AADSTS90093`, `AADSTS90094`, `AADSTS900941`) y el Excel no carga.
    > - Si la empresa tiene activada la **solicitud de aprobación** (*admin consent workflow*), la persona puede pedirla desde esa pantalla; al volver ve *"No se aprobaron los permisos de la app. Si pediste la aprobación de un administrador, espera a que la conceda…"* (`AADSTS65004`) hasta que un administrador la apruebe.
    >
-   > Solución: este paso 2.4, hecho por un administrador (**Entra ID → Registros de aplicaciones → Buscador de centros de negocio → Permisos de API → Conceder consentimiento de administrador**). Después cada persona pulsa **"Volver a iniciar sesión"** en la app (o cierra sesión y entra de nuevo).
+   > Solución: este paso 2.4, hecho por un administrador (**Entra ID → Registros de aplicaciones → Automatizacion de procesos Aaron → Permisos de API → Conceder consentimiento de administrador**). Después cada persona pulsa **"Volver a iniciar sesión"** en la app (o cierra sesión y entra de nuevo).
 
 **¿Por qué estos permisos y no otros?**
 

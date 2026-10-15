@@ -9,8 +9,8 @@
   "subtitulo": "Centros de negocio y sus órdenes de compra / servicio",
 
   "microsoft": {
-    "_clientId": "Id. de aplicación (cliente) de la app \"Buscador de centros de negocio\" registrada en Entra ID (12/10/2026).",
-    "clientId": "f8547d9b-6819-40b6-80d7-8ae62bd0630a",
+    "_clientId": "Id. de aplicación (cliente) de la app \"Automatizacion de procesos Aaron\" registrada en Entra ID por TI (Gustavo Chura), 14/10/2026. Reemplaza a la app \"Buscador de centros de negocio\" (f8547d9b-…), que ya no se usa.",
+    "clientId": "e5d497dc-137e-4d16-8028-cedeffa02f32",
     "_tenantId": "Id. de directorio (inquilino) JAICOS CORP S.A.C. (incluye aic.pe y jaicoscorp.com). OBLIGATORIO en modo microsoft: la app se registra como inquilino único.",
     "tenantId": "7dd6aede-c85a-4093-9916-6427e8fe790d",
     "_tenantsPermitidos": "Lista de Id. de directorio aceptados. Vacía = no se revisa. Es solo una revisión en el navegador (comodidad), igual que los dominios.",

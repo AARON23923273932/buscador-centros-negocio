@@ -96,8 +96,8 @@ describe('construirAuthority y mensajes', () => {
     expect(esErrorConsentimiento(error)).toBe(true);
     const texto = explicarErrorLogin(error);
     expect(texto).toMatch(/un administrador apruebe el permiso de lectura de archivos/);
-    expect(texto).toMatch(/"Buscador de centros de negocio"/);
-    expect(texto).toMatch(/Entra ID → Registros de aplicaciones → Buscador de centros de negocio → Permisos de API/);
+    expect(texto).toMatch(/"Automatizacion de procesos Aaron"/);
+    expect(texto).toMatch(/Entra ID → Registros de aplicaciones → Automatizacion de procesos Aaron → Permisos de API/);
     // "Conceder consentimiento" solo aprueba lo que está en la lista: primero hay que revisar que Files.Read.All esté.
     expect(texto).toMatch(/revisar que "Files\.Read\.All" \(delegado\) esté en la lista/);
     expect(texto).toMatch(/Conceder consentimiento de administrador/);
