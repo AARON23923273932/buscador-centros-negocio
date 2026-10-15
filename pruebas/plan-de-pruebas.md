@@ -1,6 +1,6 @@
 # ✅ Plan de pruebas — Buscador de centros de negocio
 
-> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (354 unitarias de lógica y componentes + 84 en navegador, al 15/10/2026, ya con **React Router 8.4**, los componentes **shadcn/ui**, la **guía de estilo de AIC** y las órdenes una por línea) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
+> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (358 unitarias de lógica y componentes + 93 en navegador, al 15/10/2026, ya con **React Router 8.4**, los componentes **shadcn/ui**, la **guía de estilo de AIC** y las órdenes una por línea) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
 > Marca `[x]` lo que pase. Si algo falla, anota qué viste (o toma captura) y me lo pasas.
 
 **Cómo abrir la app en tu PC:**
@@ -138,7 +138,7 @@ Necesitas: etapa 3 hecha + que **tu cuenta pueda abrir** el Excel original en Sh
 - [ ] 6.4 Antes de subir la versión con el Excel real: que el administrador haya hecho el **paso 2** de la guía (`Files.Read.All` en la lista + consentimiento). Después, cerrar el Excel de ejemplo, `npm.cmd run preparar-publicacion`, subir `publicar/` y repetir 4.2–4.6 en https://aic-centros-negocio.netlify.app.
 - [ ] 6.5 **Versión con rutas (React Router):** `publicar/` tiene el archivo **`_redirects`** (el script se detiene si falta). Ya publicada, abrir directamente `https://aic-centros-negocio.netlify.app/centros/<un código real>` y **recargar (F5)** → se ve el detalle, no *"Page not found"* de Netlify. Repetir 1.16 y 4.9 en la dirección publicada ([guía, paso 6 → "Rutas de la app y `_redirects`"](../GUIA-CONFIGURACION-MICROSOFT.md#rutas-de-la-app-y-_redirects-14102026-react-router)).
 
-- [x] 6.6 Revisiones automáticas con los cambios del 15/10/2026 (rama `ui-aic-shadcn`) — **yo**: `typecheck`, `lint`, 354 unitarias, 84 en navegador, `build` y `preparar-publicacion` OK; `npm.cmd audit --omit=dev` sin avisos. *(15/10/2026)*
+- [x] 6.6 Revisiones automáticas con los cambios del 15/10/2026 (rama `ui-aic-shadcn`) — **yo**: `typecheck`, `lint`, 358 unitarias, 93 en navegador, `build` y `preparar-publicacion` OK; `npm.cmd audit --omit=dev` sin avisos. *(15/10/2026)*
 - [ ] 6.7 **Publicar los cambios del 15/10/2026:** `npm.cmd ci` → `npm.cmd run preparar-publicacion` → subir `publicar/`. Ya publicada, repetir 1.18 y 6.5 en https://aic-centros-negocio.netlify.app (con el Excel real: 1.18.8 y 1.18.9).
 
 ---
