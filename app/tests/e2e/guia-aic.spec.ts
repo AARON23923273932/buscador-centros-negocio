@@ -331,8 +331,10 @@ test.describe('Guía de estilo oficial de AIC', () => {
       });
       expect(seleccion, tema).toEqual({ fondo, texto });
       // También en el texto de la página (ej. una celda de la tabla).
-      const celda = await page.locator('#tabla-resultados td').first().evaluate((el) => getComputedStyle(el, '::selection').backgroundColor);
-      expect(celda, tema).toBe(fondo);
+      // expect.poll: con varias pruebas en paralelo la tabla puede estar redibujándose tras la búsqueda.
+      await expect
+        .poll(() => page.locator('#tabla-resultados td').first().evaluate((el) => getComputedStyle(el, '::selection').backgroundColor), { message: tema })
+        .toBe(fondo);
     }
   });
 
