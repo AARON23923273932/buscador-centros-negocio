@@ -1,28 +1,25 @@
 // Cambios de diseño pedidos por el supervisor (Gustavo), medidos en Chromium:
 //   1. Más margen a los lados (14/10/2026 y otra vez 15/10/2026: "creo que podría ser un poco más"): el contenido
 //      va en una columna de 1120 px como máximo, con un margen lateral del 6 % del ancho (entre 20 y 96 px).
-//   2. Contornos menos agresivos: bordes de 1 px y un anillo al llegar con el teclado (no con el mouse), que
-//      contrasta al menos 3:1 con el fondo en claro y en oscuro. Desde el 15/10/2026 los colores son los de la
-//      guía de estilo de AIC (sin transparencias): borde Primary Blue + anillo Medium Blue (en oscuro: Light Blue
-//      + Border Gray). Los componentes son de shadcn/ui; el anillo es un box-shadow.
+//   2. Contornos suaves y foco visible con el teclado. Desde el último pedido del 15/10/2026 ("que use los estilos
+//      naturales de shadcn … sin cambios, solo agregando el estilo de marca") son los de shadcn/ui tal cual: bordes de
+//      1 px y, con el teclado (:focus-visible), el borde pasa al color del anillo (--ring, Medium Blue) más un anillo
+//      de 3 px de ese color al 50 % (focus-visible:border-ring ring-3 ring-ring/50). El color --ring contrasta al menos
+//      3:1 con el fondo en claro y en oscuro. En los botones el anillo aparece solo con el teclado; en las cajas de texto
+//      y desplegables, como en shadcn/ui, también al hacer clic (el navegador las marca :focus-visible).
 //   3. Íconos alineados con su texto (mismo tamaño, desfase vertical de 1 px o menos).
 import { expect, test, type Page } from '@playwright/test';
 import { abrir } from './ayuda.ts';
+import { al, PALETA, prepararColores } from './colores.ts';
 import { usarConfigPruebas } from './config-pruebas.ts';
 
 test.beforeEach(async ({ context }) => {
   await usarConfigPruebas(context);
+  await prepararColores(context);
 });
 
-/** Colores de la guía de AIC como los devuelve getComputedStyle. */
-const PRIMARY_BLUE = 'rgb(30, 58, 110)';
-const MEDIUM_BLUE = 'rgb(59, 107, 170)';
-const LIGHT_BLUE = 'rgb(232, 238, 245)';
-const BORDER_GRAY = 'rgb(204, 204, 204)';
-const WHITE = 'rgb(255, 255, 255)';
-/** Anillo de foco: 2 px sólidos alrededor (claro: Medium Blue; oscuro: Border Gray). */
-const ANILLO_CLARO = `${MEDIUM_BLUE} 0px 0px 0px 2px`;
-const ANILLO_OSCURO = `${BORDER_GRAY} 0px 0px 0px 2px`;
+/** Anillo de foco de shadcn/ui: --ring (Medium Blue, en claro y en oscuro) al 50 %, 3 px alrededor. */
+const ANILLO = al(PALETA.mediumBlue, 0.5);
 
 /** Diferencia en px entre el centro vertical de un ícono y el centro del texto a su lado. */
 async function desfase(page: Page, selectorIcono: string, selectorTexto: string): Promise<{ tamano: number[]; desfase: number }> {
@@ -53,15 +50,23 @@ async function llegarConTeclado(page: Page, selector: string) {
   await expect(page.locator(selector).first()).toBeFocused();
 }
 
-/** Borde, sombra (anillo) y :focus-visible del elemento con el foco. */
+/**
+ * Borde, anillo de foco de shadcn/ui (o "ninguno") y :focus-visible del elemento con el foco. Primero termina la
+ * transición del componente (transition-all de shadcn/ui: el anillo aparece de a poco).
+ */
 const estiloFoco = (page: Page) =>
-  page.evaluate(() => {
+  page.evaluate(async () => {
     const el = document.activeElement!;
+    await Promise.all(el.getAnimations().map((a) => a.finished.catch(() => {})));
     const e = getComputedStyle(el);
-    return { visible: el.matches(':focus-visible'), borde: e.borderTopColor, sombra: e.boxShadow };
+    const anillo = window.sombrasDe(e.boxShadow).find((s) => s.medidas === '0px 0px 0px 3px');
+    return { visible: el.matches(':focus-visible'), borde: window.normalizarColor(e.borderTopColor), anillo: anillo?.color ?? 'ninguno' };
   });
 
-/** Contraste (WCAG) del anillo de foco (--ring) dibujado sobre el fondo de la página y sobre las tarjetas. */
+/** Estado de foco esperado con el teclado: borde --ring y anillo de shadcn/ui. */
+const CON_TECLADO = { visible: true, borde: PALETA.mediumBlue, anillo: ANILLO };
+
+/** Contraste (WCAG) del color del anillo (--ring) sobre el fondo de la página y sobre las tarjetas. */
 const contrastesAnillo = (page: Page) =>
   page.evaluate(() => {
     const rgba = (texto: string) => {
@@ -153,49 +158,52 @@ test.describe('Diseño (pedido del supervisor)', () => {
     expect(a720.margen - anterior).toBeLessThan(1);
   });
 
-  test('2. contornos suaves: bordes de 1 px; anillo de foco solo con el teclado', async ({ page }) => {
+  test('2. contornos suaves: bordes de 1 px; anillo de foco de shadcn/ui solo con el teclado', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
     // (#panel-filtros: antes se buscaba por su clase "filtros", que ya no existe; es el mismo <fieldset>.)
-    for (const selector of ['#buscador', '#f-cliente', '#f-codigo', '#tam-pagina', '#btn-exportar', '#contenedor-tabla', '#panel-filtros']) {
+    for (const selector of ['#buscador', '#f-cliente', '#f-codigo', '#tam-pagina', '#btn-exportar', '#panel-filtros']) {
       expect(await page.locator(selector).evaluate((el) => getComputedStyle(el).borderTopWidth), selector).toBe('1px');
     }
+    // #contenedor-tabla ahora es una Card de shadcn/ui: su contorno de 1 px es un "ring-1" (sombra), no un borde.
+    const contornoCaja = await page.locator('#contenedor-tabla').evaluate((el) => window.sombrasDe(getComputedStyle(el).boxShadow));
+    expect(contornoCaja).toContainEqual({ color: al(PALETA.black, 0.1), medidas: '0px 0px 0px 1px' });
 
     // Con el mouse: sin anillo.
     const actualizar = page.getByRole('button', { name: 'Actualizar' });
     await actualizar.click();
     await expect(actualizar).toBeFocused();
-    const conMouse = await actualizar.evaluate((b) => ({ visible: b.matches(':focus-visible'), sombra: getComputedStyle(b).boxShadow }));
-    expect(conMouse.visible).toBe(false);
-    expect(conMouse.sombra).toBe('none');
+    expect(await estiloFoco(page)).toMatchObject({ visible: false, anillo: 'ninguno' });
 
-    // Con el teclado: borde primario + anillo de 2 px (no el contorno de 3 px de antes).
+    // Con el teclado: el borde pasa al color --ring y aparece el anillo de 3 px (focus-visible:border-ring ring-3 ring-ring/50).
     await page.getByLabel('Filas por página').focus();
     await page.keyboard.press('Tab');
     const exportar = page.getByRole('button', { name: 'Exportar a Excel' });
     await expect(exportar).toBeFocused();
-    const conTeclado = await exportar.evaluate((b) => {
-      const e = getComputedStyle(b);
-      return { visible: b.matches(':focus-visible'), sombra: e.boxShadow, borde: e.borderTopColor, contorno: e.outlineColor };
-    });
-    expect(conTeclado.visible).toBe(true);
-    expect(conTeclado.sombra).toBe(ANILLO_CLARO);
-    expect(conTeclado.borde).toBe(PRIMARY_BLUE);
-    expect(conTeclado.contorno).toBe('rgba(0, 0, 0, 0)'); // transparente: solo se ve en alto contraste de Windows
-    // El anillo se distingue: al menos 3:1 con el fondo de la página y con el blanco de las tarjetas.
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
+    // El color del anillo se distingue: al menos 3:1 con el fondo de la página y con el de las tarjetas.
     const contraste = await contrastesAnillo(page);
     expect(contraste.fondo).toBeGreaterThanOrEqual(3);
     expect(contraste.tarjeta).toBeGreaterThanOrEqual(3);
+    // Alto contraste de Windows (forced-colors): ahí no se dibujan sombras; un contorno de 2 px toma el lugar del anillo
+    // (regla de estilos.css que solo se aplica en ese modo).
+    expect(await exportar.evaluate((b) => getComputedStyle(b).outlineStyle)).toBe('none'); // modo normal: el de shadcn/ui
+    await page.emulateMedia({ forcedColors: 'active' });
+    expect(await exportar.evaluate((b) => ({ estilo: getComputedStyle(b).outlineStyle, ancho: getComputedStyle(b).outlineWidth }))).toEqual({
+      estilo: 'solid',
+      ancho: '2px',
+    });
+    await page.emulateMedia({ forcedColors: 'none' });
 
-    // Enlaces (sin borde): contorno fino de 2 px, bien visible.
+    // Enlaces (no son componentes de shadcn/ui, no tienen borde): contorno de 2 px del color --ring.
     await page.getByRole('link', { name: 'CN-0001' }).first().focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
     const enlace = await page.evaluate(() => {
       const e = getComputedStyle(document.activeElement!);
-      return { clase: document.activeElement!.className, ancho: e.outlineWidth, estilo: e.outlineStyle };
+      return { clase: document.activeElement!.className, ancho: e.outlineWidth, estilo: e.outlineStyle, color: window.normalizarColor(e.outlineColor) };
     });
-    expect(enlace).toEqual({ clase: 'codigo enlace-codigo', ancho: '2px', estilo: 'solid' });
+    expect(enlace).toEqual({ clase: 'codigo enlace-codigo', ancho: '2px', estilo: 'solid', color: PALETA.mediumBlue });
   });
 
   test('2. en modo oscuro el anillo de foco también se ve con el teclado (y no con el mouse)', async ({ page }) => {
@@ -205,30 +213,20 @@ test.describe('Diseño (pedido del supervisor)', () => {
 
     const actualizar = page.getByRole('button', { name: 'Actualizar' });
     await actualizar.click();
-    expect(await actualizar.evaluate((b) => ({ visible: b.matches(':focus-visible'), sombra: getComputedStyle(b).boxShadow }))).toEqual({
-      visible: false,
-      sombra: 'none',
-    });
+    expect(await estiloFoco(page)).toMatchObject({ visible: false, anillo: 'ninguno' });
 
-    // Con el teclado: borde Light Blue y anillo Border Gray (se distinguen sobre el fondo negro del modo oscuro).
+    // Con el teclado: borde y anillo Medium Blue (--ring también en oscuro: 3,9:1 sobre el negro).
     await page.getByLabel('Filas por página').focus();
     await page.keyboard.press('Tab');
-    const exportar = page.getByRole('button', { name: 'Exportar a Excel' });
-    await expect(exportar).toBeFocused();
-    const conTeclado = await exportar.evaluate((b) => {
-      const e = getComputedStyle(b);
-      return { visible: b.matches(':focus-visible'), sombra: e.boxShadow, borde: e.borderTopColor };
-    });
-    expect(conTeclado.visible).toBe(true);
-    expect(conTeclado.sombra).toBe(ANILLO_OSCURO);
-    expect(conTeclado.borde).toBe(LIGHT_BLUE);
+    await expect(page.getByRole('button', { name: 'Exportar a Excel' })).toBeFocused();
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
     const contraste = await contrastesAnillo(page);
     expect(contraste.fondo).toBeGreaterThanOrEqual(3);
     expect(contraste.tarjeta).toBeGreaterThanOrEqual(3);
 
-    // El botón "copiar" de cada fila: el mismo borde azul con el teclado.
+    // El botón "copiar" de cada fila: lo mismo con el teclado.
     await llegarConTeclado(page, '#tabla-resultados .btn-copiar');
-    expect(await estiloFoco(page)).toEqual({ visible: true, borde: LIGHT_BLUE, sombra: ANILLO_OSCURO });
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
 
     // Enlace del código: contorno de 2 px del mismo color que el anillo.
     await page.getByRole('link', { name: 'CN-0001' }).first().focus();
@@ -236,66 +234,77 @@ test.describe('Diseño (pedido del supervisor)', () => {
     await page.keyboard.press('Tab');
     const enlace = await page.evaluate(() => {
       const e = getComputedStyle(document.activeElement!);
-      return { ancho: e.outlineWidth, estilo: e.outlineStyle, color: e.outlineColor };
+      return { ancho: e.outlineWidth, estilo: e.outlineStyle, color: window.normalizarColor(e.outlineColor) };
     });
-    expect(enlace).toEqual({ ancho: '2px', estilo: 'solid', color: BORDER_GRAY });
+    expect(enlace).toEqual({ ancho: '2px', estilo: 'solid', color: PALETA.mediumBlue });
   });
 
-  test('2. el foco se ve en TODOS los controles con borde: "copiar" de cada fila y botón principal', async ({ page }) => {
+  test('2. el foco se ve en TODOS los controles: "copiar" de cada fila, botón principal y títulos que ordenan', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
-    // "Copiar" (uno por fila: lo que más se recorre con Tab): borde azul + anillo, como los demás.
+    // "Copiar" (uno por fila: lo que más se recorre con Tab): borde --ring + anillo, como los demás.
     await llegarConTeclado(page, '#tabla-resultados .btn-copiar');
-    expect(await estiloFoco(page)).toEqual({ visible: true, borde: PRIMARY_BLUE, sombra: ANILLO_CLARO });
-    // Con el mouse, solo el borde gris (Border Gray) del :hover, sin anillo.
-    await page.locator('#tabla-resultados .btn-copiar').nth(1).hover();
-    const conMouse = await page.locator('#tabla-resultados .btn-copiar').nth(1).evaluate((b) => getComputedStyle(b).borderTopColor);
-    expect(conMouse).toBe(BORDER_GRAY);
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
+    // Con el mouse encima de otro "copiar": el fondo Light Gray del Button "ghost" de shadcn/ui, sin anillo.
+    const otro = page.locator('#tabla-resultados .btn-copiar').nth(1);
+    await otro.hover();
+    await expect
+      .poll(() => otro.evaluate((b) => ({ fondo: window.normalizarColor(getComputedStyle(b).backgroundColor), sombras: window.sombrasDe(getComputedStyle(b).boxShadow) })))
+      .toEqual({ fondo: PALETA.lightGray, sombras: [] });
 
-    // Botón principal ("Ir al buscador", "Iniciar sesión"): su borde ya es azul, así que el anillo va separado
-    // del botón por una línea blanca (el color de la tarjeta) y es sólido.
+    // Título que ordena (botón propio dentro del encabezado Primary Blue): contorno de 2 px del color de su texto
+    // (blanco: 11,1:1 sobre Primary Blue), por dentro de la celda.
+    await llegarConTeclado(page, '[data-orden="codigoCentro"]');
+    const titulo = await page.evaluate(() => {
+      const e = getComputedStyle(document.activeElement!);
+      return { estilo: e.outlineStyle, ancho: e.outlineWidth, color: window.normalizarColor(e.outlineColor), separacion: e.outlineOffset };
+    });
+    expect(titulo).toEqual({ estilo: 'solid', ancho: '2px', color: PALETA.white, separacion: '-4px' });
+
+    // Botón principal ("Ir al buscador", "Iniciar sesión"): el mismo borde y anillo de shadcn/ui.
     await page.goto('/no-existe');
     await llegarConTeclado(page, '#enlace-ir-al-buscador');
-    expect(await estiloFoco(page)).toEqual({
-      visible: true,
-      borde: PRIMARY_BLUE,
-      sombra: `${WHITE} 0px 0px 0px 2px, ${MEDIUM_BLUE} 0px 0px 0px 4px`,
-    });
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
   });
 
-  test('2. con el mouse ENCIMA de un control que tiene el foco del teclado, el borde sigue azul', async ({ page }) => {
+  test('2. con el mouse ENCIMA de un control que tiene el foco del teclado, el borde y el anillo no cambian', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
     for (const selector of ['#f-cliente', '#f-codigo', '#tam-pagina', '#btn-tema', '#tabla-resultados .btn-copiar']) {
       await llegarConTeclado(page, selector);
       await page.locator(selector).first().hover();
-      expect(await estiloFoco(page), selector).toEqual({ visible: true, borde: PRIMARY_BLUE, sombra: ANILLO_CLARO });
+      expect(await estiloFoco(page), selector).toEqual(CON_TECLADO);
     }
     await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
     await llegarConTeclado(page, '.fila-centro .btn-expandir');
     await page.locator('.fila-centro .btn-expandir').first().hover();
-    expect((await estiloFoco(page)).borde).toBe(PRIMARY_BLUE);
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
   });
 
-  test('2. al hacer CLIC en una caja de texto o un desplegable no aparece el anillo (sí con Tab)', async ({ page }) => {
+  test('2. el anillo sigue a :focus-visible, como en shadcn/ui: botones solo con Tab; cajas de texto y desplegables también con el clic', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
+    // Botones (también la opción elegida de "Por orden / Por centro"): al hacer clic no aparece el anillo.
+    for (const selector of ['#btn-actualizar', '[role="radio"][aria-checked="true"]', '#btn-exportar']) {
+      await page.locator(selector).first().click();
+      await expect(page.locator(selector).first()).toBeFocused();
+      expect(await estiloFoco(page), selector).toMatchObject({ visible: false, anillo: 'ninguno' });
+    }
+    // Cajas de texto y desplegables: Chromium los marca :focus-visible también con el clic (dice dónde se escribe) y
+    // el componente de shadcn/ui muestra su anillo (antes la app lo quitaba con logica/modalidad.ts y una regla propia).
     for (const selector of ['#buscador', '#f-codigo', '#f-cliente', '#tam-pagina']) {
       await page.locator(selector).click();
-      if (selector.startsWith('#f-cliente') || selector === '#tam-pagina') await page.keyboard.press('Escape'); // cierra la lista
+      if (selector === '#f-cliente' || selector === '#tam-pagina') await page.keyboard.press('Escape'); // cierra la lista
       await expect(page.locator(selector)).toBeFocused();
-      // Solo el borde azul (dice dónde se escribe o qué se eligió), sin el anillo.
-      expect(await estiloFoco(page), selector).toMatchObject({ borde: PRIMARY_BLUE, sombra: 'none' });
+      const foco = await estiloFoco(page);
+      expect(foco.anillo !== 'ninguno', selector).toBe(foco.visible);
+      if (selector === '#buscador' || selector === '#f-codigo') expect(foco, selector).toEqual(CON_TECLADO);
     }
-    // Escribir no hace aparecer el anillo a la mitad.
-    await page.locator('#f-codigo').click();
-    await page.keyboard.type('cn');
-    expect((await estiloFoco(page)).sombra).toBe('none');
-    // Con Tab, el anillo vuelve.
+    // Con Tab, el anillo siempre.
     await page.keyboard.press('Tab');
-    expect((await estiloFoco(page)).sombra).toBe(ANILLO_CLARO);
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
     await llegarConTeclado(page, '#f-cliente');
-    expect(await estiloFoco(page)).toEqual({ visible: true, borde: PRIMARY_BLUE, sombra: ANILLO_CLARO });
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
   });
 
   test('3. el logo de Microsoft del botón "Iniciar sesión" va alineado con su texto', async ({ page }) => {

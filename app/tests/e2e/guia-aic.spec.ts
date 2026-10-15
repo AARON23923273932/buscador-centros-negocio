@@ -1,31 +1,25 @@
 // Pedidos del supervisor del 15/10/2026 (en Chromium, modo demo):
 //   1. Una orden por línea: el Excel real trae varias órdenes en una misma celda ("OC 3519155 OC 3519252 …").
-//   2. Guía de estilo oficial de AIC: solo los 9 colores de la paleta, letra Calibri, tablas con encabezado
-//      Primary Blue (texto blanco en negrita), bordes Border Gray, filas alternas Light Gray y el padding de la guía.
+//   2. Guía de estilo oficial de AIC (letra Calibri, paleta de 9 colores, tablas con encabezado Primary Blue y texto
+//      blanco en negrita, filas alternas Light Gray) aplicada SOBRE los componentes de shadcn/ui "naturales", sin
+//      cambios (último pedido del día: "que use los estilos naturales de shadcn … solo agregando el estilo de marca").
+//      La marca entra por las variables del tema (estilos.css); sombras, esquinas, transiciones, anillos de foco y
+//      transparencias son los de shadcn/ui. Por eso, desde ese pedido, se permiten los colores de la paleta CON
+//      transparencia (ej. hover:bg-primary/80) y las sombras neutras (negro con poca opacidad), pero ningún color
+//      ajeno a la marca (ej. el azul del navegador o un color de Tailwind que no sale del tema).
 //      Todo texto cumple el contraste WCAG 2.1 AA, en modo claro y en oscuro.
 // (El margen lateral, el otro pedido del mismo día, se prueba en diseno.spec.ts.)
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import * as XLSX from 'xlsx/xlsx.mjs';
 import { abrir, usarExcel, vigilarErrores } from './ayuda.ts';
+import { al, FUNCIONES_COLOR, PALETA, prepararColores } from './colores.ts';
 import { usarConfigPruebas } from './config-pruebas.ts';
 
 test.beforeEach(async ({ context }) => {
   await usarConfigPruebas(context);
+  await prepararColores(context);
 });
-
-/** Los 9 colores de la guía, como los devuelve getComputedStyle. */
-const PALETA = {
-  primaryBlue: 'rgb(30, 58, 110)',
-  darkBlue: 'rgb(44, 82, 130)',
-  mediumBlue: 'rgb(59, 107, 170)',
-  lightBlue: 'rgb(232, 238, 245)',
-  lightGray: 'rgb(245, 245, 245)',
-  black: 'rgb(0, 0, 0)',
-  white: 'rgb(255, 255, 255)',
-  gray: 'rgb(102, 102, 102)',
-  borderGray: 'rgb(204, 204, 204)',
-} as const;
 
 // ---------------------------------------------------------------------------------------------------------------
 // 1. Varias órdenes en una celda
@@ -133,79 +127,120 @@ test.describe('Varias órdenes en una misma celda: una por línea', () => {
 });
 
 // ---------------------------------------------------------------------------------------------------------------
-// 2. Guía de estilo de AIC
+// 2. Guía de estilo de AIC sobre los componentes de shadcn/ui sin cambios
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Estilos calculados de un elemento (los que pide la guía). */
+/** Estilos calculados de un elemento, con los colores normalizados (ver colores.ts). */
 const estilo = (page: Page, selector: string) =>
-  page.locator(selector).first().evaluate((el) => {
-    const e = getComputedStyle(el);
-    return {
-      fondo: e.backgroundColor,
-      texto: e.color,
-      peso: e.fontWeight,
-      alineacion: e.textAlign,
-      letra: e.fontFamily,
-      bordeArriba: e.borderTopColor,
-      bordeAbajo: e.borderBottomColor,
-      bordeDerecha: e.borderRightColor,
-      bordeIzquierda: e.borderLeftColor,
-      anchoBordeIzquierda: e.borderLeftWidth,
-      padding: [e.paddingTop, e.paddingRight, e.paddingBottom, e.paddingLeft],
-    };
-  });
+  page
+    .locator(selector)
+    .first()
+    .evaluate((el) => {
+      const e = getComputedStyle(el);
+      const c = window.normalizarColor;
+      return {
+        fondo: c(e.backgroundColor),
+        texto: c(e.color),
+        peso: e.fontWeight,
+        alineacion: e.textAlign,
+        letra: e.fontFamily,
+        bordeArriba: c(e.borderTopColor),
+        anchoBorde: e.borderTopWidth,
+        bordeAbajo: c(e.borderBottomColor),
+        anchoBordeAbajo: e.borderBottomWidth,
+        esquina: e.borderTopLeftRadius,
+        sombras: window.sombrasDe(e.boxShadow),
+        padding: [e.paddingTop, e.paddingRight, e.paddingBottom, e.paddingLeft],
+        alto: el.getBoundingClientRect().height,
+      };
+    });
 
-test.describe('Guía de estilo oficial de AIC', () => {
-  test('tablas: encabezado Primary Blue con texto blanco en negrita y centrado; bordes; filas alternas; padding', async ({ page }) => {
+/** Fondo de una fila de tabla (con el mouse donde esté). */
+const fondoFila = async (page: Page, selector: string) => (await estilo(page, selector)).fondo;
+
+test.describe('Guía de estilo oficial de AIC (sobre shadcn/ui sin cambios)', () => {
+  test('tablas: encabezado de marca (Primary Blue, texto blanco en negrita y centrado) y filas alternas Light Gray', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
     const th = await estilo(page, '#tabla-resultados thead th');
     expect(th).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white, peso: '700', alineacion: 'center' });
-    expect(th.bordeAbajo).toBe(PALETA.darkBlue); // bordes del encabezado: Dark Blue
-    expect(th.bordeDerecha).toBe(PALETA.darkBlue);
-    // Padding del encabezado (6 pt arriba/abajo, 4 pt a los lados ≈ 8 px / 5 px): lo lleva el botón que ordena.
-    expect((await estilo(page, '#tabla-resultados thead th button')).padding).toEqual(['8px', '5px', '8px', '5px']);
-    // Celdas: bordes Border Gray y padding de la guía (4 pt arriba/abajo, 6 pt a los lados ≈ 5 px / 8 px).
+    // h-10 de la TableHead de shadcn/ui (40 px; la línea inferior de la fila, en el modelo de bordes colapsados de
+    // la tabla, le suma medio píxel).
+    expect(th.alto).toBeGreaterThanOrEqual(40);
+    expect(th.alto).toBeLessThanOrEqual(41);
+    // El botón que ordena hereda el texto blanco en negrita del encabezado.
+    expect(await estilo(page, '#tabla-resultados thead th button')).toMatchObject({ texto: PALETA.white, peso: '700' });
+    // Filas (TableRow de shadcn/ui): línea inferior de 1 px en Border Gray (--border); celdas con su padding (p-2).
+    expect(await estilo(page, '#tabla-resultados tbody tr:nth-child(1)')).toMatchObject({ bordeAbajo: PALETA.borderGray, anchoBordeAbajo: '1px' });
     const td = await estilo(page, '#tabla-resultados tbody tr:nth-child(1) td');
-    expect(td).toMatchObject({ bordeAbajo: PALETA.borderGray, bordeDerecha: PALETA.borderGray, texto: PALETA.black });
-    expect(td.padding).toEqual(['5px', '8px', '5px', '8px']);
-    // Filas alternas: impares blancas, pares Light Gray (tabla de datos).
-    expect((await estilo(page, '#tabla-resultados tbody tr:nth-child(1)')).fondo).toBe(PALETA.white);
-    expect((await estilo(page, '#tabla-resultados tbody tr:nth-child(2)')).fondo).toBe(PALETA.lightGray);
+    expect(td.texto).toBe(PALETA.black);
+    expect(td.padding).toEqual(['8px', '8px', '8px', '8px']);
+    // Filas alternas: impares sin fondo (se ve el White de la tarjeta), pares Light Gray (tabla de datos).
+    expect(await fondoFila(page, '#tabla-resultados tbody tr:nth-child(1)')).toBe('transparente');
+    expect(await fondoFila(page, '#tabla-resultados tbody tr:nth-child(2)')).toBe(PALETA.lightGray);
+    expect((await estilo(page, '#contenedor-tabla')).fondo).toBe(PALETA.white);
 
-    // Tabla sin botones de orden (detalle de un centro): el padding de la guía lo lleva el mismo <th>.
+    // El encabezado se queda fijo arriba al bajar dentro de la caja con scroll (una Card de shadcn/ui).
+    const fijo = await page.locator('#contenedor-tabla').evaluate((caja) => {
+      caja.scrollTop = 400;
+      const encabezado = caja.querySelector('thead th')!.getBoundingClientRect();
+      return { bajo: caja.scrollTop, distancia: Math.abs(encabezado.top - caja.getBoundingClientRect().top) };
+    });
+    expect(fijo.bajo).toBeGreaterThan(0);
+    expect(fijo.distancia).toBeLessThanOrEqual(1);
+
+    // Tabla sin botones de orden (detalle de un centro): el mismo encabezado de marca.
     await abrir(page, '/centros/CN-0005');
-    const thDetalle = await estilo(page, '#tabla-detalle thead th');
-    expect(thDetalle).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white, peso: '700', alineacion: 'center' });
-    expect(thDetalle.padding).toEqual(['8px', '5px', '8px', '5px']);
+    expect(await estilo(page, '#tabla-detalle thead th')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white, peso: '700', alineacion: 'center' });
   });
 
-  test('letra Calibri; botón principal Primary Blue; avisos con la "caja de nota" de la guía', async ({ page }) => {
+  test('letra Calibri; títulos y botón principal Primary Blue; avisos, tarjetas y botones con el estilo de shadcn/ui', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
     expect((await estilo(page, 'body')).letra).toMatch(/^Calibri, Carlito/);
     expect((await estilo(page, '#tabla-resultados td')).letra).toMatch(/^Calibri/); // también los códigos y las tablas
     expect((await estilo(page, 'h1')).texto).toBe(PALETA.primaryBlue);
-    // Caja de nota: fondo Light Blue, borde izquierdo grueso Primary Blue, demás bordes Border Gray.
-    const nota = await estilo(page, '#aviso-demo');
-    expect(nota).toMatchObject({ fondo: PALETA.lightBlue, bordeIzquierda: PALETA.primaryBlue, anchoBordeIzquierda: '4px', bordeArriba: PALETA.borderGray });
-    // Opción elegida de "Por orden / Por centro": Primary Blue con texto blanco.
-    expect(await estilo(page, '[role="radio"][aria-checked="true"]')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
-    // …también con el mouse encima (no se confunde con la otra opción, que con el mouse encima va en Light Blue).
-    await page.locator('[role="radio"][aria-checked="true"]').hover();
-    expect(await estilo(page, '[role="radio"][aria-checked="true"]')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
-    await page.locator('[role="radio"][aria-checked="false"]').hover();
-    expect(await estilo(page, '[role="radio"][aria-checked="false"]')).toMatchObject({ fondo: PALETA.lightBlue, texto: PALETA.primaryBlue });
-    expect(await estilo(page, '[role="radio"][aria-checked="true"]')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
+    // Aviso (Alert de shadcn/ui): fondo de tarjeta (White), borde Border Gray de 1 px y esquinas de 10 px (--radius).
+    expect(await estilo(page, '#aviso-demo')).toMatchObject({
+      fondo: PALETA.white,
+      texto: PALETA.black,
+      bordeArriba: PALETA.borderGray,
+      anchoBorde: '1px',
+      esquina: '10px',
+    });
+    // Tarjeta (Card de shadcn/ui, la caja de la tabla): esquinas de 14 px, contorno de 1 px y sombra, negros con poca opacidad.
+    const caja = await estilo(page, '#contenedor-tabla');
+    expect(caja.esquina).toBe('14px');
+    expect(caja.sombras).toEqual(
+      expect.arrayContaining([
+        { color: al(PALETA.black, 0.1), medidas: '0px 0px 0px 1px' },
+        { color: al(PALETA.black, 0.05), medidas: '0px 1px 2px 0px' },
+      ]),
+    );
 
-    // Botón principal.
+    // "Por orden / Por centro" (Button de shadcn/ui en un ButtonGroup): la opción elegida va con el estilo principal
+    // (Primary Blue, texto blanco) y la otra con el de "outline" (fondo White, borde Border Gray).
+    const elegida = '[role="radio"][aria-checked="true"]';
+    const otra = '[role="radio"][aria-checked="false"]';
+    expect(await estilo(page, elegida)).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
+    expect(await estilo(page, otra)).toMatchObject({ fondo: PALETA.white, texto: PALETA.black, bordeArriba: PALETA.borderGray });
+    // Con el mouse encima, los fondos de shadcn/ui: la elegida al 80 % (hover:bg-primary/80), la otra Light Gray (bg-muted).
+    await page.locator(elegida).hover();
+    await expect.poll(async () => (await estilo(page, elegida)).fondo).toBe(al(PALETA.primaryBlue, 0.8));
+    await page.locator(otra).hover();
+    await expect.poll(async () => (await estilo(page, otra)).fondo).toBe(PALETA.lightGray);
+    expect((await estilo(page, otra)).texto).toBe(PALETA.black);
+
+    // Botón principal (esquinas de 8 px: rounded-md de shadcn/ui).
     await page.goto('/no-existe');
-    expect(await estilo(page, '#enlace-ir-al-buscador')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
-    // El error usa la misma caja (sin rojo): se distingue por el ícono y el borde más grueso.
+    expect(await estilo(page, '#enlace-ir-al-buscador')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white, esquina: '8px' });
+    // Error: Alert variant="destructive". La paleta no tiene rojo: el texto va en --destructive (Primary Blue), con su
+    // ícono y role="alert".
     await page.route('**/datos/centros-ejemplo.xlsx', (r) => r.fulfill({ status: 404, body: '' }));
     await page.goto('/ordenes');
     await expect(page.locator('#aviso-error')).toBeVisible();
-    expect(await estilo(page, '#aviso-error')).toMatchObject({ fondo: PALETA.lightBlue, bordeIzquierda: PALETA.primaryBlue, anchoBordeIzquierda: '8px' });
+    await expect(page.locator('#aviso-error')).toHaveAttribute('role', 'alert');
+    expect(await estilo(page, '#aviso-error')).toMatchObject({ fondo: PALETA.white, texto: PALETA.primaryBlue, bordeArriba: PALETA.borderGray });
     await expect(page.locator('#aviso-error > svg')).toBeVisible();
   });
 
@@ -220,99 +255,95 @@ test.describe('Guía de estilo oficial de AIC', () => {
     expect(await estilo(page, '#btn-login')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
   });
 
-  test('modo oscuro (no está en la guía): encabezado Dark Blue con texto blanco, fondo negro', async ({ page }) => {
+  test('modo oscuro (no está en la guía): el tema oscuro de shadcn/ui, armado con la paleta', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await abrir(page, '/ordenes');
-    expect((await estilo(page, 'body')).fondo).toBe(PALETA.black);
-    expect(await estilo(page, '#tabla-resultados thead th')).toMatchObject({ fondo: PALETA.darkBlue, texto: PALETA.white, peso: '700' });
-    expect((await estilo(page, '#tabla-resultados tbody tr:nth-child(2)')).fondo).toBe(PALETA.primaryBlue);
+    expect(await estilo(page, 'body')).toMatchObject({ fondo: PALETA.black, texto: PALETA.white });
+    // Encabezado de las tablas = --primary del tema oscuro: Light Blue con texto Primary Blue (9,5:1).
+    expect(await estilo(page, '#tabla-resultados thead th')).toMatchObject({ fondo: PALETA.lightBlue, texto: PALETA.primaryBlue, peso: '700' });
+    // Filas alternas = --muted del tema oscuro: Primary Blue (texto White, 11,1:1).
+    expect(await fondoFila(page, '#tabla-resultados tbody tr:nth-child(2)')).toBe(PALETA.primaryBlue);
+    // Bordes: los del tema oscuro de shadcn/ui (blanco al 10 %); cajas de texto: Gray (3,7:1 con el negro).
+    expect((await estilo(page, '#aviso-demo')).bordeArriba).toBe(al(PALETA.white, 0.1));
+    expect((await estilo(page, '#buscador')).bordeArriba).toBe(PALETA.gray);
+    expect(await estilo(page, '[role="radio"][aria-checked="true"]')).toMatchObject({ fondo: PALETA.lightBlue, texto: PALETA.primaryBlue });
   });
 
-  /**
-   * Fondo de una fila y la raya izquierda de su primera celda (sombra interior de 4 px; Tailwind agrega otras
-   * sombras vacías, transparentes, que no se ven), con el mouse donde esté.
-   */
-  const fila = (page: Page, selector: string) =>
-    page.locator(selector).first().evaluate((tr) => ({
-      fondo: getComputedStyle(tr).backgroundColor,
-      raya: /rgba?\([^)]*\) 4px 0px 0px 0px inset/.exec(getComputedStyle(tr.querySelector(':scope > td')!).boxShadow)?.[0] ?? 'ninguna',
-    }));
-  const raya = (color: string) => `${color} 4px 0px 0px 0px inset`;
-
   test('"Por centro": el centro abierto no se confunde con un encabezado (claro y oscuro)', async ({ page }) => {
-    for (const tema of ['light', 'dark'] as const) {
+    // Centro abierto: la TableRow de shadcn/ui pinta la fila con un botón abierto (has-aria-expanded:bg-muted/50) y la
+    // fila con sus órdenes lleva el mismo fondo. Claro: Light Gray al 50 %; oscuro: Primary Blue al 50 %.
+    for (const [tema, abierta] of [
+      ['light', al(PALETA.lightGray, 0.5)],
+      ['dark', al(PALETA.primaryBlue, 0.5)],
+    ] as const) {
       await page.emulateMedia({ colorScheme: tema });
       await abrir(page, '/centros');
-      const centro = page.locator('.fila-centro').nth(1); // fila par (en oscuro, Primary Blue antes de abrirla)
+      const centro = page.locator('.fila-centro').nth(1); // fila par (con el fondo de fila alterna antes de abrirla)
       await centro.locator('.btn-expandir').click();
       await expect(page.locator('.fila-detalle')).toBeVisible();
       await page.locator('h1').hover(); // el mouse lejos de la tabla
       const encabezado = (await estilo(page, '#tabla-resultados > thead th')).fondo;
-      const abierta = await fila(page, '.fila-centro.abierta');
-      const detalle = await fila(page, '.fila-detalle');
+      await expect.poll(() => fondoFila(page, '.fila-centro.abierta'), { message: tema }).toBe(abierta);
+      expect(await fondoFila(page, '.fila-detalle')).toBe(abierta); // la fila con sus órdenes sigue a la del centro
+      expect(abierta).not.toBe(encabezado);
       const encabezadoAnidado = (await estilo(page, '.fila-detalle .tabla-anidada thead th')).fondo;
-      if (tema === 'light') {
-        // Como la caja de nota de la guía: fondo Light Blue y raya izquierda Primary Blue.
-        expect(abierta).toEqual({ fondo: PALETA.lightBlue, raya: raya(PALETA.primaryBlue) });
-        expect(encabezado).toBe(PALETA.primaryBlue);
-      } else {
-        // Antes: fila abierta, encabezado y encabezado de sus órdenes, los tres Dark Blue.
-        expect(abierta).toEqual({ fondo: PALETA.black, raya: raya(PALETA.lightBlue) });
-        expect(encabezado).toBe(PALETA.darkBlue);
-      }
-      expect(detalle).toEqual(abierta); // la fila con sus órdenes sigue a la del centro
-      expect(abierta.fondo).not.toBe(encabezado);
       expect(encabezadoAnidado).toBe(encabezado);
-      expect(encabezadoAnidado).not.toBe(detalle.fondo);
-      // Con el mouse encima, el centro abierto no cambia (ni pierde su raya).
+      expect(encabezadoAnidado).not.toBe(abierta);
+      // Con el mouse encima, el centro abierto no cambia.
       await centro.locator('td').nth(2).hover();
-      expect(await fila(page, '.fila-centro.abierta')).toEqual(abierta);
+      await expect.poll(() => fondoFila(page, '.fila-centro.abierta'), { message: tema }).toBe(abierta);
     }
   });
 
-  test('modo oscuro: la fila con el mouse encima no se pinta del color del encabezado', async ({ page }) => {
-    await page.emulateMedia({ colorScheme: 'dark' });
-    await abrir(page, '/ordenes');
-    for (const n of [1, 2]) {
-      const selector = `#tabla-resultados > tbody > tr:nth-child(${n})`;
-      await page.locator(`${selector} > td`).nth(2).hover();
-      expect(await fila(page, selector), `fila ${n}`).toEqual({ fondo: PALETA.black, raya: raya(PALETA.lightBlue) });
+  test('la fila con el mouse encima toma el fondo suave de shadcn/ui, nunca el color del encabezado (claro y oscuro)', async ({ page }) => {
+    for (const [tema, conMouse] of [
+      ['light', al(PALETA.lightGray, 0.5)],
+      ['dark', al(PALETA.primaryBlue, 0.5)],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: tema });
+      await abrir(page, '/ordenes');
+      const encabezado = (await estilo(page, '#tabla-resultados thead th')).fondo;
+      for (const n of [1, 2]) {
+        const selector = `#tabla-resultados > tbody > tr:nth-child(${n})`;
+        await page.locator(`${selector} > td`).nth(2).hover();
+        await expect.poll(() => fondoFila(page, selector), { message: `${tema}, fila ${n}` }).toBe(conMouse); // hover:bg-muted/50
+        expect(conMouse).not.toBe(encabezado);
+      }
     }
-    // En claro la fila con el mouse encima es Light Blue, sin raya (la "raya" es del mismo color que la fila).
-    await page.emulateMedia({ colorScheme: 'light' });
-    const selector = '#tabla-resultados > tbody > tr:nth-child(2)';
-    await page.locator(`${selector} > td`).nth(2).hover();
-    expect(await fila(page, selector)).toEqual({ fondo: PALETA.lightBlue, raya: raya(PALETA.lightBlue) });
   });
 
-  test('sin colores intermedios: la ayuda flotante y el aviso aparecen sin fundido', async ({ page, context }) => {
+  test('suavidad de shadcn/ui: la ayuda flotante y el aviso flotante aparecen con un fundido', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
-    // Ayuda flotante con el mouse (aparece después de una espera, con la animación de entrada de shadcn/ui).
+    // Ayuda flotante con el mouse: la animación de entrada de shadcn/ui (fade-in-0 + zoom-in-95) empieza transparente.
     await page.locator('#btn-tema').hover();
     const ayuda = page.locator('[data-slot="tooltip-content"]');
     await expect(ayuda).toBeVisible();
     const entrada = await ayuda.evaluate((el) => {
-      // Se congela la animación en su primer cuadro: así se ve con qué opacidad empieza.
-      for (const a of el.getAnimations()) {
-        a.pause();
-        a.currentTime = 0;
-      }
       const e = getComputedStyle(el);
-      return { estado: el.getAttribute('data-state'), opacidad: e.opacity, desde: e.getPropertyValue('--tw-enter-opacity').trim() };
+      return {
+        animacion: e.animationName,
+        duracion: parseFloat(e.animationDuration),
+        desde: e.getPropertyValue('--tw-enter-opacity').trim(),
+        fondo: window.normalizarColor(e.backgroundColor),
+        texto: window.normalizarColor(e.color),
+      };
     });
-    expect(entrada.estado).toBe('delayed-open');
-    expect(entrada.opacidad).toBe('1'); // con fade-in-0 empezaba en 0 (colores intermedios por unos 150 ms)
-    expect(['', '1']).toContain(entrada.desde);
+    // animate-in fade-in-0 (tw-animate-css): la animación "enter" empieza con opacidad 0 y dura más de 0 s.
+    expect(entrada.animacion).toContain('enter');
+    expect(entrada.duracion).toBeGreaterThan(0);
+    expect(entrada.desde).toBe('0');
+    await expect(ayuda).toHaveCSS('opacity', '1');
+    // Termina con los colores del tema: bg-foreground / text-background (Black / White en claro).
+    expect(entrada).toMatchObject({ fondo: PALETA.black, texto: PALETA.white });
 
-    // Aviso flotante ("Código … copiado"): solo se desliza; la opacidad no tiene transición.
+    // Aviso flotante ("Código … copiado"): se desliza y aparece con fundido (transición de opacity y translate).
     await page.getByRole('button', { name: /^Copiar código/ }).first().click();
     const aviso = page.locator('#aviso-flotante');
     await expect(aviso).toContainText('copiado');
-    const transicion = await aviso.evaluate((el) => getComputedStyle(el).transitionProperty);
-    expect(transicion.split(/,\s*/)).not.toContain('opacity');
-    expect(transicion).toBe('translate');
+    expect((await aviso.evaluate((el) => getComputedStyle(el).transitionProperty)).split(/,\s*/)).toEqual(['opacity', 'translate']);
+    await expect(aviso).toHaveCSS('opacity', '1');
   });
 
   test('texto seleccionado con colores de la paleta (no el azul del navegador)', async ({ page }) => {
@@ -353,7 +384,7 @@ test.describe('Guía de estilo oficial de AIC', () => {
     // "Copiar código": sin ayuda flotante (una por fila hacía lento cambiar de página) ni "title" (se leería dos veces).
     const copiar = page.locator('#tabla-resultados .btn-copiar').first();
     await copiar.hover();
-    await page.waitForTimeout(600); // más que la espera de la ayuda flotante (300 ms)
+    await page.waitForTimeout(600); // más que la espera y la animación de una ayuda flotante
     await expect(page.getByRole('tooltip')).toHaveCount(0);
     await expect(copiar).toHaveAccessibleName(/^Copiar código /);
     await expect(copiar).toHaveAccessibleDescription('');
@@ -362,84 +393,154 @@ test.describe('Guía de estilo oficial de AIC', () => {
 });
 
 // ---------------------------------------------------------------------------------------------------------------
-// Solo colores de la paleta y contraste AA, en todas las pantallas (claro y oscuro)
+// Solo colores de la marca y contraste AA, en todas las pantallas (claro y oscuro)
 // ---------------------------------------------------------------------------------------------------------------
 
 /**
  * Recorre todo lo que se ve en la página y devuelve:
- *  - fueraDePaleta: colores (texto, fondo, bordes, contornos, sombras, subrayados, íconos) que no son de la paleta;
- *  - bajoContraste: textos con contraste menor que el de WCAG 2.1 AA (4,5:1; 3:1 si el texto es grande).
+ *  - fueraDePaleta: colores (texto, fondo, bordes, contornos, sombras, subrayados, íconos) ajenos a la marca, en
+ *    cualquier notación (rgb, oklab, oklch, lab…). Criterio pedido por Gustavo (15/10/2026, shadcn/ui "natural"):
+ *    se aceptan los 9 colores de la paleta y sus TRANSPARENCIAS (las que agregan los componentes de shadcn/ui:
+ *    hover:bg-primary/80, ring-ring/50, bg-input/30, border blanco al 10 % en oscuro…), que incluyen las sombras
+ *    neutras (negro con poca opacidad: shadow-xs, ring-foreground/10). Se informa cualquier otro: el azul del
+ *    navegador, un color de Tailwind que no sale del tema, el rojo de shadcn/ui…
+ *  - bajoContraste: textos con contraste menor que el de WCAG 2.1 AA (4,5:1; 3:1 si el texto es grande), con el color
+ *    REAL del fondo y del texto: las transparencias (y la opacidad de los contenedores) se mezclan con lo de abajo.
  * No cuenta lo que no se ve (oculto, transparente o solo para lectores de pantalla), los controles desactivados
  * (WCAG no les pide contraste) ni el logo de Microsoft (sus colores son la marca de Microsoft).
  */
 function revisarColores(page: Page) {
-  return page.evaluate(async (paleta) => {
-    // Primero terminan las transiciones (ej. el aviso flotante que aparece): se revisa cómo queda la pantalla.
-    await Promise.all(document.getAnimations().filter((a) => a instanceof CSSTransition).map((a) => a.finished.catch(() => {})));
-    const permitidos = new Set<string>(Object.values(paleta));
-    const fueraDePaleta = new Set<string>();
-    const bajoContraste: string[] = [];
-    const rgb = (c: string) => c.match(/[\d.]+/g)!.map(Number);
-    const luz = (c: string) => {
-      const [r, g, b] = rgb(c).map((v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
-    };
-    const contraste = (a: string, b: string) => {
-      const [x, y] = [luz(a), luz(b)].sort((m, n) => n - m);
-      return (x! + 0.05) / (y! + 0.05);
-    };
-    const transparente = (c: string) => c === 'transparent' || /^rgba\(.*,\s*0\)$/.test(c);
-    const nombre = (el: Element) => `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${el.className && typeof el.className === 'string' ? `.${el.className.split(' ')[0]}` : ''}`;
-    const revisar = (el: Element, propiedad: string, valor: string) => {
-      for (const color of valor.match(/rgba?\([^)]*\)/g) ?? []) {
-        if (!transparente(color) && !permitidos.has(color)) fueraDePaleta.add(`${nombre(el)} ${propiedad}: ${color}`);
-      }
-    };
-    const seVe = (el: Element) => {
-      if (el.getClientRects().length === 0) return false;
-      for (let a: Element | null = el; a; a = a.parentElement) {
-        const e = getComputedStyle(a);
-        if (e.visibility === 'hidden' || Number(e.opacity) === 0 || e.clipPath === 'inset(50%)') return false;
-      }
-      return true;
-    };
-    const fondoDe = (el: Element) => {
-      for (let a: Element | null = el; a; a = a.parentElement) {
-        const f = getComputedStyle(a).backgroundColor;
-        if (!transparente(f)) return f;
-      }
-      return getComputedStyle(document.body).backgroundColor;
-    };
+  return page.evaluate(
+    async ({ paleta, funciones }) => {
+      // Primero terminan las transiciones y animaciones (ej. el aviso o la ayuda flotante que aparecen): se revisa cómo
+      // queda la pantalla. Las que no terminan nunca (la ruedita de "Cargando…") no se esperan.
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => {})),
+      );
+      const permitidos = new Set<string>(paleta);
+      const color = window.normalizarColor;
+      const fueraDePaleta = new Set<string>();
+      const bajoContraste: string[] = [];
+      /** "rgb(r, g, b) / alfa" → canales y alfa. */
+      const partes = (c: string) => {
+        const [rgb, alfa] = c.split(' / ');
+        return { canales: (rgb!.match(/\d+/g) ?? []).map(Number), rgb: rgb!, alfa: alfa === undefined ? 1 : Number(alfa) };
+      };
+      /** Un color (con alfa) dibujado sobre otro (opaco). */
+      const sobre = (arriba: string, abajo: number[], opacidad = 1) => {
+        const { canales, alfa } = partes(arriba);
+        const a = alfa * opacidad;
+        return canales.map((v, i) => a * v + (1 - a) * abajo[i]!);
+      };
+      const luz = (c: number[]) => {
+        const [r, g, b] = c.map((v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+        return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+      };
+      const contraste = (a: number[], b: number[]) => {
+        const [x, y] = [luz(a), luz(b)].sort((m, n) => n - m);
+        return (x! + 0.05) / (y! + 0.05);
+      };
+      const texto = (c: number[]) => `rgb(${c.map(Math.round).join(', ')})`;
+      const nombre = (el: Element) =>
+        `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${el.className && typeof el.className === 'string' ? `.${el.className.split(' ')[0]}` : ''}`;
+      const revisar = (el: Element, propiedad: string, valor: string) => {
+        for (const c of valor.match(new RegExp(funciones, 'g')) ?? []) {
+          const n = color(c);
+          if (n !== 'transparente' && !permitidos.has(partes(n).rgb)) fueraDePaleta.add(`${nombre(el)} ${propiedad}: ${c} → ${n}`);
+        }
+      };
+      const seVe = (el: Element) => {
+        if (el.getClientRects().length === 0) return false;
+        for (let a: Element | null = el; a; a = a.parentElement) {
+          const e = getComputedStyle(a);
+          if (e.visibility === 'hidden' || Number(e.opacity) === 0 || e.clipPath === 'inset(50%)') return false;
+        }
+        return true;
+      };
+      /** Fondo real detrás de un elemento: su fondo y los de sus contenedores, mezclados hasta llegar a uno opaco. */
+      const fondoDe = (el: Element) => {
+        const capas: string[] = [];
+        for (let a: Element | null = el; a; a = a.parentElement) {
+          const f = color(getComputedStyle(a).backgroundColor);
+          if (f === 'transparente') continue;
+          capas.push(f);
+          if (partes(f).alfa >= 1) break;
+        }
+        let resultado = [255, 255, 255];
+        for (const capa of capas.reverse()) resultado = sobre(capa, resultado);
+        return resultado;
+      };
+      /** Opacidad acumulada del elemento y sus contenedores. */
+      const opacidadDe = (el: Element) => {
+        let o = 1;
+        for (let a: Element | null = el; a; a = a.parentElement) o *= Number(getComputedStyle(a).opacity);
+        return o;
+      };
 
-    for (const el of document.body.querySelectorAll('*')) {
-      if (!seVe(el) || el.closest('#btn-login svg')) continue;
-      const e = getComputedStyle(el);
-      revisar(el, 'color', e.color);
-      revisar(el, 'background-color', e.backgroundColor);
-      for (const lado of ['Top', 'Right', 'Bottom', 'Left'] as const) {
-        if (e[`border${lado}Style`] !== 'none' && parseFloat(e[`border${lado}Width`]) > 0) revisar(el, `border-${lado}`, e[`border${lado}Color`]);
+      for (const el of document.body.querySelectorAll('*')) {
+        if (!seVe(el) || el.closest('#btn-login svg')) continue;
+        const e = getComputedStyle(el);
+        revisar(el, 'color', e.color);
+        revisar(el, 'background-color', e.backgroundColor);
+        for (const lado of ['Top', 'Right', 'Bottom', 'Left'] as const) {
+          if (e[`border${lado}Style`] !== 'none' && parseFloat(e[`border${lado}Width`]) > 0) revisar(el, `border-${lado}`, e[`border${lado}Color`]);
+        }
+        if (e.outlineStyle !== 'none' && parseFloat(e.outlineWidth) > 0) revisar(el, 'outline', e.outlineColor);
+        if (e.boxShadow !== 'none') revisar(el, 'box-shadow', e.boxShadow);
+        if (e.textDecorationLine !== 'none') revisar(el, 'text-decoration', e.textDecorationColor);
+        if (el instanceof SVGElement) {
+          if (e.fill !== 'none') revisar(el, 'fill', e.fill);
+          if (e.stroke !== 'none') revisar(el, 'stroke', e.stroke);
+        }
+        // Contraste: elementos con texto propio (no el de sus hijos).
+        const conTexto = [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
+        if (!conTexto || el.closest(':disabled, [aria-disabled="true"]')) continue;
+        const tamano = parseFloat(e.fontSize);
+        const grande = tamano >= 24 || (tamano >= 18.66 && Number(e.fontWeight) >= 700);
+        const fondo = fondoDe(el);
+        const letra = sobre(color(e.color), fondo, opacidadDe(el));
+        const c = contraste(letra, fondo);
+        if (c < (grande ? 3 : 4.5)) {
+          bajoContraste.push(`${nombre(el)} "${el.textContent?.trim().slice(0, 30)}": ${c.toFixed(2)} (${texto(letra)} sobre ${texto(fondo)})`);
+        }
       }
-      if (e.outlineStyle !== 'none' && parseFloat(e.outlineWidth) > 0) revisar(el, 'outline', e.outlineColor);
-      if (e.boxShadow !== 'none') revisar(el, 'box-shadow', e.boxShadow);
-      if (e.textDecorationLine !== 'none') revisar(el, 'text-decoration', e.textDecorationColor);
-      if (el instanceof SVGElement) {
-        if (e.fill !== 'none') revisar(el, 'fill', e.fill);
-        if (e.stroke !== 'none') revisar(el, 'stroke', e.stroke);
-      }
-      // Contraste: elementos con texto propio (no el de sus hijos).
-      const texto = [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
-      if (!texto || el.closest(':disabled, [aria-disabled="true"]')) continue;
-      const tamano = parseFloat(e.fontSize);
-      const grande = tamano >= 24 || (tamano >= 18.66 && Number(e.fontWeight) >= 700);
-      const c = contraste(e.color, fondoDe(el));
-      if (c < (grande ? 3 : 4.5)) bajoContraste.push(`${nombre(el)} "${el.textContent?.trim().slice(0, 30)}": ${c.toFixed(2)} (${e.color} sobre ${fondoDe(el)})`);
-    }
-    return { fueraDePaleta: [...fueraDePaleta], bajoContraste };
-  }, PALETA);
+      return { fueraDePaleta: [...fueraDePaleta], bajoContraste };
+    },
+    { paleta: Object.values(PALETA), funciones: FUNCIONES_COLOR },
+  );
 }
 
+test('el revisor de colores informa los colores ajenos a la marca y el contraste bajo (y acepta las transparencias de la paleta)', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await abrir(page, '/ordenes');
+  await page.evaluate(() => {
+    const sondas = document.createElement('div');
+    sondas.id = 'sondas';
+    sondas.innerHTML = [
+      // Ajenos a la marca: deben informarse.
+      '<a id="sonda-navegador" href="#sondas" style="all: revert">enlace con el azul del navegador</a>',
+      '<div id="sonda-tailwind" style="height: 4px; border: 2px solid oklch(0.623 0.214 259.815)"></div>', // blue-500 de Tailwind
+      '<div id="sonda-rojo" style="height: 4px; background-color: oklch(0.577 0.245 27.325)"></div>', // --destructive de shadcn/ui
+      '<div id="sonda-anillo" style="height: 4px; box-shadow: 0 0 0 3px rgb(255 0 0 / 0.5)"></div>',
+      // De la marca (se aceptan): una transparencia de la paleta y una sombra neutra.
+      '<p id="sonda-transparencia" style="background-color: color-mix(in oklab, #1e3a6e 80%, transparent); color: #fff">Primary Blue al 80 %</p>',
+      '<p id="sonda-sombra" style="box-shadow: 0 1px 2px rgb(0 0 0 / 0.05)">sombra neutra</p>',
+      // De la paleta, pero con contraste bajo (Border Gray sobre White: 1,6:1).
+      '<p id="sonda-contraste" style="color: #cccccc; background-color: #ffffff">texto casi invisible</p>',
+    ].join('');
+    document.querySelector('#principal')!.prepend(sondas);
+  });
+  const { fueraDePaleta, bajoContraste } = await revisarColores(page);
+  const sondas = (lista: string[]) => [...new Set(lista.map((x) => /#(sonda-[\w-]+)/.exec(x)?.[1] ?? `(otro) ${x}`))].sort();
+  expect(sondas(fueraDePaleta)).toEqual(['sonda-anillo', 'sonda-navegador', 'sonda-rojo', 'sonda-tailwind']);
+  expect(sondas(bajoContraste)).toEqual(['sonda-contraste']);
+});
+
 for (const tema of ['light', 'dark'] as const) {
-  test.describe(`Solo colores de la paleta y contraste AA (modo ${tema === 'light' ? 'claro' : 'oscuro'})`, () => {
+  test.describe(`Solo colores de la marca y contraste AA (modo ${tema === 'light' ? 'claro' : 'oscuro'})`, () => {
     test.beforeEach(async ({ page }) => {
       await page.emulateMedia({ colorScheme: tema });
     });
