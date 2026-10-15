@@ -24,7 +24,13 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    // Alias "@/…" = src/… (lo usan los componentes de shadcn/ui: "@/components/ui/button", "@/lib/utils").
+    // Vite y Vitest tienen el mismo alias (vite.config.ts y vitest.config.ts). Sin "baseUrl" (TypeScript 7 ya no lo usa).
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }

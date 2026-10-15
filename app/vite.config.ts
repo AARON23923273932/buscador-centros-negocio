@@ -1,5 +1,6 @@
 // Configuración de Vite (la herramienta que sirve la app en desarrollo y la "compila" a dist/).
 import { resolve } from 'node:path';
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 import { quitarTemporales } from './scripts/archivos-temporales.mjs';
@@ -65,11 +66,17 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     // React: JSX/TSX y recarga instantánea en desarrollo.
     react(),
+    // Tailwind CSS v4 (estilos de los componentes shadcn/ui y de la app): genera solo las clases que se usan.
+    tailwindcss(),
     agregarCsp(),
     sinTemporalesDeOffice(),
     // "npm run dev:demo" / "npm run preview:demo": modo demo sin tocar public/config.json (ver scripts/config-demo.mjs).
     ...(mode === 'demo' ? [pluginConfigDemo(resolve(import.meta.dirname, 'public/config.json'))] : []),
   ],
+  // "@/…" = src/… (componentes de shadcn/ui). El mismo alias está en tsconfig.json y vitest.config.ts.
+  resolve: {
+    alias: { '@': resolve(import.meta.dirname, 'src') },
+  },
   build: {
     outDir: 'dist',
     // SheetJS (lectura de Excel) pesa ~900 KB; es normal.
