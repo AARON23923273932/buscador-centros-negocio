@@ -1,0 +1,5 @@
+# Componentes de shadcn/ui (y src/lib/utils.ts): siempre con finales de línea LF, como los escribe "npx shadcn add".
+# Sin esto, con core.autocrlf=true (Windows) Git los saca con CRLF y una comparación byte a byte con lo que genera
+# shadcn da "distintos" aunque el contenido sea el mismo (README, sección 8.2).
+app/src/components/ui/** text eol=lf
+app/src/lib/utils.ts text eol=lf

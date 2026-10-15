@@ -13,6 +13,8 @@ import { describe, expect, it } from 'vitest';
 const UI = resolve(import.meta.dirname, '../../src/components/ui');
 const ARCHIVOS = readdirSync(UI).filter((nombre) => nombre.endsWith('.tsx'));
 const leer = (nombre: string) => readFileSync(join(UI, nombre), 'utf8');
+/** src/lib/utils.ts: también lo escribe shadcn (alias "utils" de components.json). */
+const UTILS = resolve(import.meta.dirname, '../../src/lib/utils.ts');
 
 /** Lo que la versión anterior les agregaba a mano (para la guía de AIC) y ya no debe estar. */
 const ADAPTACIONES = [
@@ -44,5 +46,30 @@ describe('componentes de shadcn/ui sin cambios (src/components/ui)', () => {
   it('importan cn() del paquete "cn" (lo que genera la versión instalada de shadcn con este components.json)', () => {
     const sinCn = ARCHIVOS.filter((nombre) => /\bcn\(/.test(leer(nombre)) && !leer(nombre).includes('import { cn } from "cn"'));
     expect(sinCn).toEqual([]);
+  });
+
+  it('tienen finales de línea LF, como los escribe shadcn (así un "cmp" con lo que genera da idénticos byte a byte)', () => {
+    // Con core.autocrlf=true (Windows), Git los sacaba con CRLF; el .gitattributes de la raíz del repositorio los fija en LF.
+    const conCrlf = [...ARCHIVOS.map((nombre) => join(UI, nombre)), UTILS].filter((ruta) => readFileSync(ruta, 'utf8').includes('\r'));
+    expect(conCrlf).toEqual([]);
+  });
+});
+
+describe('controles de la app: los de shadcn/ui', () => {
+  /** Archivos .tsx de la app fuera de src/components/ui. */
+  const PROPIOS = readdirSync(resolve(import.meta.dirname, '../../src'), { recursive: true, encoding: 'utf8' })
+    .filter((ruta) => ruta.endsWith('.tsx') && !ruta.replaceAll('\\', '/').startsWith('components/ui/'))
+    .map((ruta) => resolve(import.meta.dirname, '../../src', ruta));
+
+  it('fuera de src/components/ui no hay <button>, <input>, <select> ni <textarea> nativos, salvo el título que ordena', () => {
+    // Única excepción (README 8.2, por confirmar con Gustavo): el título que ordena una columna (Celdas.tsx) es un
+    // <button> simple dentro del encabezado Primary Blue: las variantes del Button de shadcn/ui son para fondos claros.
+    const nativos = PROPIOS.flatMap((ruta) =>
+      readFileSync(ruta, 'utf8')
+        .split(/\r?\n/)
+        .flatMap((linea, i) => (/<(button|input|select|textarea)\b/.test(linea) && !/^\s*(\/\/|\*)/.test(linea) ? [`${ruta.replaceAll('\\', '/').split('/src/')[1]}:${i + 1}`] : [])),
+    );
+    expect(nativos).toHaveLength(1);
+    expect(nativos[0]).toMatch(/^componentes\/Celdas\.tsx:\d+$/);
   });
 });
