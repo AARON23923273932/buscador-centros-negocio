@@ -189,7 +189,8 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await abrir(otra, enlace);
     await expect(otra.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
     await expect(otra.getByLabel('Cliente', { exact: true })).toHaveValue(valorCliente);
-    await expect(otra.locator('input[name="vista"][value="centro"]')).toBeChecked();
+    // "Por orden / Por centro" es un ToggleGroup de shadcn/ui: cada opción es un botón role="radio" (aria-checked).
+    await expect(otra.getByRole('radio', { name: 'Por centro de negocio' })).toBeChecked();
     await expect(otra.locator('#contador')).toContainText('centro');
   });
 
@@ -364,7 +365,8 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     expect(anidada).not.toContain('Moneda');
     expect(anidada).toContain('Estado');
 
-    await page.locator('.detalles-columnas summary').click();
+    // "Columnas detectadas" se abre con un botón (Collapsible de shadcn/ui; antes era un <details>).
+    await page.getByRole('button', { name: 'Columnas detectadas en el Excel' }).click();
     await expect(page.locator('#info-columnas')).toContainText('Columnas ocultas (no se muestran, no se buscan ni se exportan): Monto (G), Moneda (H)');
     await expect(page.locator('#info-columnas')).toContainText('Estado');
     // En modo demo no hay ubicación de SharePoint que mostrar.
@@ -553,7 +555,7 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await abrir(page, '/?vista=centro');
     await expect(page.locator('#contador')).toHaveText('Mostrando 1–2 de 2 centros (de 2 en total)');
     expect(await page.locator('.fila-centro .insignia').allInnerTexts()).toEqual(['3', '2']);
-    await page.locator('.detalles-columnas summary').click();
+    await page.getByRole('button', { name: 'Columnas detectadas en el Excel' }).click();
     await expect(page.locator('#info-columnas')).toContainText('se completaron con el centro de la fila de arriba: 3');
   });
 

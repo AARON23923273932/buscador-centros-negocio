@@ -1,16 +1,20 @@
 // Íconos (SVG). Todos llevan aria-hidden: son decoración, el texto del botón dice qué hace.
 //
-// Alineación (pedido del supervisor, 14/10/2026): todos usan la clase "icono" (estilos.css), que los
-// dibuja como bloque de 16 px que no se encoge (display:block, flex-shrink:0) dentro de botones que
-// los centran con display:inline-flex + align-items:center. Así no "bailan" con la línea del texto.
+// Alineación (pedido del supervisor, 14/10/2026): todos se dibujan como bloque de 16 px (18 px la lupa, el logo
+// de Microsoft y el tema) que no se encoge ("block shrink-0 size-4"), dentro de botones que los centran con
+// inline-flex + items-center. Así no "bailan" con la línea del texto. La clase "size-…" también evita que el
+// botón de shadcn/ui les cambie el tamaño.
 // Los de la cabecera (logo, luna/sol) están también en index.html: si se cambian aquí, cambiarlos allá.
+// Colores: heredan el del texto (currentColor), que siempre es de la paleta de AIC. El logo de Microsoft
+// conserva sus 4 colores: es la marca de Microsoft (sus reglas de uso piden no cambiarla), no un color de la app.
 
 import type { ReactNode } from 'react';
 
 /** SVG de 24×24 dibujado al tamaño indicado (16 px por defecto). */
 function Svg({ children, tamano = 16, clase = '' }: { children: ReactNode; tamano?: number; clase?: string }) {
+  const medida = tamano === 18 ? 'size-[18px]' : 'size-4';
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={tamano} height={tamano} className={`icono${clase ? ` ${clase}` : ''}`}>
+    <svg aria-hidden="true" viewBox="0 0 24 24" width={tamano} height={tamano} className={`block shrink-0 ${medida}${clase ? ` ${clase}` : ''}`}>
       {children}
     </svg>
   );
@@ -18,7 +22,7 @@ function Svg({ children, tamano = 16, clase = '' }: { children: ReactNode; taman
 
 export function IconoLogo() {
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22">
+    <svg viewBox="0 0 24 24" width="22" height="22" className="block">
       <path
         fill="currentColor"
         d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm13-2h2v3h3v2h-3v3h-2v-3h-3v-2h3v-3Z"
@@ -29,7 +33,7 @@ export function IconoLogo() {
 
 export function IconoLuna() {
   return (
-    <svg className="icono-luna" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+    <svg className="icono-luna block size-[18px] shrink-0 in-data-[tema-efectivo=oscuro]:hidden" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
       <path fill="currentColor" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a.5.5 0 0 0-.6-.6A9.5 9.5 0 1 0 21.6 15.1a.5.5 0 0 0-.6-.6Z" />
     </svg>
   );
@@ -37,7 +41,7 @@ export function IconoLuna() {
 
 export function IconoSol() {
   return (
-    <svg className="icono-sol" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+    <svg className="icono-sol hidden size-[18px] shrink-0 in-data-[tema-efectivo=oscuro]:block" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
       <circle cx="12" cy="12" r="4.5" fill="currentColor" />
       <path
         fill="none"
@@ -52,7 +56,7 @@ export function IconoSol() {
 
 export function IconoMicrosoft() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 21 21" width="18" height="18" className="icono icono-18">
+    <svg aria-hidden="true" viewBox="0 0 21 21" width="18" height="18" className="block size-[18px] shrink-0">
       <path fill="#f25022" d="M1 1h9v9H1z" />
       <path fill="#7fba00" d="M11 1h9v9h-9z" />
       <path fill="#00a4ef" d="M1 11h9v9H1z" />
@@ -61,9 +65,10 @@ export function IconoMicrosoft() {
   );
 }
 
-export function IconoActualizar() {
+/** Flechas en círculo de "Actualizar" (giran mientras se descarga el Excel). */
+export function IconoActualizar({ girando = false }: { girando?: boolean }) {
   return (
-    <Svg clase="icono-actualizar">
+    <Svg clase={girando ? 'animate-spin' : ''}>
       <path
         fill="currentColor"
         d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"
@@ -74,7 +79,7 @@ export function IconoActualizar() {
 
 export function IconoLupa() {
   return (
-    <Svg tamano={18} clase="icono-18 icono-lupa">
+    <Svg tamano={18} clase="icono-lupa pointer-events-none absolute top-1/2 left-[15px] -mt-[9px] text-muted-foreground">
       <path
         fill="currentColor"
         d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16a6.47 6.47 0 0 0 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14Z"
@@ -123,7 +128,7 @@ export function IconoCopiar() {
 /** Flecha ">" que gira al abrir un centro (vista "Por centro"). */
 export function IconoFlecha() {
   return (
-    <Svg clase="icono-expandir">
+    <Svg clase="transition-transform in-aria-expanded:rotate-90">
       <path fill="currentColor" d="M9 6l6 6-6 6-1.4-1.4L12.2 12 7.6 7.4 9 6Z" />
     </Svg>
   );
@@ -138,14 +143,17 @@ export function IconoVolver() {
   );
 }
 
-/** Indicador de orden de una columna: sin ordenar (▲▼ tenues), ascendente (▲) o descendente (▼). */
+/**
+ * Indicador de orden de una columna: sin ordenar (▲▼ en Border Gray), ascendente (▲) o descendente (▼) en el
+ * color del texto del encabezado. Sin transparencias (la guía de AIC no permite colores fuera de la paleta).
+ */
 export function IconoOrden({ aria }: { aria: 'none' | 'ascending' | 'descending' }) {
   const arriba = 'M12 4.5 17 10H7l5-5.5Z';
   const abajo = 'M12 19.5 7 14h10l-5 5.5Z';
   return (
-    <Svg clase="icono-orden">
-      {aria !== 'descending' && <path fill="currentColor" d={arriba} opacity={aria === 'none' ? 0.55 : 1} />}
-      {aria !== 'ascending' && <path fill="currentColor" d={abajo} opacity={aria === 'none' ? 0.55 : 1} />}
+    <Svg clase={aria === 'none' ? 'text-encabezado-icono' : ''}>
+      {aria !== 'descending' && <path fill="currentColor" d={arriba} />}
+      {aria !== 'ascending' && <path fill="currentColor" d={abajo} />}
     </Svg>
   );
 }
@@ -163,4 +171,12 @@ export function IconoPagina({ tipo }: { tipo: 'primera' | 'anterior' | 'siguient
       <path fill="currentColor" d={caminos[tipo]} />
     </Svg>
   );
+}
+
+/**
+ * Ruedita de "Cargando…" (un círculo Border Gray con un tramo en el color principal que gira). No es un SVG:
+ * es un borde redondo. Está también en index.html (pantalla "Cargando…" antes de que cargue React).
+ */
+export function IndicadorCarga() {
+  return <span className="inline-block size-[22px] shrink-0 animate-spin rounded-full border-3 border-border border-t-primary align-middle" aria-hidden="true" />;
 }

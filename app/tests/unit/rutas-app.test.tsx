@@ -55,7 +55,9 @@ describe('rutas de la aplicación', () => {
     abrirRutas(PROPS, '/?q=cableado&vista=centro');
     await waitFor(() => expect(location.pathname + location.search).toBe('/centros?q=cableado'));
     await waitFor(() => expect(contador()).toMatch(/^Mostrando .* centros/));
-    expect((screen.getByRole('radio', { name: 'Por centro de negocio' }) as HTMLInputElement).checked).toBe(true);
+    // "Por orden / Por centro" es un ToggleGroup de shadcn/ui: cada opción es un botón role="radio" con aria-checked.
+    expect(screen.getByRole('radio', { name: 'Por centro de negocio' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('radio', { name: 'Por orden' }).getAttribute('aria-checked')).toBe('false');
   });
 
   it('el Excel se descarga una sola vez aunque se cambie de ruta (lista → detalle → lista)', async () => {

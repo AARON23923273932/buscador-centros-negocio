@@ -1,10 +1,13 @@
-// Rutas de la app con React Router (modo demo, en Chromium):
+// Rutas de la app con React Router 8 (modo demo, en Chromium):
 //   /  →  /ordenes  ·  /centros  ·  /centros/:codigo  ·  "Página no encontrada"
 // y los enlaces viejos con ?vista=centro. La búsqueda y los filtros van en la query (?q=…) y se
 // conservan al cambiar de ruta, al volver del detalle y con el botón atrás del navegador.
 import { expect, test, type Page } from '@playwright/test';
 import { abrir, usarExcel, vigilarErrores } from './ayuda.ts';
 import { usarConfigPruebas } from './config-pruebas.ts';
+
+// "Por orden / Por centro" es un ToggleGroup de shadcn/ui: cada opción es un botón role="radio" con aria-checked
+// (antes, <input type="radio" name="vista">). toBeChecked() revisa aria-checked igual que el "checked" de antes.
 
 test.beforeEach(async ({ context }) => {
   await usarConfigPruebas(context);
@@ -33,14 +36,14 @@ test.describe('Rutas (React Router)', () => {
     await expect(page).toHaveURL(/\/ordenes\?q=cableado&estado=Abierta$/);
     await expect(page.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
     await expect(page.getByLabel('Estado', { exact: true })).toHaveValue('Abierta');
-    await expect(page.locator('input[name="vista"][value="orden"]')).toBeChecked();
+    await expect(page.getByRole('radio', { name: 'Por orden' })).toBeChecked();
     expect(errores).toEqual([]);
   });
 
   test('enlaces viejos con ?vista=centro llevan a /centros con el resto de la búsqueda', async ({ page }) => {
     await abrir(page, '/?q=cableado&vista=centro&cliente=Cliente+Demo+B+S.A.');
     await expect(page).toHaveURL(/\/centros\?q=cableado&cliente=Cliente\+Demo\+B\+S\.A\.$/);
-    await expect(page.locator('input[name="vista"][value="centro"]')).toBeChecked();
+    await expect(page.getByRole('radio', { name: 'Por centro de negocio' })).toBeChecked();
     await expect(page.getByLabel('Cliente', { exact: true })).toHaveValue('Cliente Demo B S.A.');
     await expect(page.locator('#contador')).toContainText('centro');
 
@@ -72,7 +75,7 @@ test.describe('Rutas (React Router)', () => {
     // Atrás: /ordenes con la búsqueda, el cliente y el orden que tenía.
     await page.goBack();
     await expect(page).toHaveURL(/\/ordenes\?q=cableado&cliente=.+&ord=codigoCentro$/);
-    await expect(page.locator('input[name="vista"][value="orden"]')).toBeChecked();
+    await expect(page.getByRole('radio', { name: 'Por orden' })).toBeChecked();
     await expect(page.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
     await expect(page.getByLabel('Cliente', { exact: true })).toHaveValue('Corporación Ejemplo Perú S.A.C.');
     await expect(page.locator('#tabla-resultados thead th').first()).toHaveAttribute('aria-sort', 'ascending');
@@ -81,7 +84,7 @@ test.describe('Rutas (React Router)', () => {
     // Adelante: /centros otra vez.
     await page.goForward();
     await expect(page).toHaveURL(/\/centros\?/);
-    await expect(page.locator('input[name="vista"][value="centro"]')).toBeChecked();
+    await expect(page.getByRole('radio', { name: 'Por centro de negocio' })).toBeChecked();
     await expect(page.locator('#contador')).toContainText('centro');
     expect(descargas.excel).toBe(1); // el Excel se descargó una sola vez
   });
@@ -286,7 +289,7 @@ test.describe('Rutas (React Router)', () => {
 
     await page.getByRole('link', { name: 'Volver a la lista' }).click();
     await expect(page).toHaveURL(/\/ordenes\?q=cn0005$/); // la lista de origen (antes: /centros?q=cn0005)
-    await expect(page.locator('input[name="vista"][value="orden"]')).toBeChecked();
+    await expect(page.getByRole('radio', { name: 'Por orden' })).toBeChecked();
     expect(await page.evaluate(() => history.length)).toBe(historial); // volvió atrás: no agregó otra entrada
   });
 

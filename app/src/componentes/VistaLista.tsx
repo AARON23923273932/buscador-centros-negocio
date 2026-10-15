@@ -19,6 +19,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
+import { CircleAlertIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useGuardarEnUrl } from '../hooks/useEstadoUrl.ts';
 import { mismoCodigo } from '../logica/centro.ts';
 import { TAMANOS_PAGINA } from '../logica/estado-url.ts';
@@ -28,7 +30,9 @@ import type { Columna } from '../logica/tipos.ts';
 import { calcularResultados, estadoControles, opcionesDesplegables, paginarResultados, terminosDeColumna, vistaCentroDisponible } from '../logica/vista.ts';
 import { BarraResultados } from './BarraResultados.tsx';
 import { Buscador } from './Buscador.tsx';
+import { CONTENEDOR_TABLA, ESTADO_TABLA } from './clases.ts';
 import { Filtros } from './Filtros.tsx';
+import { IndicadorCarga } from './Iconos.tsx';
 import { Paginacion } from './Paginacion.tsx';
 import { useContextoApp } from './PantallaApp.tsx';
 import { TablaCentros } from './TablaCentros.tsx';
@@ -215,11 +219,17 @@ export function VistaLista() {
         />
       );
   } else if (excel.sinDatos === 'error') {
-    tabla = <div className="estado-tabla estado-error">No hay datos para mostrar. Revisa el mensaje de arriba.</div>;
+    tabla = (
+      <div className={ESTADO_TABLA}>
+        <CircleAlertIcon aria-hidden="true" className="size-[18px] shrink-0 text-titulo" />
+        No hay datos para mostrar. Revisa el mensaje de arriba.
+      </div>
+    );
   } else {
     tabla = (
-      <div className="estado-tabla">
-        <span className="spinner" aria-hidden="true" /> Cargando datos del Excel…
+      <div className={ESTADO_TABLA}>
+        <IndicadorCarga />
+          Cargando datos del Excel…
       </div>
     );
   }
@@ -262,14 +272,14 @@ export function VistaLista() {
       />
 
       {/* Solo se ve al llegar con la tecla Tab: evita recorrer todos los botones de la tabla. */}
-      <button type="button" id="btn-saltar-paginacion" className="saltar-local" onClick={saltarAPaginacion}>
+      <Button type="button" id="btn-saltar-paginacion" className="sr-only focus:not-sr-only focus:mb-2" onClick={saltarAPaginacion}>
         Saltar a la paginación
-      </button>
+      </Button>
 
       <div
         id="contenedor-tabla"
         ref={contenedorTabla}
-        className="contenedor-tabla"
+        className={CONTENEDOR_TABLA}
         role="region"
         aria-label="Resultados"
         tabIndex={0}

@@ -28,6 +28,13 @@ import { vistaDeRuta } from './logica/rutas.ts';
 const TITULO = 'Buscador de centros de negocio';
 const SUBTITULO = 'Centros de negocio y sus órdenes de compra / servicio';
 
+/**
+ * Enlace "Saltar al buscador / al contenido": escondido (solo para lectores de pantalla) hasta que recibe el foco
+ * con el teclado; ahí aparece arriba a la izquierda. Las mismas clases están en index.html.
+ */
+const SALTAR =
+  'saltar sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground';
+
 /** Botón "Reintentar" de las pantallas de error: vuelve a cargar la página. */
 const REINTENTAR = { texto: 'Reintentar', principal: true, accion: () => location.reload() };
 
@@ -83,7 +90,7 @@ export function App() {
             Quien administra la aplicación debe revisar el archivo <code>config.json</code> (ver la guía{' '}
             <strong>GUIA-CONFIGURACION-MICROSOFT.md</strong>):
           </p>
-          <ul className="lista-errores">
+          <ul className="text-left">
             {arranque.errores.map((e, i) => (
               <li key={i}>{e}</li>
             ))}
@@ -132,7 +139,11 @@ export function App() {
 
   return (
     <>
-      <a className="saltar" href={conBuscador ? '#buscador' : '#principal'} onClick={(ev) => saltarA(ev, conBuscador ? 'buscador' : 'principal')}>
+      <a
+        className={SALTAR}
+        href={conBuscador ? '#buscador' : '#principal'}
+        onClick={(ev) => saltarA(ev, conBuscador ? 'buscador' : 'principal')}
+      >
         {conBuscador ? 'Saltar al buscador' : 'Saltar al contenido'}
       </a>
       <Cabecera
@@ -142,7 +153,7 @@ export function App() {
         demo={arranque.fase === 'app' && arranque.config.modo !== 'microsoft'}
         tema={tema}
       />
-      <main id="principal" className="principal">
+      <main id="principal" className="columna pt-5 pb-4 max-escritorio:pt-3 max-escritorio:pb-3">
         {pantalla}
       </main>
       <AvisoFlotante aviso={aviso} />

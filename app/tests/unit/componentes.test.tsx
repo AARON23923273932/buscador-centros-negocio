@@ -237,7 +237,16 @@ describe('Botón de tema (useTema + BotonTema)', () => {
     expect(raiz.getAttribute('data-tema')).toBe('oscuro');
     expect(raiz.getAttribute('data-tema-efectivo')).toBe('oscuro');
     expect(localStorage.getItem(CLAVE_TEMA)).toBe('oscuro');
-    expect(screen.getByRole('button', { name: 'Cambiar a modo claro' }).title).toBe('Cambiar a modo claro');
+  });
+
+  it('el nombre del botón también se ve como ayuda flotante (Tooltip) al llegar con el teclado', async () => {
+    // Radix mide la ayuda flotante con ResizeObserver, que jsdom no tiene.
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+    render(<ConBoton />);
+    const boton = screen.getByRole('button', { name: 'Cambiar a modo oscuro' });
+    expect(boton.title).toBe(''); // sin "title": no aparecen dos ayudas a la vez
+    fireEvent.focus(boton);
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Cambiar a modo oscuro');
   });
 
   it('respeta la elección guardada', () => {

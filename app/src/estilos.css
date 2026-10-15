@@ -1,1296 +1,348 @@
 /* =============================================================================
-   estilos.css — Apariencia de la app.
-   Los colores están en "variables" (--nombre) para cambiar entre modo claro y
-   oscuro (según el sistema del usuario o el botón ☀️/🌙 de la cabecera).
+   estilos.css — Apariencia de la app: Tailwind CSS v4 + componentes shadcn/ui (src/components/ui).
 
-   Cambios pedidos por el supervisor (14/10/2026):
-    1. Más margen a los lados: el contenido va en una columna centrada de ancho cómodo
-       (--ancho-contenido) con margen lateral generoso (--margen-lateral). En el celular, 16 px.
-    2. Contornos menos agresivos: bordes de 1 px de color suave (--borde-control) y, al llegar con el
-       teclado, el borde en azul + un anillo de 2 px (--anillo) en vez del contorno grueso de 3 px. Solo con
-       :focus-visible (no al hacer clic con el mouse). El anillo contrasta al menos 3:1 con el fondo.
-    3. Íconos alineados: todos son SVG de 16–18 px (clase "icono") centrados con inline-flex.
+   Colores y letra: GUÍA DE ESTILO OFICIAL DE AIC (pedido del supervisor, 15/10/2026). Solo se usan los
+   9 colores de la paleta oficial (nunca otros: tampoco para errores ni avisos) y la letra Calibri:
+     Primary Blue #1E3A6E · Dark Blue #2C5282 · Medium Blue #3B6BAA · Light Blue #E8EEF5 · Light Gray #F5F5F5
+     Black #000000 · White #FFFFFF · Gray #666666 · Border Gray #CCCCCC
+   Cada color se usa a través de una VARIABLE (--primary, --border…): los componentes de shadcn/ui ya vienen
+   preparados para esas variables, así que cambiar un color aquí lo cambia en toda la app. Tabla con cada
+   variable, su color en modo claro y oscuro y el contraste medido (WCAG 2.1 AA): README, sección "Diseño".
+   No se usan transparencias ni sombras de color: mezclarían colores que no están en la paleta.
+
+   Modo oscuro: la guía de AIC no lo define. Se arma SOLO con colores de la paleta (fondo Black, textos White,
+   azules para tablas y botones) y cumpliendo AA. Es una interpretación (por confirmar con Gustavo).
    ============================================================================= */
 
-:root {
-  color-scheme: light;
-  --fondo: #f4f6f9;
-  --superficie: #ffffff;
-  --superficie-2: #eef1f5;
-  --borde: #d6dbe3;
-  --borde-control: #c5ccd7;
-  --borde-fuerte: #b9c1cd;
-  --texto: #1a2130;
-  --texto-2: #535d6e;
-  --primario: #1d5bbf;
-  --primario-hover: #164a9d;
-  --primario-texto: #ffffff;
-  --primario-suave: #e6eefb;
-  --cebra: #f8f9fb;
-  --fila-hover: #edf3fd;
-  --marca-fondo: #ffe48f;
-  --marca-texto: #1a2130;
-  --error: #a8261b;
-  --error-fondo: #fdeceb;
-  --advertencia: #7a4f00;
-  --advertencia-fondo: #fff4d9;
-  --info: #174a9c;
-  --info-fondo: #e7effc;
-  --foco: #1d5bbf;
-  /* Anillo de foco (2 px, junto al borde en color primario): el primario un poco transparente. Con 0,7 contrasta
-     3,2:1 con el fondo y 3,4:1 con el blanco de las tarjetas (mínimo recomendado para indicadores: 3:1). */
-  --anillo: rgba(29, 91, 191, 0.7);
-  --sombra: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --radio: 10px;
-  --fuente: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  /* Flecha de los desplegables (SVG propio: igual en todos los navegadores; la CSP permite imágenes data:). */
-  --flecha-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23535d6e' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
-  /* Columna de contenido: ancho máximo cómodo de leer y margen a los lados (16 px en el celular). */
-  --ancho-contenido: 1240px;
-  --margen-lateral: clamp(16px, 4vw, 56px);
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Variante "dark:" de Tailwind = el modo oscuro de la app: el del sistema (salvo que la persona eligiera claro
+   con el botón ☀️/🌙) o el elegido con el botón (<html data-tema="oscuro">, ver src/hooks/useTema.ts). */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-tema="claro"]), :root:not([data-tema="claro"]) *) {
+      @slot;
+    }
+  }
+  &:where(:root[data-tema="oscuro"], :root[data-tema="oscuro"] *) {
+    @slot;
+  }
 }
 
-/* Modo oscuro: sigue al sistema, salvo que la persona elija otro con el botón ☀️/🌙
-   (src/hooks/useTema.ts guarda la elección en <html data-tema="claro|oscuro">). */
+@theme inline {
+  /* Letra única de la guía: Calibri. Carlito es su equivalente libre (mismas medidas) y Segoe UI la de Windows
+     si faltara; no se descargan letras de internet (la política de seguridad solo permite archivos propios). */
+  --font-sans: Calibri, Carlito, "Segoe UI", sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: var(--font-sans);
+
+  /* Celular: menos de 720 px. "escritorio:" = 720 px o más; "max-escritorio:" = celular. */
+  --breakpoint-escritorio: 45rem;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  /* Propios de la app (también de la paleta). */
+  --color-titulo: var(--titulo);
+  --color-subtitulo: var(--subtitulo);
+  --color-enlace: var(--enlace);
+  --color-cebra: var(--cebra);
+  --color-fila-hover: var(--fila-hover);
+  --color-fila-abierta: var(--fila-abierta);
+  --color-encabezado: var(--encabezado);
+  --color-encabezado-texto: var(--encabezado-texto);
+  --color-encabezado-borde: var(--encabezado-borde);
+  --color-encabezado-hover: var(--encabezado-hover);
+  --color-encabezado-icono: var(--encabezado-icono);
+  --color-marca: var(--marca);
+  --color-marca-texto: var(--marca-texto);
+  --color-nota: var(--nota);
+  --color-nota-borde: var(--nota-borde);
+  --color-nota-titulo: var(--nota-titulo);
+  --color-nota-texto: var(--nota-texto);
+  --color-desactivado: var(--desactivado);
+  --color-desactivado-texto: var(--desactivado-texto);
+  --color-desactivado-borde: var(--desactivado-borde);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/* ---------- Modo claro (el de la guía) ---------- */
+:root {
+  color-scheme: light;
+  --background: #f5f5f5; /* Light Gray: fondo de la página */
+  --foreground: #000000; /* Black: texto */
+  --card: #ffffff; /* White: tarjetas, tablas, cajas */
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #1e3a6e; /* Primary Blue: botón principal, enlaces, encabezados */
+  --primary-foreground: #ffffff;
+  --primary-hover: #2c5282; /* Dark Blue */
+  --secondary: #e8eef5; /* Light Blue: insignias */
+  --secondary-foreground: #1e3a6e;
+  --muted: #f5f5f5;
+  --muted-foreground: #666666; /* Gray: textos secundarios */
+  --accent: #e8eef5; /* Light Blue: fondo al pasar el mouse */
+  --accent-foreground: #1e3a6e;
+  --destructive: #1e3a6e; /* sin rojo: la paleta no lo tiene */
+  --border: #cccccc; /* Border Gray: bordes de tablas y tarjetas */
+  --input: #666666; /* Gray: borde de cajas, desplegables y botones (contraste 5,7:1 con el blanco) */
+  --ring: #3b6baa; /* Medium Blue: anillo de foco con el teclado (5,4:1 con el blanco) */
+  --titulo: #1e3a6e;
+  --subtitulo: #2c5282;
+  --enlace: #1e3a6e;
+  /* Tablas (guía: encabezado Primary Blue con texto blanco en negrita, bordes Dark Blue; celdas con bordes
+     Border Gray; filas alternas Light Gray en tablas de datos). */
+  --cebra: #f5f5f5;
+  --fila-hover: #e8eef5;
+  --fila-abierta: #e8eef5;
+  --encabezado: #1e3a6e;
+  --encabezado-texto: #ffffff;
+  --encabezado-borde: #2c5282;
+  --encabezado-hover: #2c5282;
+  --encabezado-icono: #cccccc;
+  /* Coincidencias del buscador: invertidas (texto blanco sobre Primary Blue), se ven sobre cualquier fila. */
+  --marca: #1e3a6e;
+  --marca-texto: #ffffff;
+  /* Caja de nota de la guía: fondo Light Blue, borde izquierdo grueso Primary Blue, título Primary Blue. */
+  --nota: #e8eef5;
+  --nota-borde: #1e3a6e;
+  --nota-titulo: #1e3a6e;
+  --nota-texto: #000000;
+  /* Controles desactivados: sin transparencia (no saldrían colores fuera de la paleta). */
+  --desactivado: #f5f5f5;
+  --desactivado-texto: #666666;
+  --desactivado-borde: #cccccc;
+  --radius: 0.5rem;
+  /* Columna de contenido (pedido del supervisor, 15/10/2026: "un poco más" de margen a los lados): ancho
+     máximo más angosto y margen lateral que crece con la pantalla (6 % del ancho, entre 20 y 96 px). */
+  --ancho-contenido: 1120px;
+  --margen-lateral: clamp(20px, 6vw, 96px);
+}
+
+/* ---------- Modo oscuro (interpretación propia: la guía no lo define) ---------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
     color-scheme: dark;
-    --fondo: #0e1117;
-    --superficie: #161a22;
-    --superficie-2: #1d222c;
-    --borde: #2c3340;
-    --borde-control: #394252;
-    --borde-fuerte: #3d4656;
-    --texto: #e7eaf0;
-    --texto-2: #a6afbe;
-    --primario: #79a8ff;
-    --primario-hover: #9bbdff;
-    --primario-texto: #0b1020;
-    --primario-suave: #1b2a45;
-    --cebra: #1a1e27;
-    --fila-hover: #1f2a3d;
-    --marca-fondo: #7a5d00;
-    --marca-texto: #fff6d6;
-    --error: #ff9b90;
-    --error-fondo: #3a1714;
-    --advertencia: #ffd27a;
-    --advertencia-fondo: #33270b;
-    --info: #a9c6ff;
-    --info-fondo: #18243b;
-    --foco: #79a8ff;
-    --anillo: rgba(121, 168, 255, 0.6); /* 3,6:1 con el fondo y 3,3:1 con las tarjetas */
-    --sombra: 0 1px 2px rgba(0, 0, 0, 0.35);
-    --flecha-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a6afbe' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
+    --background: #000000;
+    --foreground: #ffffff;
+    --card: #000000;
+    --card-foreground: #ffffff;
+    --popover: #000000;
+    --popover-foreground: #ffffff;
+    --primary: #e8eef5;
+    --primary-foreground: #1e3a6e;
+    --primary-hover: #ffffff;
+    --secondary: #e8eef5;
+    --secondary-foreground: #1e3a6e;
+    --muted: #1e3a6e;
+    --muted-foreground: #cccccc;
+    --accent: #1e3a6e;
+    --accent-foreground: #ffffff;
+    --destructive: #e8eef5;
+    --border: #666666;
+    --input: #666666;
+    --ring: #cccccc;
+    --titulo: #ffffff;
+    --subtitulo: #e8eef5;
+    --enlace: #e8eef5;
+    --cebra: #1e3a6e;
+    --fila-hover: #2c5282;
+    --fila-abierta: #2c5282;
+    --encabezado: #2c5282;
+    --encabezado-texto: #ffffff;
+    --encabezado-borde: #1e3a6e;
+    --encabezado-hover: #1e3a6e;
+    --encabezado-icono: #cccccc;
+    --marca: #e8eef5;
+    --marca-texto: #000000;
+    --nota: #1e3a6e;
+    --nota-borde: #e8eef5;
+    --nota-titulo: #ffffff;
+    --nota-texto: #ffffff;
+    --desactivado: #000000;
+    --desactivado-texto: #666666;
+    --desactivado-borde: #666666;
   }
 }
 :root[data-tema="oscuro"] {
   color-scheme: dark;
-  --fondo: #0e1117;
-  --superficie: #161a22;
-  --superficie-2: #1d222c;
-  --borde: #2c3340;
-  --borde-control: #394252;
-  --borde-fuerte: #3d4656;
-  --texto: #e7eaf0;
-  --texto-2: #a6afbe;
-  --primario: #79a8ff;
-  --primario-hover: #9bbdff;
-  --primario-texto: #0b1020;
-  --primario-suave: #1b2a45;
-  --cebra: #1a1e27;
-  --fila-hover: #1f2a3d;
-  --marca-fondo: #7a5d00;
-  --marca-texto: #fff6d6;
-  --error: #ff9b90;
-  --error-fondo: #3a1714;
-  --advertencia: #ffd27a;
-  --advertencia-fondo: #33270b;
-  --info: #a9c6ff;
-  --info-fondo: #18243b;
-  --foco: #79a8ff;
-  --anillo: rgba(121, 168, 255, 0.6);
-  --sombra: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --flecha-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a6afbe' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --popover: #000000;
+  --popover-foreground: #ffffff;
+  --primary: #e8eef5;
+  --primary-foreground: #1e3a6e;
+  --primary-hover: #ffffff;
+  --secondary: #e8eef5;
+  --secondary-foreground: #1e3a6e;
+  --muted: #1e3a6e;
+  --muted-foreground: #cccccc;
+  --accent: #1e3a6e;
+  --accent-foreground: #ffffff;
+  --destructive: #e8eef5;
+  --border: #666666;
+  --input: #666666;
+  --ring: #cccccc;
+  --titulo: #ffffff;
+  --subtitulo: #e8eef5;
+  --enlace: #e8eef5;
+  --cebra: #1e3a6e;
+  --fila-hover: #2c5282;
+  --fila-abierta: #2c5282;
+  --encabezado: #2c5282;
+  --encabezado-texto: #ffffff;
+  --encabezado-borde: #1e3a6e;
+  --encabezado-hover: #1e3a6e;
+  --encabezado-icono: #cccccc;
+  --marca: #e8eef5;
+  --marca-texto: #000000;
+  --nota: #1e3a6e;
+  --nota-borde: #e8eef5;
+  --nota-titulo: #ffffff;
+  --nota-texto: #ffffff;
+  --desactivado: #000000;
+  --desactivado-texto: #666666;
+  --desactivado-borde: #666666;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* En el celular: 16 px a cada lado. */
+@media (max-width: 44.9375rem) {
+  :root {
+    --margen-lateral: 16px;
+  }
 }
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+/* ---------- Utilidades propias (se usan como clases de Tailwind) ---------- */
 
-body {
-  margin: 0;
-  font-family: var(--fuente);
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--texto);
-  background: var(--fondo);
-  min-height: 100vh;
-}
-
-[hidden] {
-  display: none !important;
-}
-
-h1,
-h2,
-h3 {
-  line-height: 1.25;
-}
-
-code,
-kbd {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 0.9em;
-  background: var(--superficie-2);
-  border: 1px solid var(--borde);
-  border-radius: 4px;
-  padding: 0 4px;
-}
-
-a {
-  color: var(--primario);
-}
-
-/* ---------- Foco (teclado) ----------
-   Solo con :focus-visible: el navegador lo muestra al llegar con el teclado, no al hacer clic con el mouse.
-   General (enlaces, textos): un contorno fino de 2 px. Controles con borde (botones, cajas, desplegables):
-   borde en color primario + anillo de 2 px alrededor. El contorno transparente hace que el foco se siga
-   viendo en el modo de alto contraste de Windows (ahí no se dibujan sombras).
-   Las reglas :hover de esos controles llevan :not(:focus-visible): con el mouse encima de un control que
-   tiene el foco del teclado, el borde sigue azul. */
-:focus-visible {
-  outline: 2px solid var(--foco);
-  outline-offset: 2px;
-}
-.btn:focus-visible,
-.btn-tema:focus-visible,
-.btn-copiar:focus-visible,
-.btn-expandir:focus-visible,
-.btn-borrar:focus-visible,
-#buscador:focus-visible,
-.campo input:focus-visible,
-.campo select:focus-visible,
-#tam-pagina:focus-visible,
-.contenedor-tabla:focus-visible {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  border-color: var(--primario);
-  box-shadow: 0 0 0 2px var(--anillo);
-}
-/* Cajas de texto y desplegables: Chromium los marca :focus-visible también al hacer clic con el mouse.
-   Si lo último que se usó fue el mouse (<html data-modalidad="puntero">, ver src/logica/modalidad.ts),
-   solo queda el borde azul (dice dónde se va a escribir), sin el anillo. */
-:root[data-modalidad='puntero'] #buscador:focus-visible,
-:root[data-modalidad='puntero'] .campo input:focus-visible,
-:root[data-modalidad='puntero'] .campo select:focus-visible,
-:root[data-modalidad='puntero'] #tam-pagina:focus-visible {
-  box-shadow: none;
-}
-/* "Saltar al contenido" lleva el foco a <main> (para seguir con Tab desde ahí): no se remarca toda la página. */
-#principal:focus {
-  outline: none;
-}
-
-.solo-lectores {
-  position: absolute !important;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.saltar {
-  position: absolute;
-  left: 8px;
-  top: -48px;
-  z-index: 100;
-  padding: 8px 12px;
-  background: var(--primario);
-  color: var(--primario-texto);
-  border-radius: 6px;
-  text-decoration: none;
-}
-.saltar:focus {
-  top: 8px;
-}
-
-/* "Saltar a la paginación": escondido hasta que recibe el foco con el teclado. */
-.saltar-local {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-  padding: 0;
-}
-.saltar-local:focus {
-  position: static;
-  width: auto;
-  height: auto;
-  clip: auto;
-  margin: 0 0 8px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--primario);
-  color: var(--primario-texto);
-  font: inherit;
-  cursor: pointer;
-}
-
-/* Línea entre dos avisos dentro de la misma caja. */
-.separador-aviso {
-  border: 0;
-  border-top: 1px solid currentColor;
-  opacity: 0.3;
-  margin: 8px 0;
-}
-
-/* ---------- Íconos ----------
-   Bloques de 16 px (18 px los de la lupa, el logo de Microsoft y el tema) que no se encogen: dentro de un
-   botón con inline-flex + align-items:center quedan centrados con el texto, sin moverse con la línea. */
-.icono {
-  display: block;
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-}
-.icono-18 {
-  width: 18px;
-  height: 18px;
-}
-
-/* ---------- Columna de contenido (cabecera, avisos, buscador, tabla, pie) ---------- */
-.cabecera-interior,
-.principal {
+/* Columna de contenido centrada: cabecera y pantalla principal. */
+@utility columna {
   width: 100%;
   max-width: calc(var(--ancho-contenido) + 2 * var(--margen-lateral));
-  margin: 0 auto;
-  padding-left: var(--margen-lateral);
-  padding-right: var(--margen-lateral);
+  margin-inline: auto;
+  padding-inline: var(--margen-lateral);
 }
 
-/* ---------- Cabecera (fondo a todo el ancho; su contenido, alineado con la columna) ---------- */
-.cabecera {
-  background: var(--superficie);
-  border-bottom: 1px solid var(--borde);
-}
-.cabecera-interior {
-  padding-top: 12px;
-  padding-bottom: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-}
-.marca {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.logo {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: var(--primario);
-  color: var(--primario-texto);
-}
-.logo svg {
-  display: block;
-}
-.marca-textos {
-  min-width: 0;
-}
-.marca h1 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-.subtitulo {
-  margin: 0;
-  color: var(--texto-2);
-  font-size: 0.85rem;
-}
-.cabecera-acciones {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  margin-left: auto;
-}
-.btn-tema {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid var(--borde-control);
-  border-radius: 999px;
-  background: var(--superficie);
-  color: var(--texto);
-  cursor: pointer;
-}
-.btn-tema svg {
-  display: block;
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-}
-.btn-tema:hover {
-  background: var(--superficie-2);
-}
-.btn-tema:hover:not(:focus-visible) {
-  border-color: var(--borde-fuerte);
-}
-/* Se muestra el ícono del modo AL QUE se cambia: luna en claro, sol en oscuro. */
-.btn-tema .icono-sol {
-  display: none;
-}
-:root[data-tema-efectivo="oscuro"] .btn-tema .icono-sol {
-  display: block;
-}
-:root[data-tema-efectivo="oscuro"] .btn-tema .icono-luna {
-  display: none;
-}
-.zona-usuario {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.insignia-demo {
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--advertencia-fondo);
-  color: var(--advertencia);
-  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
-}
-.datos-usuario {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.avatar {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--primario-suave);
-  color: var(--primario);
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-.usuario-textos {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.2;
-}
-.usuario-nombre {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.usuario-correo {
-  color: var(--texto-2);
-  font-size: 0.8rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 260px;
-}
-
-/* ---------- Contenido ---------- */
-.principal {
-  padding-top: 20px;
-  padding-bottom: 16px;
-}
-
-.pantalla-centro {
-  display: grid;
-  place-items: center;
-  min-height: 60vh;
-}
-.tarjeta {
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  box-shadow: var(--sombra);
-  padding: 24px;
-}
-.tarjeta-centro {
-  width: 100%;
-  max-width: 480px;
-  text-align: center;
-}
-.tarjeta-centro h2 {
-  margin-top: 0;
-}
-.tarjeta-centro h2:focus {
-  outline: none;
-}
-.lista-errores {
-  text-align: left;
-}
-.acciones-mensaje {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-/* ---------- Botones ---------- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 38px;
-  padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--borde-control);
-  background: var(--superficie);
-  color: var(--texto);
-  font: inherit;
-  font-size: 0.92rem;
-  font-weight: 500;
-  line-height: 1.25;
-  cursor: pointer;
-  white-space: nowrap;
-  text-decoration: none;
-}
-.btn:hover:not(:disabled) {
-  border-color: var(--primario);
-  color: var(--primario);
-}
-.btn:disabled,
-.btn[aria-disabled='true'] {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.btn-primario {
-  background: var(--primario);
-  border-color: var(--primario);
-  color: var(--primario-texto);
-}
-.btn-primario:hover:not(:disabled) {
-  background: var(--primario-hover);
-  border-color: var(--primario-hover);
-  color: var(--primario-texto);
-}
-/* Botón principal con el foco: su borde ya es azul (no cambia), así que el anillo va separado del botón por
-   una línea del color de la tarjeta y es sólido (contrasta con el fondo y con el relleno azul). */
-.btn-primario:focus-visible {
-  box-shadow:
-    0 0 0 1px var(--superficie),
-    0 0 0 3px var(--foco);
-}
-.btn-grande {
-  min-height: 46px;
-  padding: 10px 20px;
-  font-size: 1rem;
-  width: 100%;
-  max-width: 320px;
-  gap: 10px;
-}
-.btn-pequeno {
-  min-height: 32px;
-  padding: 4px 10px;
-  font-size: 0.85rem;
-}
-.girando .icono-actualizar {
-  animation: girar 1s linear infinite;
-}
-
-/* ---------- Avisos ---------- */
-.aviso {
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin: 0 0 12px;
-  border: 1px solid transparent;
-  font-size: 0.92rem;
-  overflow-wrap: anywhere;
-}
-.aviso .btn {
-  margin-top: 4px;
-}
-.aviso-info {
-  background: var(--info-fondo);
-  color: var(--info);
-  border-color: color-mix(in srgb, var(--info) 22%, transparent);
-}
-.aviso-error {
-  background: var(--error-fondo);
-  color: var(--error);
-  border-color: color-mix(in srgb, var(--error) 28%, transparent);
-}
-.aviso-advertencia {
-  background: var(--advertencia-fondo);
-  color: var(--advertencia);
-  border-color: color-mix(in srgb, var(--advertencia) 28%, transparent);
-}
-.tarjeta-centro .aviso {
-  margin-top: 16px;
-  text-align: left;
-}
-
-.barra-estado {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  margin-bottom: 12px;
-}
-.texto-actualizado {
-  margin: 0;
-  color: var(--texto-2);
-  font-size: 0.88rem;
-}
-
-/* ---------- Buscador ---------- */
-.busqueda {
-  margin-bottom: 12px;
-}
-.etiqueta-busqueda {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.caja-busqueda {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-/* La lupa, centrada en la altura de la caja (18 px). */
-.icono-lupa {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  margin-top: -9px;
-  color: var(--texto-2);
-  pointer-events: none;
-}
-#buscador {
-  width: 100%;
-  min-height: 52px;
-  padding: 10px 48px 10px 44px;
-  font: inherit;
-  font-size: 1.05rem;
-  color: var(--texto);
-  background: var(--superficie);
-  border: 1px solid var(--borde-control);
-  border-radius: var(--radio);
-  box-shadow: var(--sombra);
-}
-#buscador:hover:not(:focus) {
-  border-color: var(--borde-fuerte);
-}
-#buscador:focus {
-  border-color: var(--primario);
-}
-#buscador::-webkit-search-cancel-button {
-  -webkit-appearance: none;
-  appearance: none;
-}
-#buscador::placeholder {
-  color: var(--texto-2);
-}
-/* "×" para borrar la búsqueda: botón redondo de 36 px centrado en la altura de la caja. */
-.btn-borrar {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  margin-top: -18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--texto-2);
-  cursor: pointer;
-}
-.btn-borrar:hover {
-  background: var(--superficie-2);
-  color: var(--texto);
-}
-.ayuda {
-  margin: 6px 0 0;
-  font-size: 0.82rem;
-  color: var(--texto-2);
-}
-
-/* ---------- Filtros ---------- */
-.filtros {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px;
-  align-items: end;
-  margin: 0 0 12px;
-  padding: 12px 14px 14px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  background: var(--superficie);
-  min-width: 0;
-}
-.filtros legend {
-  padding: 0 6px;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.campo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.campo label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--texto-2);
-}
-.campo input,
-.campo select,
-#tam-pagina {
-  width: 100%;
-  min-height: 38px;
-  padding: 6px 10px;
-  font: inherit;
-  font-size: 0.92rem;
-  color: var(--texto);
-  background-color: var(--superficie);
-  border: 1px solid var(--borde-control);
-  border-radius: 8px;
-}
-.campo input:hover:not(:disabled, :focus-visible),
-.campo select:hover:not(:disabled, :focus-visible),
-#tam-pagina:hover:not(:focus-visible) {
-  border-color: var(--borde-fuerte);
-}
-/* Desplegables con flecha propia (la del sistema cambia de tamaño y altura según el navegador). */
-.campo select,
-#tam-pagina {
-  -webkit-appearance: none;
-  appearance: none;
-  padding-right: 34px;
-  background-image: var(--flecha-select);
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px 16px;
-  cursor: pointer;
-}
-.campo input:disabled,
-.campo select:disabled {
-  background-color: var(--superficie-2);
-  cursor: not-allowed;
-}
-.campo select:disabled {
-  opacity: 0.75;
-}
-.campo-boton .btn {
-  width: 100%;
-}
-.solo-movil {
-  display: none;
-}
-
-/* ---------- Barra de resultados ---------- */
-.barra-resultados {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  margin-bottom: 8px;
-}
-.selector-vista {
-  display: inline-flex;
-  border: 1px solid var(--borde-control);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--superficie);
-}
-/* Con el teclado sobre "Por orden / Por centro": el mismo anillo que los demás controles. */
-.selector-vista:has(input:focus-visible) {
-  border-color: var(--primario);
-  box-shadow: 0 0 0 2px var(--anillo);
-  outline: 2px solid transparent;
-}
-.opcion-vista {
-  position: relative;
-  display: flex;
-  cursor: pointer;
-}
-.opcion-vista input {
-  position: absolute;
-  opacity: 0;
-  inset: 0;
-  margin: 0;
-  cursor: pointer;
-}
-.opcion-vista span {
-  padding: 7px 14px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-.opcion-vista + .opcion-vista span {
-  border-left: 1px solid var(--borde-control);
-}
-.opcion-vista input:checked + span {
-  background: var(--primario);
-  color: var(--primario-texto);
-}
-.opcion-vista input:disabled + span {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.contador {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--texto-2);
-  flex: 1 1 260px;
-}
-.acciones-resultados {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.etiqueta-tamano {
-  font-size: 0.85rem;
-  color: var(--texto-2);
-}
-#tam-pagina {
-  width: auto;
-}
-
-/* ---------- Tabla ---------- */
-.contenedor-tabla {
-  position: relative;
-  overflow: auto;
-  max-height: max(360px, calc(100vh - 260px));
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  background: var(--superficie);
-  box-shadow: var(--sombra);
-  overscroll-behavior: contain;
-}
-.contenedor-tabla[aria-busy='true'] .tabla {
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-.estado-tabla {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 48px 16px;
-  color: var(--texto-2);
-  text-align: center;
-}
-.estado-error {
-  color: var(--error);
-}
-.tabla {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.9rem;
-}
-.tabla th,
-.tabla td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--borde);
-  text-align: left;
-  vertical-align: top;
-  white-space: nowrap;
-}
-.tabla td.ancha,
-.tabla th.ancha {
-  white-space: normal;
-  min-width: 260px;
-  max-width: 480px;
-}
-.tabla thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--superficie-2);
-  border-bottom: 1px solid var(--borde-control);
-  padding: 0;
-  font-weight: 600;
-}
-.tabla thead th.col-expandir {
-  padding: 8px;
-}
-.tabla .num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.btn-orden {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  padding: 9px 12px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.btn-orden:hover {
-  background: var(--fila-hover);
-}
-/* Dentro del encabezado (que corta lo que sobresale): la marca de foco va por dentro. */
-.btn-orden:focus-visible {
-  outline: 2px solid transparent;
-  box-shadow: inset 0 0 0 2px var(--primario);
-}
-.icono-orden {
-  color: var(--texto-2);
-}
-.btn-orden.activo .icono-orden {
-  color: var(--primario);
-}
-.tabla tbody tr:nth-child(even) > td {
-  background: var(--cebra);
-}
-.tabla tbody tr:hover > td {
-  background: var(--fila-hover);
-}
-.tabla mark {
-  background: var(--marca-fondo);
-  color: var(--marca-texto);
-  border-radius: 2px;
-  padding: 0 1px;
-}
-.fila-vacia td {
-  text-align: center;
-  white-space: normal;
-  padding: 40px 16px;
-  color: var(--texto-2);
-}
-.tabla-vacia {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--texto-2);
-}
-
-/* Código del centro + botón "copiar": en la línea del texto de las demás celdas (el botón no la agranda). */
-.celda-codigo {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.codigo {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 0.88rem;
-}
-/* El código es un enlace al detalle del centro (/centros/:codigo). */
-.enlace-codigo {
-  color: var(--primario);
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
-  text-underline-offset: 3px;
-  border-radius: 3px;
-}
-.enlace-codigo:hover {
-  text-decoration-color: currentColor;
-}
-.enlace-codigo:focus-visible {
-  outline-offset: 1px;
-}
-.btn-copiar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  margin: -3px 0;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--texto-2);
-  cursor: pointer;
-  opacity: 0.75;
-}
-.btn-copiar:hover {
-  opacity: 1;
-  color: var(--primario);
-  border-color: var(--borde);
-  background: var(--superficie);
-}
-/* Con el teclado: como los demás controles (borde azul + anillo). Va después de :hover para ganarle. */
-.btn-copiar:focus-visible {
-  opacity: 1;
-  color: var(--primario);
-  border-color: var(--primario);
-  background: var(--superficie);
-}
-
-/* Vista por centro */
-.col-expandir {
-  width: 44px;
-}
-.fila-centro {
-  cursor: pointer;
-}
-/* Botón de la flecha: centrado con el código del centro de su fila, sin hacerla más alta. Se apoya en el borde
-   de arriba de la línea (vertical-align: top) y sobresale 3 px arriba y 5 px abajo: así ocupa 20 px, lo mismo que
-   la línea de texto, y su centro coincide con el del código (letra monoespaciada más chica, apoyada en la misma
-   base que el resto de la fila: su centro queda ~1,5 px más abajo que el centro de la línea). */
-.btn-expandir {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  vertical-align: top;
-  width: 28px;
-  height: 28px;
-  margin: -3px 0 -5px;
-  padding: 0;
-  border: 1px solid var(--borde);
-  border-radius: 6px;
-  background: var(--superficie);
-  color: var(--texto);
-  cursor: pointer;
-}
-.btn-expandir:hover:not(:focus-visible) {
-  border-color: var(--borde-fuerte);
-}
-.icono-expandir {
-  transition: transform 0.15s;
-}
-.btn-expandir[aria-expanded='true'] .icono-expandir {
-  transform: rotate(90deg);
-}
-.fila-centro.abierta > td {
-  background: var(--primario-suave) !important;
-  border-bottom-color: transparent;
-}
-.fila-detalle > td {
-  padding: 0 12px 12px 44px;
-  background: var(--primario-suave) !important;
-  white-space: normal;
-}
-.detalle-contenedor {
-  overflow-x: auto;
-  border: 1px solid var(--borde);
-  border-radius: 8px;
-  background: var(--superficie);
-}
-.tabla-anidada thead th {
-  position: static;
-  padding: 7px 12px;
-}
-.insignia {
-  display: inline-block;
-  min-width: 24px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--primario-suave);
-  color: var(--primario);
-  font-weight: 700;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  text-align: center;
-}
-
-/* ---------- Detalle de un centro (/centros/:codigo) ---------- */
-.barra-detalle {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.detalle-centro > h2 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 8px;
-  margin: 0 0 12px;
-  font-size: 1.3rem;
-}
-.detalle-centro > h2:focus {
-  outline: none;
-}
-.detalle-centro > h2 .codigo {
-  font-size: 1.15rem;
-  overflow-wrap: anywhere;
-}
-.ficha-centro {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px 28px;
-  margin: 0 0 20px;
-  padding: 16px 20px;
-}
-.ficha-dato {
-  min-width: 0;
-}
-.ficha-ancha {
-  grid-column: span 2;
-}
-.ficha-centro dt {
-  margin-bottom: 2px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--texto-2);
-}
-.ficha-centro dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.subtitulo-detalle {
-  margin: 0 0 8px;
-  font-size: 1rem;
-}
-.subtitulo-detalle .tenue {
-  font-weight: 400;
-  font-size: 0.9rem;
-}
-.tabla-detalle thead th {
-  padding: 9px 12px;
-}
-.contenedor-detalle {
-  margin-bottom: 12px;
-}
-
-/* ---------- Paginación ---------- */
-.paginacion {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  margin: 12px 0;
-}
-.btn-pagina {
-  min-width: 38px;
-  padding-left: 10px;
-  padding-right: 10px;
-}
-.pagina-actual {
-  padding: 0 8px;
-  font-size: 0.9rem;
-  color: var(--texto-2);
-  border-radius: 4px;
-}
-/* Recibe el foco al llegar a la primera/última página con el teclado: debe verse dónde está. */
-.pagina-actual:focus-visible {
-  outline: 2px solid var(--foco);
-  outline-offset: 2px;
-}
-
-/* ---------- Detalle de columnas y pie ---------- */
-.detalles-columnas {
-  margin: 16px 0 8px;
-  font-size: 0.88rem;
-}
-.detalles-columnas summary {
-  cursor: pointer;
-  color: var(--texto-2);
-  font-weight: 500;
-  border-radius: 4px;
-}
-.info-columnas p {
-  overflow-wrap: anywhere;
-}
-.contenedor-mini {
-  overflow-x: auto;
-  border: 1px solid var(--borde);
-  border-radius: 8px;
-  background: var(--superficie);
-}
-.tabla-mini thead th {
-  position: static;
-  padding: 6px 12px;
-}
-.tenue {
-  color: var(--texto-2);
-}
-.pie {
-  margin: 12px 0 24px;
-  font-size: 0.82rem;
-  color: var(--texto-2);
-}
-
-/* ---------- Aviso flotante ---------- */
-.aviso-flotante {
-  position: fixed;
-  left: 50%;
-  bottom: 20px;
-  z-index: 50;
-  max-width: calc(100vw - 32px);
-  padding: 10px 16px;
-  border-radius: 8px;
-  background: var(--texto);
-  color: var(--fondo);
-  font-size: 0.9rem;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  transform: translate(-50%, 20px);
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.2s,
-    transform 0.2s;
-}
-.aviso-flotante.visible {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-/* ---------- Indicador de carga ---------- */
-.spinner {
-  display: inline-block;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border: 3px solid var(--borde);
-  border-top-color: var(--primario);
-  border-radius: 50%;
-  animation: girar 0.8s linear infinite;
-}
-@keyframes girar {
-  to {
-    transform: rotate(360deg);
+/* Foco con el TECLADO (pedido del supervisor, 14/10/2026: contornos suaves y anillo solo con el teclado):
+   borde del control en el color principal + anillo sólido de 2 px (--ring). El contorno transparente hace que
+   el foco se siga viendo en el modo de alto contraste de Windows (ahí no se dibujan sombras). Solo con
+   :focus-visible: al hacer clic con el mouse no aparece (ver también la regla de data-modalidad, abajo). */
+@utility foco-control {
+  &:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--ring);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+/* Botón principal (su relleno ya es del color principal): el anillo va separado por una línea del color de la tarjeta. */
+@utility foco-primario {
+  &:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow:
+      0 0 0 2px var(--card),
+      0 0 0 4px var(--ring);
+  }
+}
+/* Botones del encabezado de las tablas (fondo azul): la marca de foco va por dentro, en blanco. */
+@utility foco-encabezado {
+  &:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset 0 0 0 2px var(--encabezado-texto);
   }
 }
 
-/* ---------- Pantallas pequeñas (celular) ---------- */
-@media (max-width: 719px) {
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    font-size: 14px;
+    /* Calibri se ve más chica que otras letras del mismo tamaño: 16 px (15 px en el celular). */
+    @apply min-h-screen bg-background text-base leading-normal text-foreground max-escritorio:text-[15px];
   }
-  .principal {
-    padding-top: 12px;
-    padding-bottom: 12px;
+  h1,
+  h2,
+  h3 {
+    @apply leading-tight font-bold text-titulo;
   }
-  .cabecera-interior {
-    padding-top: 10px;
-    padding-bottom: 10px;
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
   }
-  .subtitulo {
-    display: none;
+  /* Enlaces y demás (sin borde propio): contorno de 2 px con el teclado. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
-  .usuario-textos {
-    display: none;
+  /* "Saltar al contenido" y los títulos que reciben el foco (lo anuncia el lector de pantalla): sin marco. */
+  #principal:focus,
+  h2[tabindex="-1"]:focus {
+    outline: none;
   }
-  .solo-movil {
-    display: inline-flex;
-    margin-bottom: 12px;
+  code {
+    @apply rounded-sm border border-border bg-muted px-1 text-[0.95em] text-foreground;
   }
-  .solo-escritorio {
-    display: none;
+  /* Coincidencias del buscador (componentes/Resaltado.tsx). */
+  mark {
+    @apply rounded-[2px] bg-marca px-px text-marca-texto;
   }
-  #buscador {
-    font-size: 1rem; /* 16 px: evita que el celular haga zoom al escribir */
-  }
-  .filtros:not(.abierto) {
-    display: none;
-  }
-  .filtros {
-    grid-template-columns: 1fr;
-  }
-  .barra-resultados {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .selector-vista {
-    width: 100%;
-  }
-  .opcion-vista {
-    flex: 1;
-  }
-  .opcion-vista span {
-    flex: 1;
-    text-align: center;
-    padding: 8px 6px;
-  }
-  .contador {
-    flex: none;
-  }
-  .acciones-resultados {
-    justify-content: space-between;
-  }
-  .contenedor-tabla {
-    max-height: 70vh;
-  }
-  .tabla td.ancha,
-  .tabla th.ancha {
-    min-width: 200px;
-  }
-  .texto-boton {
-    display: none;
-  }
-  .fila-detalle > td {
-    padding-left: 12px;
-  }
-  .ficha-centro {
-    grid-template-columns: 1fr;
-    padding: 14px 16px;
-  }
-  .ficha-ancha {
-    grid-column: auto;
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-@media print {
-  .cabecera,
-  .barra-estado,
-  .busqueda,
-  .filtros,
-  .solo-movil,
-  .barra-resultados .acciones-resultados,
-  .paginacion,
-  .detalles-columnas,
-  .btn-copiar,
-  .barra-detalle {
-    display: none !important;
+@layer components {
+  /* Código del centro (texto) y su enlace al detalle (/centros/:codigo). Estas dos clases las usan también las
+     pruebas y VistaLista.tsx (para devolver el foco al enlace): por eso se dibujan aquí y no con clases sueltas. */
+  .codigo {
+    font-variant-numeric: tabular-nums;
   }
-  .contenedor-tabla {
-    max-height: none;
-    overflow: visible;
-    box-shadow: none;
+  .enlace-codigo {
+    @apply rounded-[3px] font-semibold text-enlace underline decoration-1 underline-offset-[3px] hover:decoration-2;
   }
+  .enlace-codigo:focus-visible {
+    outline-offset: 1px;
+  }
+}
+
+/* Cajas de texto y desplegables: Chromium los marca :focus-visible también al hacer CLIC con el mouse. Si lo
+   último que se usó fue el mouse (<html data-modalidad="puntero">, ver src/logica/modalidad.ts), solo queda el
+   borde azul (dice dónde se va a escribir), sin el anillo. Fuera de las capas de Tailwind: gana siempre. */
+:root[data-modalidad="puntero"] :is(input, select).foco-control:focus-visible {
+  box-shadow: none;
 }

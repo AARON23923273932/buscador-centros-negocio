@@ -10,12 +10,18 @@
 
 import { useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { CircleAlertIcon, TriangleAlertIcon } from 'lucide-react';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Table, TableBody, TableHeader } from '@/components/ui/table';
 import { buscarCentro, estadosDeCentro } from '../logica/centro.ts';
 import { numero } from '../logica/formato.ts';
 import { codigoDeRuta, rutaVolver, type EstadoNavegacion } from '../logica/rutas.ts';
-import { claseColumna } from '../logica/tabla.ts';
-import { ContenidoCelda, FilasDatos } from './Celdas.tsx';
-import { IconoVolver } from './Iconos.tsx';
+import { ContenidoCelda, EncabezadosFijos, FilasDatos } from './Celdas.tsx';
+import { CONTENEDOR_TABLA, ESTADO_TABLA } from './clases.ts';
+import { IconoVolver, IndicadorCarga } from './Iconos.tsx';
 import { useContextoApp } from './PantallaApp.tsx';
 
 /** En el detalle no se resalta nada (no es una búsqueda). Función fija: memo() de FilasDatos sirve. */
@@ -38,10 +44,13 @@ function VolverALista() {
     }
   };
   return (
-    <Link id="btn-volver" className="btn btn-secundario btn-volver" to={destino} onClick={alHacerClic}>
-      <IconoVolver />
-      Volver a la lista
-    </Link>
+    // Enlace con el aspecto de un botón (Button de shadcn/ui con asChild: el <a> recibe sus clases).
+    <Button asChild variant="outline">
+      <Link id="btn-volver" to={destino} onClick={alHacerClic}>
+        <IconoVolver />
+        Volver a la lista
+      </Link>
+    </Button>
   );
 }
 
@@ -66,89 +75,101 @@ export function DetalleCentro() {
     anotarCentroAbierto({ codigo, indice: -1 });
   }, [codigo, anotarCentroAbierto]);
 
+  /** Un dato de la ficha del centro (título + valor). */
+  const DATO = 'min-w-0';
+  const DATO_ANCHO = 'min-w-0 col-span-2 max-escritorio:col-span-1';
+  const TITULO_DATO = 'mb-0.5 text-[0.8rem] font-semibold text-muted-foreground';
+  const VALOR_DATO = 'm-0 [overflow-wrap:anywhere]';
+
   let contenido;
   if (!datos) {
     contenido =
       excel.sinDatos === 'error' ? (
-        <div className="estado-tabla estado-error tarjeta">No hay datos para mostrar. Revisa el mensaje de arriba.</div>
+        <Card className={`${ESTADO_TABLA} p-0`}>
+          <CircleAlertIcon aria-hidden="true" className="size-[18px] shrink-0 text-titulo" />
+        No hay datos para mostrar. Revisa el mensaje de arriba.
+        </Card>
       ) : (
-        <div className="estado-tabla tarjeta" aria-busy="true">
-          <span className="spinner" aria-hidden="true" /> Cargando datos del Excel…
-        </div>
+        <Card className={`${ESTADO_TABLA} p-0`} aria-busy="true">
+          <IndicadorCarga />
+          Cargando datos del Excel…
+        </Card>
       );
   } else if (!grupo) {
     contenido = (
-      <div id="centro-no-encontrado" className="aviso aviso-advertencia" role="status">
-        <strong>No se encontró el centro de negocio “{codigo}” en el Excel.</strong> Revisa el código (puede haber cambiado o
-        estar mal escrito en el enlace) o vuelve a la lista para buscarlo.
-      </div>
+      <Alert id="centro-no-encontrado" role="status">
+        <TriangleAlertIcon aria-hidden="true" />
+        <div>
+          <strong>No se encontró el centro de negocio “{codigo}” en el Excel.</strong> Revisa el código (puede haber cambiado o
+          estar mal escrito en el enlace) o vuelve a la lista para buscarlo.
+        </div>
+      </Alert>
     );
   } else {
     contenido = (
       <>
-        <dl id="ficha-centro" className="ficha-centro tarjeta">
-          <div className="ficha-dato">
-            <dt>Código</dt>
-            <dd>
-              <ContenidoCelda columna={{ campo: 'codigoCentro' }} celda={{ t: grupo.codigo }} terminos={[]} alCopiar={copiar} enlazar={false} />
-            </dd>
-          </div>
-          <div className="ficha-dato ficha-ancha">
-            <dt>Descripción</dt>
-            <dd>{grupo.descripcion || '—'}</dd>
-          </div>
-          <div className="ficha-dato ficha-ancha">
-            <dt>{grupo.clientes.length > 1 ? 'Clientes' : 'Cliente'}</dt>
-            <dd>{grupo.clientes.join(', ') || '—'}</dd>
-          </div>
-          {conEstado && (
-            <div className="ficha-dato">
-              <dt>{estados.length > 1 ? 'Estados' : 'Estado'}</dt>
-              <dd>{estados.join(', ') || '—'}</dd>
+        <Card className="mb-5 px-5 py-4 max-escritorio:px-4 max-escritorio:py-3.5">
+          <dl id="ficha-centro" className="m-0 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-7 gap-y-3.5 max-escritorio:grid-cols-1">
+            <div className={DATO}>
+              <dt className={TITULO_DATO}>Código</dt>
+              <dd className={VALOR_DATO}>
+                <ContenidoCelda columna={{ campo: 'codigoCentro' }} celda={{ t: grupo.codigo }} terminos={[]} alCopiar={copiar} enlazar={false} />
+              </dd>
             </div>
-          )}
-          <div className="ficha-dato">
-            <dt>N° de órdenes</dt>
-            <dd>
-              <span className="insignia">{numero(grupo.ordenes)}</span>
-            </dd>
-          </div>
-        </dl>
+            <div className={DATO_ANCHO}>
+              <dt className={TITULO_DATO}>Descripción</dt>
+              <dd className={VALOR_DATO}>{grupo.descripcion || '—'}</dd>
+            </div>
+            <div className={DATO_ANCHO}>
+              <dt className={TITULO_DATO}>{grupo.clientes.length > 1 ? 'Clientes' : 'Cliente'}</dt>
+              <dd className={VALOR_DATO}>{grupo.clientes.join(', ') || '—'}</dd>
+            </div>
+            {conEstado && (
+              <div className={DATO}>
+                <dt className={TITULO_DATO}>{estados.length > 1 ? 'Estados' : 'Estado'}</dt>
+                <dd className={VALOR_DATO}>{estados.join(', ') || '—'}</dd>
+              </div>
+            )}
+            <div className={DATO}>
+              {/* Cuenta cada orden aunque varias vengan juntas en una celda (ver logica/ordenes.ts). */}
+              <dt className={TITULO_DATO}>N° de órdenes</dt>
+              <dd className={VALOR_DATO}>
+                <Badge variant="secondary" id="numero-ordenes" className="insignia min-w-6">
+                  {numero(grupo.ordenes)}
+                </Badge>
+              </dd>
+            </div>
+          </dl>
+        </Card>
 
-        <h3 className="subtitulo-detalle" id="titulo-ordenes-centro">
+        <h3 className="mt-0 mb-2 text-base text-subtitulo" id="titulo-ordenes-centro">
           Órdenes del centro{' '}
-          <span className="tenue">
+          <span className="text-[0.9rem] font-normal text-muted-foreground">
             ({numero(grupo.filas.length)} {grupo.filas.length === 1 ? 'fila' : 'filas'} del Excel)
           </span>
         </h3>
-        <div id="contenedor-detalle" className="contenedor-tabla contenedor-detalle" role="region" aria-labelledby="titulo-ordenes-centro" tabIndex={0}>
-          <table className="tabla tabla-detalle" id="tabla-detalle">
-            <caption className="solo-lectores">Órdenes del centro {grupo.codigo}</caption>
-            <thead>
-              <tr>
-                {datos.columnas.map((c) => (
-                  <th key={c.indice} scope="col" className={claseColumna(c)}>
-                    {c.titulo}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+        <div id="contenedor-detalle" className={`${CONTENEDOR_TABLA} mb-3`} role="region" aria-labelledby="titulo-ordenes-centro" tabIndex={0}>
+          <Table container={false} id="tabla-detalle">
+            <caption className="sr-only">Órdenes del centro {grupo.codigo}</caption>
+            <TableHeader>
+              <EncabezadosFijos columnas={datos.columnas} />
+            </TableHeader>
+            <TableBody>
               <FilasDatos columnas={datos.columnas} filas={grupo.filas} terminosDe={sinTerminos} alCopiar={copiar} enlazarCodigo={false} />
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </>
     );
   }
 
   return (
-    <section id="detalle-centro" className="detalle-centro" aria-labelledby="titulo-detalle">
-      <div className="barra-detalle">
+    <section id="detalle-centro" aria-labelledby="titulo-detalle">
+      <div className="mb-3 flex items-center print:hidden">
         <VolverALista />
       </div>
-      <h2 id="titulo-detalle" ref={titulo} tabIndex={-1}>
-        Centro de negocio <span className="codigo">{grupo?.codigo || codigo}</span>
+      <h2 id="titulo-detalle" ref={titulo} tabIndex={-1} className="mt-0 mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[1.4rem]">
+        Centro de negocio <span className="codigo [overflow-wrap:anywhere]">{grupo?.codigo || codigo}</span>
       </h2>
       {contenido}
     </section>

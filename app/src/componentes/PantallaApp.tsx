@@ -1,7 +1,7 @@
 // =============================================================================
 // PantallaApp — Lo que comparten todas las rutas de la aplicación (es el "layout" de React Router):
 // el Excel (useExcel), lo que eligió la persona (useBusqueda), los centros abiertos, la barra
-// "Datos actualizados… [Actualizar]", los avisos y "Columnas detectadas". En el medio (<Outlet />)
+// "Datos actualizados… [Actualizar]", los avisos y "Columnas detectadas" (se abre con un botón). En el medio (<Outlet />)
 // va la ruta: la lista (/ordenes, /centros → VistaLista.tsx) o el detalle de un centro
 // (/centros/:codigo → DetalleCentro.tsx). Ver las rutas en RutasApp.tsx.
 //
@@ -15,6 +15,10 @@
 
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { Outlet, useOutletContext } from 'react-router';
+import { ChevronRightIcon, InfoIcon } from 'lucide-react';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Avisar } from '../hooks/useAvisoFlotante.ts';
 import { useBusqueda, type Busqueda } from '../hooks/useBusqueda.ts';
 import { useExcel, type Excel } from '../hooks/useExcel.ts';
@@ -121,25 +125,22 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
 
   return (
     <section id="pantalla-app">
-      <div id="aviso-demo" className="aviso aviso-info" hidden={config.modo !== 'demo'}>
-        <strong>Modo demostración:</strong> estás viendo datos <strong>ficticios</strong> de ejemplo, sin inicio de sesión.
-      </div>
+      <Alert id="aviso-demo" role="note" className="mb-3" hidden={config.modo !== 'demo'}>
+        <InfoIcon aria-hidden="true" />
+        <div>
+          <strong>Modo demostración:</strong> estás viendo datos <strong>ficticios</strong> de ejemplo, sin inicio de sesión.
+        </div>
+      </Alert>
 
-      <div className="barra-estado">
-        <p id="texto-actualizado" className="texto-actualizado" aria-live="polite">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 print:hidden">
+        <p id="texto-actualizado" className="m-0 text-sm text-muted-foreground" aria-live="polite">
           {actualizado}
         </p>
         {/* aria-disabled (y no "disabled") para que el botón no pierda el foco del teclado mientras carga. */}
-        <button
-          type="button"
-          id="btn-actualizar"
-          className={`btn btn-secundario${cargando ? ' girando' : ''}`}
-          aria-disabled={cargando}
-          onClick={() => void excel.cargar('manual')}
-        >
-          <IconoActualizar />
+        <Button type="button" id="btn-actualizar" variant="outline" aria-disabled={cargando} onClick={() => void excel.cargar('manual')}>
+          <IconoActualizar girando={cargando} />
           <span id="texto-btn-actualizar">{cargando ? 'Actualizando…' : 'Actualizar'}</span>
-        </button>
+        </Button>
       </div>
 
       <AvisoError error={excel.error} />
@@ -148,14 +149,24 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
       {/* La ruta: lista (/ordenes, /centros) o detalle de un centro (/centros/:codigo). */}
       <Outlet context={contexto} />
 
-      <details className="detalles-columnas">
-        <summary>Columnas detectadas en el Excel</summary>
-        <div id="info-columnas" className="info-columnas">
-          {datos && <ColumnasDetectadas datos={datos} archivo={excel.archivo} />}
-        </div>
-      </details>
+      {/* Se abre y se cierra con un botón (Collapsible de shadcn/ui: aria-expanded y aria-controls). */}
+      <Collapsible className="mt-4 mb-2 text-sm print:hidden">
+        <CollapsibleTrigger asChild>
+          <Button type="button" variant="ghost" size="sm" className="group/columnas -ml-2.5 text-muted-foreground">
+            <ChevronRightIcon aria-hidden="true" className="size-4 transition-transform group-data-[state=open]/columnas:rotate-90" />
+            Columnas detectadas en el Excel
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div id="info-columnas" className="pt-1 [&_p]:my-2 [&_p]:[overflow-wrap:anywhere]">
+            {datos && <ColumnasDetectadas datos={datos} archivo={excel.archivo} />}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
-      <p className="pie">La información se lee del Excel que llena el bot del ERP. Esta página es solo de consulta (no modifica el Excel).</p>
+      <p className="mt-3 mb-6 text-[0.82rem] text-muted-foreground">
+        La información se lee del Excel que llena el bot del ERP. Esta página es solo de consulta (no modifica el Excel).
+      </p>
     </section>
   );
 });

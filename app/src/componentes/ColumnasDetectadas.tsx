@@ -1,6 +1,7 @@
 // "Columnas detectadas en el Excel": qué columna usó la app para cada cosa, cuáles ocultó y
 // (con el Excel real) dónde está el archivo en SharePoint/OneDrive (para fijarlo en config.json).
 import { memo } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { InfoArchivo } from '../hooks/useExcel.ts';
 import { NOMBRES_CAMPOS } from '../logica/filtros.ts';
 import type { OrigenExcel, ResultadoLectura } from '../logica/tipos.ts';
@@ -62,25 +63,31 @@ export const ColumnasDetectadas = memo(function ColumnasDetectadas({
         <strong>{d.columnasOcultas?.length ? d.columnasOcultas.map((c) => `${c.titulo} (${c.letra})`).join(', ') : 'ninguna'}</strong>
       </p>
       <UbicacionExcel archivo={archivo} />
-      <div className="contenedor-mini">
-        <table className="tabla tabla-mini">
-          <thead>
-            <tr>
-              <th scope="col">Columna</th>
-              <th scope="col">Título en el Excel</th>
-              <th scope="col">La app la usa como</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="overflow-x-auto rounded-md border border-border bg-card">
+        <Table container={false}>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col" className="static">
+                Columna
+              </TableHead>
+              <TableHead scope="col" className="static">
+                Título en el Excel
+              </TableHead>
+              <TableHead scope="col" className="static">
+                La app la usa como
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {d.columnas.map((c) => (
-              <tr key={c.indice}>
-                <td>{c.letra}</td>
-                <td>{c.titulo}</td>
-                <td>{c.campo ? NOMBRES_CAMPOS[c.campo] : <span className="tenue">(se muestra tal cual)</span>}</td>
-              </tr>
+              <TableRow key={c.indice}>
+                <TableCell>{c.letra}</TableCell>
+                <TableCell>{c.titulo}</TableCell>
+                <TableCell>{c.campo ? NOMBRES_CAMPOS[c.campo] : <span className="text-muted-foreground">(se muestra tal cual)</span>}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </>
   );

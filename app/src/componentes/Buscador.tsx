@@ -1,6 +1,9 @@
-// Buscador global: una caja grande; filtra 200 ms después de la última tecla (Enter = ya).
-// La lupa (izquierda) y la "×" para borrar (derecha) se centran en la caja con CSS (estilos.css).
+// Buscador global: una caja grande (Input de shadcn/ui); filtra 200 ms después de la última tecla (Enter = ya).
+// La lupa (izquierda) y la "×" para borrar (derecha) van centradas en la altura de la caja.
 import type { RefObject } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Kbd } from '@/components/ui/kbd';
 import { useMediaQuery } from '../hooks/useMediaQuery.ts';
 import { IconoCerrar, IconoLupa } from './Iconos.tsx';
 
@@ -20,7 +23,7 @@ export function Buscador({ valor, alEscribir, alEnviar, alBorrar, campoRef }: Pr
   return (
     <form
       id="form-busqueda"
-      className="busqueda"
+      className="mb-3 print:hidden"
       role="search"
       noValidate
       onSubmit={(ev) => {
@@ -28,12 +31,12 @@ export function Buscador({ valor, alEscribir, alEnviar, alBorrar, campoRef }: Pr
         alEnviar();
       }}
     >
-      <label htmlFor="buscador" className="etiqueta-busqueda">
+      <label htmlFor="buscador" className="mb-1 block font-semibold">
         Buscar
       </label>
-      <div className="caja-busqueda">
+      <div className="relative flex items-center">
         <IconoLupa />
-        <input
+        <Input
           id="buscador"
           ref={campoRef}
           name="q"
@@ -43,17 +46,27 @@ export function Buscador({ valor, alEscribir, alEnviar, alBorrar, campoRef }: Pr
           spellCheck={false}
           placeholder={esCelular ? 'Código, cliente, orden…' : 'Buscar por código, descripción, cliente u orden…'}
           aria-describedby="ayuda-busqueda"
+          className="h-[52px] rounded-lg pr-12 pl-11 text-[1.05rem] max-escritorio:text-base [&::-webkit-search-cancel-button]:appearance-none"
           value={valor}
           onChange={(ev) => alEscribir(ev.target.value)}
         />
-        <button type="button" id="btn-borrar-busqueda" className="btn-borrar" aria-label="Borrar búsqueda" hidden={!valor} onClick={alBorrar}>
+        <Button
+          type="button"
+          id="btn-borrar-busqueda"
+          variant="ghost"
+          size="icon"
+          className="absolute top-1/2 right-2 -mt-[18px] rounded-full text-muted-foreground"
+          aria-label="Borrar búsqueda"
+          hidden={!valor}
+          onClick={alBorrar}
+        >
           <IconoCerrar />
-        </button>
+        </Button>
       </div>
-      <p id="ayuda-busqueda" className="ayuda">
+      <p id="ayuda-busqueda" className="mt-1.5 mb-0 text-[0.82rem] text-muted-foreground">
         Puedes escribir varias palabras: se muestran las filas que tengan <strong>todas</strong>. No importan mayúsculas ni tildes.{' '}
-        <span className="solo-escritorio">
-          Atajo: tecla <kbd>/</kbd>.
+        <span className="max-escritorio:hidden">
+          Atajo: tecla <Kbd>/</Kbd>.
         </span>
       </p>
     </form>

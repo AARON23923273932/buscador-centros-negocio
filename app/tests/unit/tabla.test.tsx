@@ -47,12 +47,19 @@ describe('TablaOrdenes', () => {
 });
 
 describe('IconoOrden (indicador ▲▼ de los títulos)', () => {
-  /** Las flechas que dibuja: "arriba" / "abajo" y si van tenues. */
-  const flechas = (aria: 'none' | 'ascending' | 'descending') =>
-    [...renderToStaticMarkup(<IconoOrden aria={aria} />).matchAll(/<path[^>]*d="M12 (4\.5|19\.5)[^"]*"[^>]*>/g)].map((m) => ({
+  /**
+   * Las flechas que dibuja: "arriba" / "abajo" y si van tenues. Guía de AIC (15/10/2026): sin transparencias (antes
+   * opacity 0.55, que daba un color fuera de la paleta); "tenue" = el ícono va en Border Gray (text-encabezado-icono).
+   */
+  const flechas = (aria: 'none' | 'ascending' | 'descending') => {
+    const html = renderToStaticMarkup(<IconoOrden aria={aria} />);
+    const tenue = /<svg[^>]*class="[^"]*\btext-encabezado-icono\b/.test(html);
+    expect(html).not.toContain('opacity');
+    return [...html.matchAll(/<path[^>]*d="M12 (4\.5|19\.5)[^"]*"[^>]*>/g)].map((m) => ({
       flecha: m[1] === '4.5' ? 'arriba' : 'abajo',
-      tenue: /opacity="0\.55"/.test(m[0]),
+      tenue,
     }));
+  };
 
   it('ascendente: solo la flecha de arriba; descendente: solo la de abajo (ambas marcadas)', () => {
     expect(flechas('ascending')).toEqual([{ flecha: 'arriba', tenue: false }]);

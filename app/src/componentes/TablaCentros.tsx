@@ -1,10 +1,14 @@
-// Tabla "Por centro de negocio": una fila por centro que se abre para ver sus órdenes.
+// Tabla "Por centro de negocio": una fila por centro que se abre para ver sus órdenes (Table de shadcn/ui).
 // memo(): no se vuelve a dibujar si sus props no cambian (ej. mientras se escribe en el buscador).
 import { Fragment, memo, type MouseEvent } from 'react';
+import { cn } from 'cn';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { numero } from '../logica/formato.ts';
-import { claseColumna } from '../logica/tabla.ts';
+import { CLASE_ANCHA, CLASE_NUMERO } from '../logica/tabla.ts';
 import type { Columna, Direccion, Grupo } from '../logica/tipos.ts';
-import { ContenidoCelda, EncabezadoOrdenable, FilasDatos, FilaSinResultados, type AlCopiar } from './Celdas.tsx';
+import { ContenidoCelda, EncabezadoOrdenable, EncabezadosFijos, FilasDatos, FilaSinResultados, type AlCopiar } from './Celdas.tsx';
 import { IconoFlecha } from './Iconos.tsx';
 import { Resaltado } from './Resaltado.tsx';
 
@@ -24,6 +28,9 @@ interface Props {
   alAlternar?: (clave: string) => void;
   alCopiar?: AlCopiar;
 }
+
+/** Fila de un centro abierto y la fila con sus órdenes: Light Blue (Dark Blue en modo oscuro), también al pasar el mouse. */
+const ABIERTA = 'bg-fila-abierta even:bg-fila-abierta hover:bg-fila-abierta';
 
 export const TablaCentros = memo(function TablaCentros({
   grupos,
@@ -50,20 +57,20 @@ export const TablaCentros = memo(function TablaCentros({
   };
 
   return (
-    <table className="tabla tabla-centros" id="tabla-resultados">
-      <caption className="solo-lectores">Centros de negocio. Pulsa la flecha de un centro para ver sus órdenes.</caption>
-      <thead>
-        <tr>
-          <th scope="col" className="col-expandir">
-            <span className="solo-lectores">Ver órdenes</span>
-          </th>
+    <Table container={false} id="tabla-resultados">
+      <caption className="sr-only">Centros de negocio. Pulsa la flecha de un centro para ver sus órdenes.</caption>
+      <TableHeader>
+        <TableRow>
+          <TableHead scope="col" className="w-11 px-2">
+            <span className="sr-only">Ver órdenes</span>
+          </TableHead>
           <EncabezadoOrdenable clave="codigo" titulo="Código" {...orden} />
-          <EncabezadoOrdenable clave="descripcion" titulo="Descripción" clase="ancha" {...orden} />
+          <EncabezadoOrdenable clave="descripcion" titulo="Descripción" {...orden} />
           <EncabezadoOrdenable clave="cliente" titulo="Cliente(s)" {...orden} />
-          <EncabezadoOrdenable clave="ordenes" titulo="N° de órdenes" clase="num" {...orden} />
-        </tr>
-      </thead>
-      <tbody>
+          <EncabezadoOrdenable clave="ordenes" titulo="N° de órdenes" {...orden} />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {!grupos.length && <FilaSinResultados columnas={5} hayDatos={hayDatos} />}
         {grupos.map((g, i) => {
           const abierto = expandidos.has(g.clave);
@@ -71,61 +78,61 @@ export const TablaCentros = memo(function TablaCentros({
           const nombre = g.codigo || g.descripcion || 'sin código';
           return (
             <Fragment key={g.clave}>
-              <tr className={`fila-centro${abierto ? ' abierta' : ''}`} data-grupo={g.clave} onClick={(ev) => alHacerClic(ev, g.clave)}>
-                <td className="col-expandir">
-                  <button
+              <TableRow className={cn('fila-centro cursor-pointer', abierto && `abierta ${ABIERTA}`)} data-grupo={g.clave} onClick={(ev) => alHacerClic(ev, g.clave)}>
+                <TableCell className="w-11">
+                  {/* Flecha: centrada con el código de su fila, sin hacerla más alta. Se apoya arriba de la línea
+                      (align-top) y sobresale 3 px arriba y 5 px abajo: ocupa 20 px, lo mismo que la línea de texto. */}
+                  <Button
                     type="button"
-                    className="btn-expandir"
+                    variant="outline"
+                    size="icon-sm"
+                    className="btn-expandir -mt-[3px] -mb-[5px] size-7 align-top"
                     data-grupo={g.clave}
                     aria-expanded={abierto}
                     aria-controls={abierto ? idDetalle : undefined}
                   >
                     <IconoFlecha />
-                    <span className="solo-lectores">
+                    <span className="sr-only">
                       {abierto ? 'Ocultar' : 'Ver'} órdenes de {nombre}
                     </span>
-                  </button>
-                </td>
-                <td>
+                  </Button>
+                </TableCell>
+                <TableCell>
                   <ContenidoCelda columna={colCodigo} celda={{ t: g.codigo }} terminos={terminosDe(colCodigo)} alCopiar={alCopiar} />
-                </td>
-                <td className="ancha">
+                </TableCell>
+                <TableCell className={CLASE_ANCHA}>
                   <Resaltado texto={g.descripcion} terminos={terminosDe(colDescripcion)} />
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   <Resaltado texto={g.clientes.join(', ')} terminos={terminos} />
-                </td>
-                <td className="num">
-                  <span className="insignia">{numero(g.ordenes)}</span>
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell className={CLASE_NUMERO}>
+                  <Badge variant="secondary" className="insignia min-w-6">
+                    {numero(g.ordenes)}
+                  </Badge>
+                </TableCell>
+              </TableRow>
               {abierto && (
-                <tr className="fila-detalle" id={idDetalle}>
-                  <td colSpan={5}>
-                    <div className="detalle-contenedor">
-                      <table className="tabla tabla-anidada">
-                        <caption className="solo-lectores">Órdenes del centro {nombre}</caption>
+                <TableRow className={cn('fila-detalle', ABIERTA)} id={idDetalle}>
+                  <TableCell colSpan={5} className="pt-0 pr-3 pb-3 pl-11 whitespace-normal max-escritorio:pl-3">
+                    <div className="overflow-x-auto rounded-md border border-border bg-card">
+                      <Table container={false} className="tabla-anidada">
+                        <caption className="sr-only">Órdenes del centro {nombre}</caption>
                         <thead>
-                          <tr>
-                            {columnas.map((c) => (
-                              <th key={c.indice} scope="col" className={claseColumna(c)}>
-                                {c.titulo}
-                              </th>
-                            ))}
-                          </tr>
+                          <EncabezadosFijos columnas={columnas} enLinea />
                         </thead>
                         <tbody>
                           <FilasDatos columnas={columnas} filas={g.filas} terminosDe={terminosDe} alCopiar={alCopiar} />
                         </tbody>
-                      </table>
+                      </Table>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
             </Fragment>
           );
         })}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 });

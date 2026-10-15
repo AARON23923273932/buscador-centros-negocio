@@ -20,12 +20,16 @@ export function estadoOrden(clave: string, ordenarPor: string, direccion: Direcc
   return direccion === 'desc' ? { aria: 'descending', activo: true } : { aria: 'ascending', activo: true };
 }
 
-/** Clases CSS de una columna: "num" (alineada a la derecha), "campo-…" y "ancha" (descripción). */
+/** Clases (Tailwind) de las columnas de números: alineadas a la derecha, con cifras del mismo ancho. */
+export const CLASE_NUMERO = 'text-right tabular-nums';
+/** Clases (Tailwind) de la descripción: puede ocupar varias líneas (las demás columnas, no). */
+export const CLASE_ANCHA = 'min-w-[260px] max-w-[480px] whitespace-normal max-escritorio:min-w-[200px]';
+
+/** Clases de las celdas de una columna según su tipo: números a la derecha; la descripción, ancha. */
 export function claseColumna(columna: Pick<Columna, 'tipo' | 'campo'>): string {
   const clases: string[] = [];
-  if (columna.tipo === 'numero') clases.push('num');
-  if (columna.campo) clases.push(`campo-${columna.campo}`);
-  if (columna.campo === 'descripcionCentro') clases.push('ancha');
+  if (columna.tipo === 'numero') clases.push(CLASE_NUMERO);
+  if (columna.campo === 'descripcionCentro') clases.push(CLASE_ANCHA);
   return clases.join(' ');
 }
 

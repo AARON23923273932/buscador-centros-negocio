@@ -1,6 +1,12 @@
-// Panel de filtros: desplegables (Cliente, Tipo de orden, Estado) y cajas "contiene" (Código,
-// Descripción, Orden). En el celular el panel se abre con el botón "Filtros" (muestra cuántos hay activos).
+// Panel de filtros: desplegables (Cliente, Tipo de orden, Estado: NativeSelect de shadcn/ui) y cajas "contiene"
+// (Código, Descripción, Orden: Input de shadcn/ui). En el celular el panel se abre con el botón "Filtros"
+// (muestra cuántos hay activos).
 import { useState } from 'react';
+import { cn } from 'cn';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import type { Borradores, ClaveTexto } from '../hooks/useBusqueda.ts';
 import type { EstadoBusqueda } from '../logica/tipos.ts';
 import type { ClaveControl, ClaveDesplegable, EstadoControl } from '../logica/vista.ts';
@@ -24,6 +30,10 @@ interface Props {
   alLimpiar: () => void;
 }
 
+/** Caja de un filtro (etiqueta + control). */
+const CAMPO = 'flex min-w-0 flex-col gap-1';
+const ETIQUETA = 'text-sm font-semibold text-muted-foreground';
+
 export function Filtros(props: Props) {
   const { estado, controles, opciones, activos } = props;
   const [abierto, setAbierto] = useState(false);
@@ -33,26 +43,27 @@ export function Filtros(props: Props) {
     const valor = estado[clave];
     const lista = valor && !opciones[clave].includes(valor) ? [...opciones[clave], valor] : opciones[clave];
     return (
-      <select
+      <NativeSelect
         id={id}
+        className="w-full"
         value={valor}
         disabled={!controles[clave].disponible}
         title={controles[clave].motivo || undefined}
         onChange={(ev) => props.alElegir(clave, ev.target.value)}
       >
-        <option value="">Todos</option>
+        <NativeSelectOption value="">Todos</NativeSelectOption>
         {lista.map((v) => (
-          <option key={v} value={v}>
+          <NativeSelectOption key={v} value={v}>
             {v}
-          </option>
+          </NativeSelectOption>
         ))}
-      </select>
+      </NativeSelect>
     );
   };
 
   /** Caja de texto "contiene": filtra 200 ms después de la última tecla (Enter = ya). */
   const texto = (clave: ClaveTexto & ClaveControl, id: string) => (
-    <input
+    <Input
       id={id}
       type="text"
       autoComplete="off"
@@ -69,51 +80,70 @@ export function Filtros(props: Props) {
 
   return (
     <>
-      <button
+      <Button
         type="button"
         id="btn-mostrar-filtros"
-        className="btn btn-secundario solo-movil"
+        variant="outline"
+        className="mb-3 escritorio:hidden print:hidden"
         aria-expanded={abierto}
         aria-controls="panel-filtros"
         onClick={() => setAbierto((a) => !a)}
       >
         <IconoFiltros />
         Filtros{' '}
-        <span id="contador-filtros" className="insignia" hidden={!activos}>
+        <Badge id="contador-filtros" hidden={!activos}>
           {activos ?? ''}
-        </span>
-      </button>
+        </Badge>
+      </Button>
 
-      <fieldset id="panel-filtros" className={`filtros${abierto ? ' abierto' : ''}`}>
-        <legend>Filtros</legend>
-        <div className="campo">
-          <label htmlFor="f-cliente">Cliente</label>
+      <fieldset
+        id="panel-filtros"
+        className={cn(
+          'mb-3 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(170px,1fr))] items-end gap-3 rounded-lg border border-border bg-card px-3.5 pt-3 pb-3.5 max-escritorio:grid-cols-1 print:hidden',
+          abierto ? 'abierto' : 'max-escritorio:hidden',
+        )}
+      >
+        <legend className="px-1.5 text-sm font-semibold">Filtros</legend>
+        <div className={CAMPO}>
+          <label htmlFor="f-cliente" className={ETIQUETA}>
+            Cliente
+          </label>
           {desplegable('cliente', 'f-cliente')}
         </div>
-        <div className="campo">
-          <label htmlFor="f-codigo">Código</label>
+        <div className={CAMPO}>
+          <label htmlFor="f-codigo" className={ETIQUETA}>
+            Código
+          </label>
           {texto('codigo', 'f-codigo')}
         </div>
-        <div className="campo">
-          <label htmlFor="f-descripcion">Descripción</label>
+        <div className={CAMPO}>
+          <label htmlFor="f-descripcion" className={ETIQUETA}>
+            Descripción
+          </label>
           {texto('descripcion', 'f-descripcion')}
         </div>
-        <div className="campo">
-          <label htmlFor="f-orden">Orden de compra / servicio</label>
+        <div className={CAMPO}>
+          <label htmlFor="f-orden" className={ETIQUETA}>
+            Orden de compra / servicio
+          </label>
           {texto('orden', 'f-orden')}
         </div>
-        <div className="campo" id="campo-tipo" hidden={!props.mostrarTipo}>
-          <label htmlFor="f-tipo">Tipo de orden</label>
+        <div className={CAMPO} id="campo-tipo" hidden={!props.mostrarTipo}>
+          <label htmlFor="f-tipo" className={ETIQUETA}>
+            Tipo de orden
+          </label>
           {desplegable('tipo', 'f-tipo')}
         </div>
-        <div className="campo" id="campo-estado" hidden={!props.mostrarEstado}>
-          <label htmlFor="f-estado">Estado</label>
+        <div className={CAMPO} id="campo-estado" hidden={!props.mostrarEstado}>
+          <label htmlFor="f-estado" className={ETIQUETA}>
+            Estado
+          </label>
           {desplegable('estado', 'f-estado')}
         </div>
-        <div className="campo campo-boton">
-          <button type="button" id="btn-limpiar" className="btn btn-secundario" disabled={props.limpiarDesactivado} onClick={props.alLimpiar}>
+        <div className={CAMPO}>
+          <Button type="button" id="btn-limpiar" variant="outline" className="w-full" disabled={props.limpiarDesactivado} onClick={props.alLimpiar}>
             Limpiar filtros
-          </button>
+          </Button>
         </div>
       </fieldset>
     </>

@@ -1,8 +1,11 @@
 // Paginación: « ‹ Anterior · Página X de Y · Siguiente › » (las flechas son íconos SVG, ver Iconos.tsx).
+// Botones de shadcn/ui (Button). No se usa el componente "Pagination" de shadcn/ui: está hecho con enlaces (<a>),
+// que no se pueden desactivar, y aquí los botones de la primera/última página se desactivan y cuidan el foco.
 //
 // Teclado: si el botón que tenía el foco queda desactivado (ej. "Siguiente" al llegar a la
 // última página), el foco pasa al texto "Página X de Y" para que no se pierda.
 import { memo, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { Button } from '@/components/ui/button';
 import { numero } from '../logica/formato.ts';
 import type { Pagina } from '../logica/tipos.ts';
 import { IconoPagina } from './Iconos.tsx';
@@ -45,9 +48,10 @@ export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef 
   });
 
   const boton = (destino: number, contenido: ReactNode, etiqueta: string, deshabilitado: boolean) => (
-    <button
+    <Button
       type="button"
-      className="btn btn-pagina"
+      variant="outline"
+      className="btn-pagina min-w-[38px] px-2.5"
       data-pagina={destino}
       aria-label={etiqueta}
       disabled={deshabilitado}
@@ -57,7 +61,7 @@ export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef 
       }}
     >
       {contenido}
-    </button>
+    </Button>
   );
 
   let botones: ReactNode = null;
@@ -71,18 +75,18 @@ export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef 
           pag.pagina - 1,
           <>
             <IconoPagina tipo="anterior" />
-            <span className="texto-boton">Anterior</span>
+            <span className="max-escritorio:hidden">Anterior</span>
           </>,
           'Página anterior',
           primera,
         )}
-        <span className="pagina-actual">
+        <span className="pagina-actual rounded-sm px-2 text-sm text-muted-foreground">
           Página {numero(pag.pagina)} de {numero(pag.totalPaginas)}
         </span>
         {boton(
           pag.pagina + 1,
           <>
-            <span className="texto-boton">Siguiente</span>
+            <span className="max-escritorio:hidden">Siguiente</span>
             <IconoPagina tipo="siguiente" />
           </>,
           'Página siguiente',
@@ -94,7 +98,7 @@ export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef 
   }
 
   return (
-    <nav id="paginacion" ref={nav} className="paginacion" aria-label="Paginación de resultados">
+    <nav id="paginacion" ref={nav} className="my-3 flex flex-wrap items-center justify-center gap-1.5 print:hidden" aria-label="Paginación de resultados">
       {botones}
     </nav>
   );

@@ -401,7 +401,7 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     await expect(page.getByLabel('Estado', { exact: true })).toBeVisible();
 
     // "Columnas detectadas" muestra driveId e itemId (para fijarlos en config.json si hiciera falta).
-    await page.locator('.detalles-columnas summary').click();
+    await page.getByRole('button', { name: 'Columnas detectadas en el Excel' }).click(); // Collapsible de shadcn/ui
     const ubicacion = page.locator('#info-columnas .ubicacion-excel');
     await expect(ubicacion).toContainText('búsqueda en SharePoint');
     await expect(ubicacion).toContainText('driveId: b!docs');
