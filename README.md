@@ -3,9 +3,17 @@
 > Proyecto "Sitio web" en Notion (código PRY-2, id `3f2738bc3a6381408614e380da98edac`). Notion es la agenda; aquí está el trabajo.
 > La app está en [`app/`](app/). La guía para conectarla a Microsoft 365 está en [`GUIA-CONFIGURACION-MICROSOFT.md`](GUIA-CONFIGURACION-MICROSOFT.md). Las pruebas manuales para entregarla están en [`pruebas/plan-de-pruebas.md`](pruebas/plan-de-pruebas.md).
 
-## Estado actual (14/10/2026)
-- **Cambios pedidos por Gustavo (14/10/2026, por WhatsApp)** — hechos y probados en la PC (rama `ui-react-router`; falta publicarlos):
-  1. **Más margen a los lados** para leer mejor: el contenido va en una columna centrada (máx. 1240 px) con margen lateral de 16 px (celular) a 56 px (pantallas grandes); la cabecera tiene el fondo a todo el ancho pero su contenido alineado con la columna.
+## Estado actual (15/10/2026)
+- **Cambios pedidos por Gustavo (15/10/2026, por WhatsApp) + componentes shadcn/ui (pedido de Aaron)** — hechos y probados en la PC (rama `ui-aic-shadcn`; falta publicarlos):
+  1. **Una orden por línea:** el Excel real trae varias órdenes en una misma celda (`OC 3519155 OC 3519252 OC N° 3519348 …`). Ahora cada OC/OS se ve en su propia línea en la tabla "Por orden", en "Por centro" y en el detalle del centro; **"N° de órdenes" cuenta cada orden** (antes contaba la celda como una). Al **exportar**, cada orden va en una línea **dentro de la misma celda** ("Ajustar texto" activado). La búsqueda y los filtros no cambian (buscan en el texto completo y resaltan dentro de cada línea). Reglas en la sección 8.
+  2. **Un poco más de margen a los lados:** columna de **1120 px** como máximo (antes 1240) y margen lateral del **6 % del ancho** de la pantalla, entre 20 y 96 px (antes 16–56 px); en el celular, 16 px.
+  3. **Guía de estilo oficial de AIC:** solo los 9 colores de la paleta oficial (también avisos y errores: sin rojo ni amarillo), letra **Calibri**, tablas con encabezado **Primary Blue** (texto blanco en negrita), bordes **Border Gray**, filas alternas **Light Gray** y el padding de la guía; botón principal Primary Blue. El **modo oscuro** no está en la guía: se armó solo con colores de la paleta y contraste AA *(por confirmar con Gustavo)*. Tabla de colores y contrastes en la sección 8.1. (El contenido de la guía es de la empresa: aquí solo se usan sus colores, letra y formato de tablas.)
+  4. **React Router 8.4.0** (la última; antes 7.18). Las rutas y su comportamiento no cambian.
+  5. **Componentes shadcn/ui + Tailwind CSS v4** (pedido de Aaron, por accesibilidad y escalabilidad): botones, cajas, desplegables, tabla, tarjetas, avisos, interruptor "Por orden / Por centro", "Columnas detectadas" y ayudas flotantes son componentes de shadcn/ui (sección 8.2).
+  - Pruebas automáticas: **354 unitarias** y **84 en navegador** (antes 334 y 68). La nueva `tests/e2e/guia-aic.spec.ts` recorre todas las pantallas (claro y oscuro) y comprueba que **solo** haya colores de la paleta y que todo texto cumpla el contraste AA.
+  - Para publicar: igual que antes (`npm.cmd run preparar-publicacion` y arrastrar `publicar/`). Antes, `npm.cmd ci` (hay librerías nuevas).
+- **Cambios pedidos por Gustavo (14/10/2026, por WhatsApp)** — hechos (rama `ui-react-router`); el 15/10/2026 se ajustaron los puntos 1 y 2 (ver arriba):
+  1. **Más margen a los lados** para leer mejor: el contenido va en una columna centrada (en ese momento, máx. 1240 px) con margen lateral de 16 px (celular) a 56 px (pantallas grandes); la cabecera tiene el fondo a todo el ancho pero su contenido alineado con la columna.
   2. **Contornos menos agresivos:** bordes de 1 px de color suave y, al usar el teclado, un **anillo suave** (borde azul + anillo de 2 px un poco transparente) en vez del contorno grueso de 3 px. El anillo contrasta al menos **3:1** con el fondo en claro y en oscuro (mínimo recomendado para que se vea). Solo aparece con el teclado (`:focus-visible`), no al hacer clic: al hacer clic en una caja de texto o un desplegable solo se pone azul su borde (dice dónde se escribe); el botón de login ya no aparece remarcado al abrir la página.
   3. **Íconos alineados:** todos son SVG de 16–18 px centrados con su texto (lupa y "×" del buscador, flecha propia en los desplegables, copiar código, ▲▼ de los títulos, flecha de "Por centro", Actualizar, Exportar, Filtros, ☀️/🌙, paginación, logo de Microsoft).
   4. **React Router** (librería de rutas) para escalar: cada pantalla tiene su dirección — `/ordenes`, `/centros` y **`/centros/<código>`** (nuevo: detalle de un centro) — y "Página no encontrada" para cualquier otra (tabla en la sección 2). La búsqueda y los filtros siguen en la dirección y funcionan con el botón **atrás** del navegador. El login sigue protegiendo **todas** las rutas y al volver de Microsoft se queda en la misma dirección.
@@ -38,21 +46,22 @@ Este proyecto es una **página web** (app web) para **buscar en ese Excel de for
 
 | Función | Cómo se usa |
 |---|---|
-| **Buscador** | Una caja grande: "Buscar por código, descripción, cliente u orden…". No importan mayúsculas ni tildes (`electrico` encuentra "Eléctrico"). Varias palabras = deben aparecer **todas** (`cableado demo b`). `cn0005` encuentra `CN-0005` (y lo resalta). Las coincidencias se resaltan en amarillo. Atajo: tecla `/`. |
+| **Buscador** | Una caja grande: "Buscar por código, descripción, cliente u orden…". No importan mayúsculas ni tildes (`electrico` encuentra "Eléctrico"). Varias palabras = deben aparecer **todas** (`cableado demo b`). `cn0005` encuentra `CN-0005` (y lo resalta). Las coincidencias se resaltan (texto blanco sobre Primary Blue; en modo oscuro, negro sobre Light Blue). Atajo: tecla `/`. |
 | **Filtros** | **Desplegables** (se elige una opción de la lista): Cliente, Tipo de orden y Estado (estos dos, si el Excel tiene esa columna). **De texto** ("contiene"): Código, Descripción y Orden de compra/servicio. Botón **Limpiar filtros**. Se combinan con el buscador. En el celular, el botón "Filtros" muestra cuántos hay activos. |
-| **Tabla tipo Excel** | Títulos fijos al bajar, clic en un título para ordenar (▲/▼), filas de colores alternos, paginación (25/50/100/250) y contador "Mostrando 1–50 de 63 resultados (de 80 en total)". |
+| **Tabla tipo Excel** | Con el formato de tablas de la guía de AIC: títulos en Primary Blue (fijos al bajar), clic en un título para ordenar (▲/▼), filas alternas Light Gray, paginación (25/50/100/250) y contador "Mostrando 1–50 de 63 resultados (de 80 en total)". |
+| **Varias órdenes en una celda** | Si una celda de la columna de órdenes trae varias (`OC 533 OC N° 3519522`), cada una se ve en su propia línea (tabla, "Por centro" y detalle) y "N° de órdenes" las cuenta por separado. Se busca igual que siempre (en el texto completo) y lo encontrado se resalta dentro de su línea. |
 | **Vista "Por centro de negocio"** | Una fila por centro (código, descripción, clientes, N° de órdenes) que se abre para ver sus órdenes. Se cambia con el interruptor **Por orden / Por centro de negocio**, que lleva de `/ordenes` a `/centros` (y viceversa) sin perder la búsqueda ni los filtros. |
 | **Detalle de un centro** | En las dos vistas, el **código del centro es un enlace** a su página `/centros/<código>`: código (con copiar), descripción, cliente(s), estado(s), N° de órdenes y la tabla con **todas** sus órdenes. **Volver a la lista** regresa a la lista con los mismos filtros. Si el código no existe, lo dice claramente. |
-| **Exportar a Excel** | Descarga lo que se está viendo (con filtros) en un `.xlsx` con fecha en el nombre, ej. `centros-de-negocio_2026-10-09_1432.xlsx`. Las fechas salen como fechas y los números como números (en Excel se pueden ordenar, filtrar y sumar); los códigos conservan sus ceros a la izquierda. Las columnas ocultas (moneda y monto) **no** se exportan. |
-| **Copiar código** | Ícono pequeño al lado de cada código de centro. |
+| **Exportar a Excel** | Descarga lo que se está viendo (con filtros) en un `.xlsx` con fecha en el nombre, ej. `centros-de-negocio_2026-10-09_1432.xlsx`. Las fechas salen como fechas y los números como números (en Excel se pueden ordenar, filtrar y sumar); los códigos conservan sus ceros a la izquierda. Las columnas ocultas (moneda y monto) **no** se exportan. Una celda con varias órdenes sale con **una orden por línea dentro de la misma celda** ("Ajustar texto"). |
+| **Copiar código** | Ícono pequeño al lado de cada código de centro (al pasar el mouse o llegar con el teclado aparece la ayuda "Copiar código"). |
 | **Enlace para compartir** | La vista va en la ruta y la búsqueda y los filtros en la dirección (ej. `…/centros?q=cableado&estado=Abierta`). Se copia el enlace y quien lo abra ve lo mismo. Los enlaces viejos (`…/?q=cableado&vista=centro`) siguen funcionando: llevan a `/centros?q=cableado`. |
 | **Actualizar** | Botón **Actualizar** + actualización automática cada 10 minutos (configurable) **sin perder** la búsqueda ni los filtros. Muestra "Datos actualizados a las HH:MM" y la fecha en que se modificó el Excel. |
 | **Celular y modo oscuro** | Se usa bien en un celular (la tabla tiene su propio desplazamiento lateral) y cambia a colores oscuros si el equipo está en modo oscuro. |
-| **Accesible** | Todo se puede usar con teclado, con foco visible (un anillo suave que aparece al usar el teclado, no al hacer clic), etiquetas en cada campo y buen contraste. Con la tecla Tab aparece **"Saltar a la paginación"** antes de la tabla, para no recorrer todos sus botones. Al abrir el detalle de un centro (o "Página no encontrada") el foco va a su título, para que el lector de pantalla lo anuncie; al **volver a la lista**, el foco regresa al código del centro que se abrió (o al buscador, si ya no está en la página). |
+| **Accesible** | Componentes de shadcn/ui (Radix) con los roles y atributos de accesibilidad estándar. Todo se puede usar con teclado, con foco visible (un anillo que aparece al usar el teclado, no al hacer clic), etiquetas en cada campo y contraste AA comprobado en todas las pantallas (claro y oscuro). "Por orden / Por centro" es un grupo de opciones: Tab llega a la elegida, las flechas pasan a la otra y Espacio o Enter la elige. Con la tecla Tab aparece **"Saltar a la paginación"** antes de la tabla, para no recorrer todos sus botones. Al abrir el detalle de un centro (o "Página no encontrada") el foco va a su título, para que el lector de pantalla lo anuncie; al **volver a la lista**, el foco regresa al código del centro que se abrió (o al buscador, si ya no está en la página). |
 
 ### Rutas (direcciones de la app) — React Router
 
-Desde el 14/10/2026 la app usa **React Router** (`react-router` v7), la librería de rutas más usada con React: cada pantalla tiene su propia dirección, así se pueden agregar pantallas nuevas sin enredar las que ya existen (pedido del supervisor, por escalabilidad).
+Desde el 14/10/2026 la app usa **React Router** (`react-router`, versión **8.4.0** desde el 15/10/2026; antes 7.18), la librería de rutas más usada con React: cada pantalla tiene su propia dirección, así se pueden agregar pantallas nuevas sin enredar las que ya existen (pedido del supervisor, por escalabilidad).
 
 | Ruta | Qué muestra |
 |---|---|
@@ -73,7 +82,7 @@ El **modo demo** no pide inicio de sesión y lee un Excel de ejemplo con **datos
 
 `app/public/config.json` ya tiene los valores de **producción** (`"modo": "microsoft"`, Excel real). Para ver la demo **no hay que tocarlo**: el comando `dev:demo` le entrega a la app una copia de ese archivo cambiada a `"modo": "demo"` y `"fuente": "archivo-local"` (solo en tu PC; lo publicado no cambia).
 
-Requisitos: **Node.js** (ya instalado: v24) — es el programa que ejecuta las herramientas de JavaScript en la computadora.
+Requisitos: **Node.js** (ya instalado: v24; React Router 8 pide 22.22 o más) — es el programa que ejecuta las herramientas de JavaScript en la computadora.
 
 ```powershell
 cd C:\dev\AIC\automatizaciones\sitio-web\app
@@ -97,8 +106,8 @@ Todos los comandos (siempre dentro de `app/`; en PowerShell, `npm.cmd` en vez de
 | `npm run dev:demo` | La app en **modo demo** (sin login, Excel de ejemplo) en http://localhost:5173, sin tocar `config.json`. |
 | `npm run typecheck` | Revisa los **tipos de TypeScript** de todo el código (app, pruebas, configuración y los scripts `.mjs`) sin compilar nada. Si algo no encaja (ej. una función recibe un número donde esperaba texto), muestra el archivo y la línea. |
 | `npm run lint` | Revisión automática del código con **oxlint** (`.oxlintrc.json`): sobre todo las **reglas de los hooks de React** que TypeScript no revisa (ej. un `useEffect` que usa un dato y no lo declara). Muestra el archivo, la línea y cómo arreglarlo. |
-| `npm test` | Pruebas **unitarias** con Vitest (334): la lógica (búsqueda, filtros, lectura del Excel, Graph, reglas de acceso, rutas…) y los componentes de React (buscador, tabla, paginación, botón de tema, avisos, rutas y detalle de un centro…), sin abrir un navegador. También revisan que escribir en el buscador no vuelva a dibujar la tabla, que la app funcione dentro de `<StrictMode>` y que la pantalla de carga de `index.html` sea igual a la de React. |
-| `npm run test:e2e` | Pruebas **de punta a punta** con Playwright (68): compila, abre la app en Chromium y hace clic como una persona (modo demo + un inicio de sesión de Microsoft **simulado**, sin internet), incluidas las rutas (`rutas.spec.ts`: enlace directo, recargar, atrás, 404, a dónde vuelve el foco) y las medidas del diseño (`diseno.spec.ts`: márgenes, contornos y contraste del foco en claro y oscuro, foco con el mouse encima o al hacer clic, íconos con desfase de 1 px o menos). Usan su propia configuración de demostración (`tests/e2e/config-pruebas.ts`), así que pasan igual aunque `config.json` ya tenga los valores de producción. **En una PC nueva**, antes de la primera vez: `npx.cmd playwright install chromium` (descarga el navegador de pruebas; `npm.cmd ci` no lo trae). |
+| `npm test` | Pruebas **unitarias** con Vitest (354): la lógica (búsqueda, filtros, lectura del Excel, Graph, reglas de acceso, rutas…) y los componentes de React (buscador, tabla, paginación, botón de tema, avisos, rutas y detalle de un centro…), sin abrir un navegador. También revisan que escribir en el buscador no vuelva a dibujar la tabla, que la app funcione dentro de `<StrictMode>` y que la pantalla de carga de `index.html` sea igual a la de React. |
+| `npm run test:e2e` | Pruebas **de punta a punta** con Playwright (84): compila, abre la app en Chromium y hace clic como una persona (modo demo + un inicio de sesión de Microsoft **simulado**, sin internet), incluidas las rutas (`rutas.spec.ts`: enlace directo, recargar, atrás, 404, a dónde vuelve el foco) las medidas del diseño (`diseno.spec.ts`: márgenes, contornos y contraste del foco en claro y oscuro, foco con el mouse encima o al hacer clic, íconos con desfase de 1 px o menos) y la guía de AIC (`guia-aic.spec.ts`: órdenes una por línea, colores y padding de las tablas, botón principal, y en todas las pantallas solo colores de la paleta y contraste AA). Usan su propia configuración de demostración (`tests/e2e/config-pruebas.ts`), así que pasan igual aunque `config.json` ya tenga los valores de producción. **En una PC nueva**, antes de la primera vez: `npx.cmd playwright install chromium` (descarga el navegador de pruebas; `npm.cmd ci` no lo trae). |
 | `npm run build` | "Compila" la app: primero ejecuta `typecheck` y `lint` (si hay un error, **se detiene** y no compila) y después crea la carpeta `dist/` con Vite. |
 | `npm run preparar-publicacion` | Ejecuta `build` y deja la copia **lista para Netlify** en `publicar/` (sin archivos temporales de Office `~$…`, con `_redirects` para las rutas: si faltara, se detiene). Al final muestra el modo, la fuente de datos y los permisos de `config.json`. |
 | `npm run preview` | Muestra la versión compilada (`dist/`) en http://localhost:4173 con la configuración real. |
@@ -186,7 +195,10 @@ sitio-web/
     │   ├── App.tsx                    ← la página completa: cabecera + la pantalla que toque (cargando, mensaje, login
     │   │                                 y, con la sesión iniciada, las rutas)
     │   ├── redirect.ts                ← lógica de redirect.html (MSAL v5, sin React)
-    │   ├── estilos.css                ← colores y diseño (claro/oscuro, celular; márgenes, contornos e íconos: 14/10/2026)
+    │   ├── estilos.css                ← Tailwind CSS + colores de la guía de AIC (variables de shadcn/ui, claro/oscuro),
+    │   │                                     columna de contenido y foco con el teclado
+    │   ├── components/ui/             ← componentes de shadcn/ui (los copia "npx shadcn add"; adaptados a la guía de AIC)
+    │   ├── lib/utils.ts               ← cn() para juntar clases de Tailwind (lo usa la herramienta de shadcn/ui)
     │   ├── componentes/               ← piezas de la pantalla (.tsx = TypeScript + JSX, el "HTML" de React)
     │   │   ├── Cabecera.tsx, BotonTema.tsx              ← título, usuario, "Cerrar sesión", botón ☀️/🌙
     │   │   ├── PantallaCarga.tsx, PantallaLogin.tsx     ← "Cargando…" y "Bienvenido" (botón de Microsoft)
@@ -201,11 +213,12 @@ sitio-web/
     │   │   ├── Buscador.tsx, Filtros.tsx                ← caja de búsqueda y panel de filtros
     │   │   ├── BarraResultados.tsx                      ← "Por orden / Por centro", contador, filas por página, exportar
     │   │   ├── TablaOrdenes.tsx, TablaCentros.tsx       ← las dos vistas de la tabla
-    │   │   ├── Celdas.tsx, Resaltado.tsx                ← títulos que ordenan, celdas (el código = enlace al detalle) y
-    │   │   │                                               resaltado <mark> (sin HTML del Excel)
+    │   │   ├── Celdas.tsx, Resaltado.tsx                ← títulos que ordenan, celdas (el código = enlace al detalle; las
+    │   │   │                                               órdenes, una por línea) y resaltado <mark> (sin HTML del Excel)
     │   │   ├── Paginacion.tsx                           ← « ‹ Página X de Y › » (el foco no se pierde)
-    │   │   ├── Avisos.tsx, ColumnasDetectadas.tsx       ← avisos rojo/amarillo, aviso flotante y "Columnas detectadas"
-    │   │   └── Iconos.tsx                               ← íconos SVG (16–18 px, clase "icono")
+    │   │   ├── Avisos.tsx, ColumnasDetectadas.tsx       ← avisos (caja de nota de la guía), aviso flotante y "Columnas detectadas"
+    │   │   ├── clases.ts                                ← clases de Tailwind compartidas (caja con scroll de las tablas)
+    │   │   └── Iconos.tsx                               ← íconos SVG (16–18 px) y la ruedita de "Cargando…"
     │   ├── hooks/                     ← "estado" y efectos reutilizables (funciones use… de React)
     │   │   ├── useArranque.ts         ← lee config.json, prepara MSAL y decide qué pantalla va
     │   │   ├── useExcel.ts            ← descarga y lee el Excel; Actualizar y auto-actualización
@@ -227,7 +240,8 @@ sitio-web/
     │       ├── estado-url.ts          ← convierte la búsqueda en la query de la dirección (?q=…) y viceversa
     │       ├── rutas.ts               ← rutas (/ordenes, /centros…), enlaces viejos (?vista=centro), archivos desde "/"
     │       ├── centro.ts              ← detalle de un centro: buscarlo por su código y sus estados
-    │       ├── exportar.ts            ← descarga a Excel
+    │       ├── ordenes.ts             ← varias órdenes en una celda: separarOrdenes() (una por línea) y cómo contarlas
+    │       ├── exportar.ts            ← descarga a Excel (órdenes una por línea + "Ajustar texto")
     │       ├── modalidad.ts           ← ¿mouse o teclado? (con el mouse, cajas y desplegables sin anillo de foco)
     │       ├── tema.ts, portapapeles.ts ← reglas del modo claro/oscuro y "copiar código"
     │       └── listas.ts              ← en(lista, i): leer una posición que se sabe que existe (ver noUncheckedIndexedAccess)
@@ -245,11 +259,13 @@ sitio-web/
     │                                     rutas.test.ts + rutas-app.test.tsx = rutas, detalle y botón atrás;
     │                                     despliegue.test.ts = _redirects, staticwebapp y base "/"
     ├── tests/e2e/                     ← pruebas en navegador (Playwright, .ts); config-pruebas.ts = su configuración fija;
-    │                                     rutas.spec.ts = rutas; diseno.spec.ts = márgenes, contornos e íconos
+    │                                     rutas.spec.ts = rutas; diseno.spec.ts = márgenes, contornos e íconos;
+    │                                     guia-aic.spec.ts = órdenes una por línea, guía de AIC, paleta y contraste AA
     ├── tsconfig.json                  ← reglas de TypeScript para src/ (modo estricto + noUncheckedIndexedAccess)
     ├── tsconfig.node.json             ← reglas de TypeScript para pruebas, configuración y scripts .mjs (con JSDoc)
     ├── .oxlintrc.json                 ← reglas de npm run lint (hooks de React y errores seguros)
-    ├── vite.config.ts                 ← compilación: React, base "/" (raíz del dominio), CSP, sin "~$…", modo demo
+    ├── components.json                ← configuración de shadcn/ui (dónde van los componentes, estilo, alias "@/")
+    ├── vite.config.ts                 ← compilación: React, Tailwind, alias "@/", base "/", CSP, sin "~$…", modo demo
     ├── vitest.config.ts / playwright.config.ts
     └── package.json                   ← lista de librerías y comandos
 ```
@@ -282,11 +298,13 @@ Todavía **no tenemos el Excel real** (por confirmar sus columnas). Por eso la a
 | **SheetJS (`xlsx` 0.20.3)** para leer y exportar Excel | Versión oficial del sitio de SheetJS (`cdn.sheetjs.com`; la de npm, 0.18.5, está desactualizada y tiene 2 avisos de seguridad). |
 | **Política de seguridad (CSP)** al compilar | Si una celda del Excel trajera código, el navegador no lo ejecuta. Además, React pone todo dato del Excel como **texto** (lo "escapa"): el resaltado de la búsqueda se arma con elementos `<mark>` de React y **nunca** con `dangerouslySetInnerHTML` (hay pruebas que lo verifican, ej. una celda con `<img onerror=…>` se ve como texto). |
 | **Sesión guardada en el navegador (`localStorage`)** | Para no pedir inicio de sesión en cada pestaña. Se puede cambiar a `sessionStorage` en `config.json` si se prefiere que se cierre al cerrar la pestaña. |
-| **React Router v7, modo "declarativo"** (`<BrowserRouter>` + `<Routes>`) *(14/10/2026)* | Pedido del supervisor, por escalabilidad: cada pantalla es una ruta (tabla en la sección 2). Se eligió el modo declarativo y no el de "datos" (`createBrowserRouter` con *loaders*) porque el inicio de sesión debe terminar **antes** de que las rutas hagan algo: las rutas solo se muestran con la sesión iniciada (fase `app` de `useArranque`), así MSAL procesa la vuelta de Microsoft en la dirección exacta donde empezó. `useTransitions={false}` (en `Enrutador.tsx`): la dirección y la búsqueda cambian juntas. |
+| **React Router (8.4.0 desde el 15/10/2026), modo "declarativo"** (`<BrowserRouter>` + `<Routes>`) *(14/10/2026)* | Pedido del supervisor, por escalabilidad: cada pantalla es una ruta (tabla en la sección 2). Se eligió el modo declarativo y no el de "datos" (`createBrowserRouter` con *loaders*) porque el inicio de sesión debe terminar **antes** de que las rutas hagan algo: las rutas solo se muestran con la sesión iniciada (fase `app` de `useArranque`), así MSAL procesa la vuelta de Microsoft en la dirección exacta donde empezó. `useTransitions={false}` (en `Enrutador.tsx`): la dirección y la búsqueda cambian juntas. **Paso a la 8.4.0** (pedido de Gustavo: *"la 8.4, revise el código y usa una versión pasada"*): según la guía oficial de actualización de v7 a v8, los cambios grandes de v8 son del modo "datos"/"framework" (middleware siempre activo, `meta` sin `data`, se elimina `react-router-dom`, solo ESM) y piden Node 22.22+ y React 19.2.7+ (ya los tenemos: Node 24, React 19.3). La app usa el modo declarativo e importa todo de `react-router`, así que no hubo que cambiar código; `useTransitions` funciona igual. Lo confirman las mismas pruebas de rutas (enlaces viejos, detalle, 404, atrás, login que vuelve a la ruta). |
 | **La búsqueda sigue en la query; la vista pasa a la ruta** | Lo que filtra (`?q=…&cliente=…&ord=…&pag=…`) queda en la dirección como antes (enlace para compartir). Cambiar un filtro **reemplaza** la dirección (no se llena el historial con cada tecla); cambiar de vista o abrir un centro **agrega** una entrada, así el botón atrás vuelve a la pantalla anterior con sus filtros. Si la dirección cambia por fuera (atrás/adelante), `useEstadoUrl` la vuelve a leer en el mismo dibujo (no en un efecto, para no escribir un estado viejo encima). `?vista=centro` (enlaces viejos) se sigue leyendo y lleva a `/centros`. |
 | **Un "layout" para las rutas** (`PantallaApp` + `<Outlet />`) | El Excel, la búsqueda y los centros abiertos viven en `PantallaApp`, que no cambia al pasar de `/ordenes` a `/centros` o al detalle: el Excel se descarga **una vez** y los filtros se conservan. "Página no encontrada" va fuera del layout (no descarga el Excel). |
 | **Al volver de Microsoft, a la misma ruta** | MSAL guarda la dirección completa (ruta + query) al pulsar "Iniciar sesión" y `redirect.html` lleva de vuelta a ella. `redirect.html` está siempre en la **raíz** (la registrada en Entra ID), aunque se inicie sesión desde `/centros/…`. |
-| **Diseño más sobrio** *(14/10/2026, pedido del supervisor)* | Columna de contenido de máx. 1240 px con margen lateral `clamp(16px, 4vw, 56px)`; bordes de 1 px (`--borde-control`); foco = borde primario + anillo de 2 px (`--anillo`, 70 % opaco en claro y 60 % en oscuro: ≥3:1 con el fondo y con las tarjetas) solo con `:focus-visible` (más un contorno transparente que Windows muestra en alto contraste); el botón principal (relleno azul) lleva el anillo sólido y separado por una línea blanca; las reglas `:hover` llevan `:not(:focus-visible)` para no taparle el borde azul al foco; como Chromium marca `:focus-visible` también al hacer **clic** en cajas de texto y desplegables, `logica/modalidad.ts` anota en `<html data-modalidad>` si lo último fue el mouse o el teclado y con el mouse esos controles solo ponen azul el borde; íconos SVG de 16–18 px con `display:block` + `flex-shrink:0` dentro de botones `inline-flex`; flecha propia en los desplegables (SVG `data:`, permitido por la CSP). Lo mide `tests/e2e/diseno.spec.ts`. |
+| **Diseño más sobrio** *(14/10/2026, pedido del supervisor; colores y márgenes cambiados el 15/10/2026, ver 8.1)* | Columna de contenido de máx. 1120 px (antes 1240) con margen lateral `clamp(20px, 6vw, 96px)` (antes `clamp(16px, 4vw, 56px)`); bordes de 1 px; foco = borde primario + anillo sólido de 2 px (`--ring`: Medium Blue en claro, Border Gray en oscuro; antes un azul semitransparente) solo con `:focus-visible` (más un contorno transparente que Windows muestra en alto contraste); el botón principal (relleno azul) lleva el anillo sólido y separado por una línea blanca; las reglas `:hover` llevan `:not(:focus-visible)` para no taparle el borde azul al foco; como Chromium marca `:focus-visible` también al hacer **clic** en cajas de texto y desplegables, `logica/modalidad.ts` anota en `<html data-modalidad>` si lo último fue el mouse o el teclado y con el mouse esos controles solo ponen azul el borde; íconos SVG de 16–18 px con `display:block` + `flex-shrink:0` dentro de botones `inline-flex`; flecha propia en los desplegables (desde el 15/10/2026, el ícono del NativeSelect de shadcn/ui). Lo mide `tests/e2e/diseno.spec.ts`. |
+| **Varias órdenes en una celda: `separarOrdenes()`** *(15/10/2026)* | Regla (`logica/ordenes.ts`): se corta **antes** de cada `OC` u `OS` que empieza una orden: palabra completa (no dentro de "ROC" ni pegada a otra palabra o número), en mayúsculas o minúsculas, seguida del número con o sin `-`, `:`, `N°`, `Nº`, `No.`, `Nro.` o `#` en medio. Así nunca se corta `OC N° 3519348` ni `OC-0000098263-2025`, y "OS de mantenimiento" (sin número) no se toma como orden. No se pierde texto (lo de antes de la primera orden queda como su propia línea) y se quitan los espacios de más; si no reconoce ninguna orden, la celda se muestra tal cual. **"N° de órdenes"** cuenta cada orden sin repetir (`OC N° 3519348` y `OC 3519348` son la misma); una celda sin "OC/OS" reconocibles cuenta como una, como antes. El resaltado se calcula una vez sobre toda la celda y se reparte entre las líneas. Lo prueban `tests/unit/ordenes.test.ts` (ejemplos reales y casos borde) y `guia-aic.spec.ts`. |
+| **Exportar: una orden por línea en la misma celda** *(15/10/2026)* | Se eligió así (y no una fila o una columna por orden) para que el Excel exportado tenga **las mismas filas** que la tabla y que el Excel original (el contador, los filtros y las sumas no cambian) y el **mismo texto** (los espacios entre órdenes pasan a ser saltos de línea: el filtro "contiene" de Excel sigue sirviendo). Sin "Ajustar texto", Excel mostraría las órdenes pegadas en una sola línea; la versión gratuita de SheetJS no escribe estilos, así que la app agrega "Ajustar texto" (y alineación arriba) solo a esas celdas en el `styles.xml` del archivo ya armado (`ajustarTextoDeVariasLineas` en `exportar.ts`). El ancho de la columna se calcula con la orden más larga. |
 
 ### Por qué React + TypeScript
 
@@ -307,12 +325,76 @@ Decisiones de la migración:
 | **`index.html` con la cabecera y "Cargando…"** | Es lo que se ve mientras baja el código (con React pesa más que antes): igual a lo primero que dibuja React, así nada salta al cargar y el botón ☀️/🌙 ya muestra el ícono correcto (`tema-inicial.js`). Lo revisan `pagina-inicial.test.tsx` y 3 pruebas en navegador. |
 | **`@azure/msal-browser` v5 directo (sin `@azure/msal-react`)** | El inicio de sesión ya estaba resuelto y probado con msal-browser (`logica/auth.ts`): vuelta por la página puente `redirect.html` (MSAL v5), revisión de dominios `aic.pe`/`jaicoscorp.com` y del tenant **después** del login, `Files.Read.All` pedido recién al leer el Excel y mensajes claros si falta el consentimiento. msal-react obliga a envolver toda la app en su `MsalProvider` (MSAL se cargaría también en modo demo, que hoy no lo descarga) y no agrega nada de eso; la app solo necesita saber "en qué fase está el arranque", y eso lo da el hook `useArranque`. Menos piezas = menos cosas que actualizar. |
 | **Estado con React puro (hooks), sin Redux ni otra librería** | El estado es poco y claro: (1) la **búsqueda** (texto, filtros, vista, orden, página) vive en `useBusqueda` y se copia a la dirección (`useEstadoUrl`), así el enlace se puede compartir; (2) los **datos del Excel** viven en `useExcel` (carga, Actualizar, auto-actualización); (3) el **arranque** (`useArranque`) es una sola variable con la fase (`cargando`, `login`, `denegado`, `app`…) y TypeScript obliga a tratar cada una. Lo que se ve (filas, contador, opciones de los filtros) se **calcula** con funciones puras de `logica/vista.ts`, que se prueban sin navegador. |
-| **Mismos ids, textos y `aria-*`** | Las 39 pruebas en navegador (Playwright) son el "contrato" de comportamiento: pasan **sin cambiar ningún selector** (solo se les agregaron tipos al pasarlas a `.ts`; después se sumaron 3 de la pantalla de carga). `estilos.css` no cambió en la migración (salvo un comentario; el 14/10/2026 sí cambió, por el pedido de diseño). Con React Router (14/10/2026) solo se ajustaron las direcciones esperadas (`?vista=centro` → `/centros`), sin quitar comprobaciones. Los avisos (`#aviso-flotante`, `#aviso-error`) vuelven a leerse en voz alta aunque el mensaje se repita, como antes. |
+| **Mismos ids, textos y `aria-*`** | Las 39 pruebas en navegador (Playwright) son el "contrato" de comportamiento: pasan **sin cambiar ningún selector** (solo se les agregaron tipos al pasarlas a `.ts`; después se sumaron 3 de la pantalla de carga). `estilos.css` no cambió en la migración (salvo un comentario; el 14/10/2026 sí cambió, por el pedido de diseño). Con React Router (14/10/2026) solo se ajustaron las direcciones esperadas (`?vista=centro` → `/centros`), sin quitar comprobaciones. Con shadcn/ui (15/10/2026) se conservaron ids, roles, etiquetas y textos; solo cambiaron los selectores de piezas que ya no son las mismas etiquetas HTML (ver 8.2), con la misma comprobación. Los avisos (`#aviso-flotante`, `#aviso-error`) vuelven a leerse en voz alta aunque el mensaje se repita, como antes. |
 | **`redirect.html` sin React** | Es una página puente mínima: solo le pasa la respuesta de Microsoft a la app (`src/redirect.ts`). Así carga rápido y no depende de la app. |
 
 **Sobre SheetJS:** la versión de npm (0.18.5) tiene 2 avisos de seguridad de nivel **alto** ("prototype pollution" y "ReDoS") que se activan con un Excel **hecho a propósito para atacar**. Por eso la app usa la **0.20.3**, instalada desde el sitio oficial:
 - Para actualizarla en el futuro: `npm.cmd install --save-exact https://cdn.sheetjs.com/xlsx-<versión>/xlsx-<versión>.tgz` (ver la versión vigente en `https://cdn.sheetjs.com/xlsx-latest/package/package.json`) y correr las pruebas.
 - Igual (buena práctica), **solo la cuenta del bot** debe tener permiso de edición sobre el Excel (guía, paso 4.2).
+
+### 8.1 Guía de estilo de AIC: colores, letra y contraste *(15/10/2026)*
+
+La guía oficial de AIC (la entregó Gustavo; es material de la empresa y **no** se copia aquí) define una paleta de 9 colores, la letra Calibri y el formato de las tablas, con la regla *"nunca usar colores fuera de esta paleta"*. En la app:
+
+- **Colores:** cada color es una **variable de CSS** en `app/src/estilos.css`; los componentes de shadcn/ui ya usan esas variables (`--primary`, `--border`…), así que cambiar un color ahí lo cambia en toda la app. No hay transparencias, sombras de color ni transiciones de color (darían colores intermedios). Avisos y errores usan la **caja de nota** de la guía (fondo Light Blue, borde izquierdo grueso Primary Blue); el error se distingue con un **ícono, un borde más grueso** y `role="alert"`, no con rojo. Única excepción: el logo de Microsoft del botón de inicio de sesión conserva sus colores (es la marca de Microsoft).
+- **Letra:** `Calibri, Carlito, "Segoe UI", sans-serif` en toda la app (también en códigos y tablas). Carlito es la versión libre con las mismas medidas. No se descargan letras de internet (la CSP solo permite archivos propios). Como Calibri se ve más chica, el texto es de 16 px (15 px en el celular).
+- **Tablas:** encabezado Primary Blue con texto blanco en negrita y centrado, bordes Dark Blue; celdas con bordes Border Gray; filas alternas Light Gray (tabla de datos) e impares blancas; padding de la guía: encabezado 6 pt arriba/abajo y 4 pt a los lados (8 px / 5 px), datos 4 pt arriba/abajo y 6 pt a los lados (5 px / 8 px).
+- **Modo oscuro** *(por confirmar con Gustavo)*: la guía no lo define. Se armó **solo con colores de la paleta**: fondo Black, textos White, encabezado de tablas Dark Blue, filas alternas Primary Blue, botón principal y enlaces Light Blue.
+
+Variables (las de shadcn/ui y las propias de la app), con el contraste medido (WCAG 2.1 AA pide 4,5:1 en texto normal y 3:1 en bordes de controles y en el foco):
+
+| Variable | Para qué | Claro | Oscuro |
+|---|---|---|---|
+| `--background` / `--foreground` | Fondo de la página / texto | Light Gray / Black (19,3:1) | Black / White (21:1) |
+| `--card` | Tarjetas, tablas, cajas | White (texto Black 21:1) | Black (texto White 21:1) |
+| `--primary` / `--primary-foreground` | Botón principal, opción elegida, insignias | Primary Blue / White (11,1:1) | Light Blue / Primary Blue (9,5:1) |
+| `--primary-hover` | Botón principal con el mouse encima | Dark Blue (con White 8,0:1) | White (con Primary Blue 11,1:1) |
+| `--secondary` | Insignias ("N° de órdenes") | Light Blue / Primary Blue (9,5:1) | Light Blue / Primary Blue (9,5:1) |
+| `--muted-foreground` | Textos secundarios (contador, ayudas, etiquetas) | Gray: 5,7:1 con White, 5,3:1 con Light Gray, 4,9:1 con Light Blue | Border Gray: 13,1:1 con Black, 6,9:1 con Primary Blue, 5,0:1 con Dark Blue |
+| `--accent` | Fondo de botones con el mouse encima | Light Blue / Primary Blue (9,5:1) | Primary Blue / White (11,1:1) |
+| `--border` | Bordes de tablas y tarjetas (decorativos) | Border Gray | Gray |
+| `--input` | Borde de cajas, desplegables y botones | Gray (5,7:1 con White) | Gray (3,7:1 con Black) |
+| `--ring` | Anillo de foco con el teclado (2 px) | Medium Blue (5,4:1 con White, 5,0:1 con Light Gray) | Border Gray (13,1:1 con Black, 6,9:1 con Primary Blue) |
+| `--enlace` | Códigos (enlace al detalle) | Primary Blue (11,1:1 / 10,2:1 / 9,5:1 sobre White / Light Gray / Light Blue) | Light Blue (18,0:1 / 9,5:1 / 6,8:1 sobre Black / Primary Blue / Dark Blue) |
+| `--encabezado` / `--encabezado-texto` | Encabezado de las tablas | Primary Blue / White (11,1:1) | Dark Blue / White (8,0:1) |
+| `--encabezado-icono` | ▲▼ de una columna sin ordenar | Border Gray sobre Primary Blue (6,9:1) | Border Gray sobre Dark Blue (5,0:1) |
+| `--cebra` | Filas pares | Light Gray (texto Black 19,3:1) | Primary Blue (texto White 11,1:1) |
+| `--fila-hover` / `--fila-abierta` | Fila con el mouse encima / centro abierto | Light Blue (texto Black 18,0:1) | Dark Blue (texto White 8,0:1) |
+| `--marca` / `--marca-texto` | Lo encontrado por el buscador | Primary Blue / White (11,1:1) | Light Blue / Black (18,0:1) |
+| `--nota`, `--nota-borde`, `--nota-titulo`, `--nota-texto` | Caja de nota (avisos) | Light Blue, Primary Blue, Primary Blue (9,5:1), Black (18,0:1) | Primary Blue, Light Blue, White (11,1:1), White |
+| `--desactivado…` | Controles desactivados (WCAG no les pide contraste) | Light Gray / Gray / Border Gray | Black / Gray / Gray |
+
+`tests/e2e/guia-aic.spec.ts` recorre todas las pantallas en claro y en oscuro (lista con búsqueda resaltada, "Por centro" abierto, detalle, mensajes, error del Excel, inicio de sesión, celular con filtros y aviso flotante, foco y ayuda flotante) y falla si aparece **cualquier** color fuera de la paleta o un texto con contraste menor que AA.
+
+### 8.2 Componentes shadcn/ui + Tailwind CSS *(15/10/2026)*
+
+**shadcn/ui** no es una librería que se instala y queda "cerrada": es un catálogo de componentes accesibles (hechos sobre **Radix UI**) que la herramienta `shadcn` **copia** al proyecto (`app/src/components/ui/`), donde se pueden adaptar. Se pintan con **Tailwind CSS** (clases cortas como `px-2`, `bg-primary`). Se instaló con la guía oficial para Vite (Tailwind v4 con `@tailwindcss/vite`, alias `@/` = `src/`, `components.json`).
+
+| Componente shadcn/ui | Dónde |
+|---|---|
+| `Button` | Todos los botones (Actualizar, Exportar, Limpiar filtros, Cerrar sesión, paginación, copiar, flecha de "Por centro", ☀️/🌙…) y los enlaces con forma de botón ("Volver a la lista", "Ir al buscador", con `asChild`). |
+| `Input` | Buscador y filtros "contiene" (Código, Descripción, Orden). |
+| `NativeSelect` | Cliente, Tipo de orden, Estado y Filas por página. **Se eligió en vez de `Select` (Radix):** es el `<select>` del navegador, el más accesible (en el celular abre la lista del sistema, se elige escribiendo las primeras letras, todos los lectores de pantalla lo conocen) y va bien con listas largas (los clientes del Excel). |
+| `Table` | Las tablas (por orden, por centro, centro abierto, detalle, columnas detectadas), con el formato de la guía. Se le agregó `container={false}` para que el encabezado se quede fijo dentro de la caja con scroll de la app. |
+| `Card`, `Badge`, `Alert`, `Separator`, `Kbd` | Tarjetas (cargando, bienvenida, mensajes, ficha del centro), insignias (Modo demostración, N° de órdenes, filtros activos), avisos (caja de nota de la guía), línea entre avisos y la tecla `/`. |
+| `ToggleGroup` | "Por orden / Por centro de negocio": grupo de opciones (`role="radiogroup"`, cada opción `role="radio"` con `aria-checked`). |
+| `Collapsible` | "Columnas detectadas en el Excel" (antes `<details>`): botón con `aria-expanded`. |
+| `Tooltip` | Ayuda flotante de los botones que solo tienen ícono (☀️/🌙 y copiar código): a diferencia de `title`, se ve también al llegar con el teclado y se cierra con Escape. |
+| **No se usaron** | `Select` (Radix): ver `NativeSelect`. `Pagination`: está hecho con enlaces (`<a>`), que no se pueden desactivar ni cuidan el foco como la paginación actual (botones; al llegar a la última página el foco pasa a "Página X de Y"); se usó `Button` dentro de la misma paginación. |
+
+- **Accesibilidad que se mantiene:** mismos ids, roles, etiquetas y textos; foco visible solo con el teclado; `aria-sort` en los títulos; "Saltar al buscador / al contenido" y "Saltar a la paginación"; atajo `/`; avisos que se vuelven a leer en voz alta.
+- **Pruebas que cambiaron de selector (sin quitar comprobaciones):** "Por centro" se marcaba con `input[name="vista"]` → ahora `getByRole('radio', …)` (`toBeChecked()` revisa `aria-checked`); "Columnas detectadas" se abría con `summary` → ahora el botón; la flecha de los desplegables era una imagen de fondo → ahora se mide el ícono (16 px, centrado); el panel de filtros se buscaba por su clase → por su id; los colores esperados son los de la guía; en las unitarias, el `title` del botón de tema pasó a ser la ayuda flotante y el ▲▼ "tenue" ya no usa transparencia sino Border Gray.
+- **Seguridad (CSP):** Radix pone algunos estilos en línea (posición de la ayuda flotante): la CSP ya permite `style-src 'unsafe-inline'`; los scripts siguen solo `'self'`. Lo comprueban las pruebas en navegador (sin errores de consola, con la CSP activa).
+- **`npm audit`:** las librerías que se publican no tienen avisos (`npm.cmd audit --omit=dev`). La herramienta `shadcn` (solo para agregar componentes, en `devDependencies`) trae avisos de dependencias suyas que no llegan a la app.
+
+**Cómo agregar un componente de shadcn/ui** (ej. un diálogo):
+
+```powershell
+cd C:\dev\AIC\automatizaciones\sitio-web\app
+npx.cmd shadcn@latest add dialog
+```
+
+Eso crea `src/components/ui/dialog.tsx` y agrega las librerías que necesite. Después: (1) revisar el archivo y cambiar lo que no siga la guía de AIC (transparencias como `bg-black/50`, sombras, `opacity-50` al desactivar, `transition-colors`, `ring-ring/50`: usar las variables de `estilos.css` y las utilidades `foco-control` / `foco-primario`); (2) usarlo con `import { Dialog } from '@/components/ui/dialog'`; (3) correr `npm.cmd run lint`, `npm.cmd test` y `npm.cmd run test:e2e` (la prueba de la paleta avisa si se coló un color de otro lado).
 
 ## 9. Qué falta / (por confirmar)
 
@@ -329,6 +411,9 @@ Decisiones de la migración:
 - [ ] **"Actualizarse"**: confirmar que significa "mostrar siempre lo último del Excel" y no "editar desde la app". *(por confirmar)*
 - [ ] ¿Qué columnas son más importantes para el equipo (para el orden de la tabla y los filtros)? *(por confirmar)*
 - [x] **SheetJS actualizada a 0.20.3** (13/10/2026). Pendiente recomendado: dejar el permiso de edición del Excel solo a la cuenta del bot.
+- [ ] **Publicar los cambios del 15/10/2026** (órdenes una por línea, más margen, guía de estilo de AIC, React Router 8.4 y shadcn/ui; rama `ui-aic-shadcn`): `npm.cmd ci` → `npm.cmd run preparar-publicacion` → arrastrar `publicar/` y revisar la sección 7 del plan de pruebas. *(por confirmar cuándo se publica y si Gustavo lo revisa antes)*
+- [ ] **Modo oscuro con la guía de AIC**: la guía no lo define; se armó solo con colores de la paleta (fondo negro, encabezados Dark Blue, filas alternas Primary Blue). *(por confirmar con Gustavo)*
+- [ ] **Separar órdenes en el Excel real**: revisar con datos reales que ninguna celda se corte mal (ej. textos como "OC pendiente" sin número no se cortan; "OC N° 123" y "OC 123" cuentan como la misma orden). *(por confirmar con Gustavo)*
 - [ ] **Publicar los cambios de Gustavo (14/10/2026: márgenes, contornos, íconos y React Router)**: `npm.cmd run preparar-publicacion` → arrastrar `publicar/` (incluye `_redirects`) y revisar el punto 6.5 del plan de pruebas (abrir y recargar `/centros/<código real>`). *(por confirmar cuándo se publica y si Gustavo lo revisa antes)*
 - [ ] **Versión React + TypeScript en Netlify**: hecha y probada en la PC (13/10/2026); falta subirla (`npm.cmd run preparar-publicacion` → arrastrar `publicar/`) y revisar el punto 1.15 del plan de pruebas. *(por confirmar cuándo se publica)*
 - [ ] **Formato del Excel real**: ¿el código/descripción del centro va en **cada fila**, en **celdas combinadas** o **una sola vez** (con las filas de abajo vacías)? ¿El bot escribe valores o fórmulas? Revisar "Columnas detectadas" y la vista "Por centro". *(por confirmar)*

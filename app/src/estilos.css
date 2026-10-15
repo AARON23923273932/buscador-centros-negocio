@@ -7,7 +7,7 @@
      Black #000000 · White #FFFFFF · Gray #666666 · Border Gray #CCCCCC
    Cada color se usa a través de una VARIABLE (--primary, --border…): los componentes de shadcn/ui ya vienen
    preparados para esas variables, así que cambiar un color aquí lo cambia en toda la app. Tabla con cada
-   variable, su color en modo claro y oscuro y el contraste medido (WCAG 2.1 AA): README, sección "Diseño".
+   variable, su color en modo claro y oscuro y el contraste medido (WCAG 2.1 AA): README, sección 8.1.
    No se usan transparencias ni sombras de color: mezclarían colores que no están en la paleta.
 
    Modo oscuro: la guía de AIC no lo define. Se arma SOLO con colores de la paleta (fondo Black, textos White,

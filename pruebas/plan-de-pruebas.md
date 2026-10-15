@@ -1,6 +1,6 @@
 # ✅ Plan de pruebas — Buscador de centros de negocio
 
-> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (334 unitarias de lógica y componentes + 68 en navegador, al 14/10/2026, ya con **React Router** y los cambios de diseño de Gustavo) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
+> Pruebas que hace **una persona** (tú), en orden. Las pruebas automáticas (354 unitarias de lógica y componentes + 84 en navegador, al 15/10/2026, ya con **React Router 8.4**, los componentes **shadcn/ui**, la **guía de estilo de AIC** y las órdenes una por línea) pasan; estas comprueban lo que solo se puede ver con **tu cuenta, el Excel real y tus ojos**.
 > Marca `[x]` lo que pase. Si algo falla, anota qué viste (o toma captura) y me lo pasas.
 
 **Cómo abrir la app en tu PC:**
@@ -55,6 +55,16 @@ Objetivo: confirmar que **hace lo que pidieron** y que es fácil de usar.
   - [ ] 1.17.1 **Más margen a los lados:** en una pantalla grande el contenido (avisos, buscador, filtros, tabla, pie) va en una columna centrada con espacio a los lados, alineada con la cabecera; en el celular queda un margen de 16 px y la página no se mueve de costado (la tabla sí tiene su propio desplazamiento).
   - [ ] 1.17.2 **Contornos menos agresivos:** cajas, desplegables, botones y la tabla tienen bordes finos y suaves. Al hacer **clic** con el mouse en un botón **no** aparece contorno (en una caja de texto o un desplegable solo se pone azul el borde); al moverse con **Tab** aparece un **anillo azul suave** que se ve bien en claro y en oscuro, también en el botón **copiar** de cada fila y si el mouse queda encima del control. En la pantalla "Bienvenido" (login) el botón no aparece remarcado al abrir la página.
   - [ ] 1.17.3 **Íconos alineados** con su texto (acercar con **Ctrl + rueda** para revisar): lupa y "×" del buscador, flechas de los desplegables, copiar junto al código, ▲▼ de los títulos, flecha de "Por centro", Actualizar, Exportar, Filtros (celular), ☀️/🌙, flechas de la paginación y el logo de Microsoft del botón de login.
+- [ ] 1.18 **Cambios del 15/10/2026 (pedidos de Gustavo + componentes shadcn/ui):** antes, `npm.cmd ci` (hay librerías nuevas).
+  - [ ] 1.18.1 **Más margen a los lados:** en una pantalla de escritorio el contenido es un poco más angosto que antes (máx. 1120 px) y tiene más espacio a los lados (a 1280 px de ancho: 80 px); en el celular sigue con 16 px y sin moverse de costado.
+  - [ ] 1.18.2 **Colores de la guía de AIC:** solo azules (Primary Blue `#1E3A6E`, Dark Blue `#2C5282`, Medium Blue `#3B6BAA`, Light Blue `#E8EEF5`), grises (`#F5F5F5`, `#666666`, `#CCCCCC`), negro y blanco. **No** hay rojo, amarillo ni otro color: el aviso de demostración, el de columnas que faltan y el de error son cajas Light Blue con un borde izquierdo azul (el error, con un ícono y el borde más grueso). Lo encontrado por el buscador se marca con texto blanco sobre azul.
+  - [ ] 1.18.3 **Tablas:** títulos con fondo Primary Blue, letra blanca en negrita y centrada; bordes grises finos entre celdas; filas alternas gris claro y blancas (también en el centro abierto de "Por centro" y en el detalle).
+  - [ ] 1.18.4 **Letra Calibri** en toda la página (también en los códigos y en los números de orden).
+  - [ ] 1.18.5 **Modo oscuro (☀️/🌙)** *(por confirmar con Gustavo: la guía no lo define)*: fondo negro, letras blancas, títulos de tablas Dark Blue, filas alternas Primary Blue, botones y enlaces Light Blue. Todo se lee bien.
+  - [ ] 1.18.6 **Componentes shadcn/ui**, con el **teclado**: Tab recorre igual que antes; en "Por orden / Por centro" Tab llega a la opción elegida, **flecha derecha/izquierda** pasa a la otra y **Espacio** la elige; al llegar con Tab al botón ☀️/🌙 o al ícono de **copiar** aparece una ayuda flotante ("Cambiar a modo oscuro", "Copiar código") que se cierra con **Escape**; "Columnas detectadas en el Excel" se abre y se cierra con **Enter**; la tecla `/` lleva al buscador; "Saltar a la paginación" aparece con Tab antes de la tabla.
+  - [ ] 1.18.7 **React Router 8.4:** repetir 1.16.1–1.16.6 (mismo comportamiento que con la versión 7).
+  - [ ] 1.18.8 **Una orden por línea** (con datos reales: etapa 2 o 4, o pidiéndome un Excel de prueba): una celda como `OC 3519155 OC 3519252 OC N° 3519348` se ve en **3 líneas** en "Por orden", al abrir el centro en "Por centro" y en `/centros/<código>`; `OC N° 3519348` y `OC-0000098263-2025` **no** se cortan. Buscar `3519348` encuentra la fila y lo resalta en su línea. **"N° de órdenes"** del centro cuenta cada orden (no cada celda).
+  - [ ] 1.18.9 **Exportar** con esas filas: en Excel, la celda tiene cada orden en su propia línea (no todas pegadas), sin filas de más.
 
 ---
 
@@ -127,6 +137,9 @@ Necesitas: etapa 3 hecha + que **tu cuenta pueda abrir** el Excel original en Sh
 - [x] 6.3 Publicada en internet con HTTPS en **Netlify**: https://aic-centros-negocio.netlify.app (se sube a mano: `npm.cmd run preparar-publicacion` y arrastrar `publicar/`, [guía, paso 6](../GUIA-CONFIGURACION-MICROSOFT.md#paso-6-publicar-la-app-hosting)). *(12/10/2026)*
 - [ ] 6.4 Antes de subir la versión con el Excel real: que el administrador haya hecho el **paso 2** de la guía (`Files.Read.All` en la lista + consentimiento). Después, cerrar el Excel de ejemplo, `npm.cmd run preparar-publicacion`, subir `publicar/` y repetir 4.2–4.6 en https://aic-centros-negocio.netlify.app.
 - [ ] 6.5 **Versión con rutas (React Router):** `publicar/` tiene el archivo **`_redirects`** (el script se detiene si falta). Ya publicada, abrir directamente `https://aic-centros-negocio.netlify.app/centros/<un código real>` y **recargar (F5)** → se ve el detalle, no *"Page not found"* de Netlify. Repetir 1.16 y 4.9 en la dirección publicada ([guía, paso 6 → "Rutas de la app y `_redirects`"](../GUIA-CONFIGURACION-MICROSOFT.md#rutas-de-la-app-y-_redirects-14102026-react-router)).
+
+- [x] 6.6 Revisiones automáticas con los cambios del 15/10/2026 (rama `ui-aic-shadcn`) — **yo**: `typecheck`, `lint`, 354 unitarias, 84 en navegador, `build` y `preparar-publicacion` OK; `npm.cmd audit --omit=dev` sin avisos. *(15/10/2026)*
+- [ ] 6.7 **Publicar los cambios del 15/10/2026:** `npm.cmd ci` → `npm.cmd run preparar-publicacion` → subir `publicar/`. Ya publicada, repetir 1.18 y 6.5 en https://aic-centros-negocio.netlify.app (con el Excel real: 1.18.8 y 1.18.9).
 
 ---
 
