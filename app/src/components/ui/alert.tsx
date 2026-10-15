@@ -2,16 +2,14 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
-// Aviso de shadcn/ui con la "caja de nota" de la guía de AIC: fondo Light Blue, borde izquierdo grueso Primary
-// Blue, demás bordes Border Gray y texto negro. La guía no permite colores fuera de la paleta (ni rojo ni
-// amarillo): un error se distingue con su ícono, su borde más grueso y role="alert", no con el color.
 const alertVariants = cva(
-  "relative w-full rounded-md border border-l-4 border-border border-l-nota-borde bg-nota px-4 py-3 text-left text-nota-texto has-[>svg]:grid has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:items-start has-[>svg]:gap-x-2.5 [&>svg]:mt-0.5 [&>svg]:size-[18px] [&>svg]:text-nota-titulo [&_strong]:text-nota-titulo",
+  "group/alert relative grid w-full gap-0.5 rounded-lg border px-4 py-3 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "",
-        error: "border-l-8",
+        default: "bg-card text-card-foreground",
+        destructive:
+          "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
       },
     },
     defaultVariants: {
@@ -35,4 +33,43 @@ function Alert({
   )
 }
 
-export { Alert }
+function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="alert-title"
+      className={cn(
+        "font-medium group-has-[>svg]/alert:col-start-2 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function AlertDescription({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="alert-description"
+      className={cn(
+        "text-sm text-balance text-muted-foreground md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function AlertAction({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="alert-action"
+      className={cn("absolute top-2.5 right-3", className)}
+      {...props}
+    />
+  )
+}
+
+export { Alert, AlertTitle, AlertDescription, AlertAction }

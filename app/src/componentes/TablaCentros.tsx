@@ -4,9 +4,10 @@ import { Fragment, memo, type MouseEvent } from 'react';
 import { cn } from 'cn';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { numero } from '../logica/formato.ts';
-import { CLASE_ANCHA, CLASE_NUMERO } from '../logica/tabla.ts';
+import { CLASE_ANCHA, CLASE_ENCABEZADO, CLASE_ENCABEZADO_FIJO, CLASE_FILA_ALTERNA, CLASE_NUMERO } from '../logica/tabla.ts';
 import type { Columna, Direccion, Grupo } from '../logica/tipos.ts';
 import { ContenidoCelda, EncabezadoOrdenable, EncabezadosFijos, FilasDatos, FilaSinResultados, type AlCopiar } from './Celdas.tsx';
 import { IconoFlecha } from './Iconos.tsx';
@@ -30,12 +31,11 @@ interface Props {
 }
 
 /**
- * Fila de un centro abierto y la fila con sus órdenes, también con el mouse encima: fondo --fila-abierta con una raya
- * izquierda de 4 px (--fila-abierta-marca), como la caja de nota de la guía. Claro: Light Blue + Primary Blue.
- * Oscuro: Black + Light Blue (no Dark Blue: es el color del encabezado y el centro abierto parecía otra fila de títulos).
+ * Filas: alternas por CENTRO (no por fila de la tabla), así abrir un centro no cambia el color de los de abajo.
+ * Centro abierto: la TableRow de shadcn/ui ya pinta la fila que tiene un botón con aria-expanded="true"
+ * (has-aria-expanded:bg-muted/50); la fila con sus órdenes lleva ese mismo fondo para que se vean juntas.
  */
-const ABIERTA =
-  'bg-fila-abierta even:bg-fila-abierta hover:bg-fila-abierta [&>td:first-child]:shadow-[inset_4px_0_0_var(--fila-abierta-marca)] hover:[&>td:first-child]:shadow-[inset_4px_0_0_var(--fila-abierta-marca)]';
+const FILA_DETALLE = 'bg-muted/50';
 
 export const TablaCentros = memo(function TablaCentros({
   grupos,
@@ -62,11 +62,11 @@ export const TablaCentros = memo(function TablaCentros({
   };
 
   return (
-    <Table container={false} id="tabla-resultados">
+    <Table id="tabla-resultados">
       <caption className="sr-only">Centros de negocio. Pulsa la flecha de un centro para ver sus órdenes.</caption>
       <TableHeader>
         <TableRow>
-          <TableHead scope="col" className="w-11 px-2">
+          <TableHead scope="col" className={cn(CLASE_ENCABEZADO, CLASE_ENCABEZADO_FIJO, 'w-11')}>
             <span className="sr-only">Ver órdenes</span>
           </TableHead>
           <EncabezadoOrdenable clave="codigo" titulo="Código" {...orden} />
@@ -83,15 +83,20 @@ export const TablaCentros = memo(function TablaCentros({
           const nombre = g.codigo || g.descripcion || 'sin código';
           return (
             <Fragment key={g.clave}>
-              <TableRow className={cn('fila-centro cursor-pointer', abierto && `abierta ${ABIERTA}`)} data-grupo={g.clave} onClick={(ev) => alHacerClic(ev, g.clave)}>
+              <TableRow
+                className={cn('fila-centro cursor-pointer', i % 2 === 1 && CLASE_FILA_ALTERNA, abierto && 'abierta')}
+                data-grupo={g.clave}
+                onClick={(ev) => alHacerClic(ev, g.clave)}
+              >
                 <TableCell className="w-11">
-                  {/* Flecha: centrada con el código de su fila, sin hacerla más alta. Se apoya arriba de la línea
-                      (align-top) y sobresale 3 px arriba y 5 px abajo: ocupa 20 px, lo mismo que la línea de texto. */}
+                  {/* Flecha (Button outline de shadcn/ui, tamaño icon-xs: 24 px): centrada con el código de su fila, sin
+                      hacerla más alta: se apoya arriba de la línea (align-top) y sobresale 2 px arriba y abajo de la
+                      línea de texto, de 20 px. */}
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon-sm"
-                    className="btn-expandir -mt-[3px] -mb-[5px] size-7 align-top"
+                    size="icon-xs"
+                    className="btn-expandir -my-0.5 align-top"
                     data-grupo={g.clave}
                     aria-expanded={abierto}
                     aria-controls={abierto ? idDetalle : undefined}
@@ -118,19 +123,20 @@ export const TablaCentros = memo(function TablaCentros({
                 </TableCell>
               </TableRow>
               {abierto && (
-                <TableRow className={cn('fila-detalle', ABIERTA)} id={idDetalle}>
+                <TableRow className={cn('fila-detalle', FILA_DETALLE)} id={idDetalle}>
                   <TableCell colSpan={5} className="pt-0 pr-3 pb-3 pl-11 whitespace-normal max-escritorio:pl-3">
-                    <div className="overflow-x-auto rounded-md border border-border bg-card">
-                      <Table container={false} className="tabla-anidada">
+                    {/* Las órdenes del centro: otra Table en una Card de shadcn/ui (py-0 gap-0: sin su espacio interior). */}
+                    <Card className="gap-0 py-0">
+                      <Table className="tabla-anidada">
                         <caption className="sr-only">Órdenes del centro {nombre}</caption>
-                        <thead>
+                        <TableHeader>
                           <EncabezadosFijos columnas={columnas} enLinea />
-                        </thead>
-                        <tbody>
+                        </TableHeader>
+                        <TableBody>
                           <FilasDatos columnas={columnas} filas={g.filas} terminosDe={terminosDe} alCopiar={alCopiar} />
-                        </tbody>
+                        </TableBody>
                       </Table>
-                    </div>
+                    </Card>
                   </TableCell>
                 </TableRow>
               )}

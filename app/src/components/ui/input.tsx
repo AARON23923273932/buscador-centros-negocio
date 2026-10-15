@@ -1,16 +1,13 @@
 import * as React from "react"
 import { cn } from "cn"
 
-// Caja de texto de shadcn/ui con los colores de la guía de AIC: borde Gray (contraste 5,7:1), foco solo con
-// el teclado (foco-control) y desactivada sin opacidad. Sin "pointer-events-none" al estar desactivada: así se
-// ve su "title" (explica por qué no se puede usar).
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input
       type={type}
       data-slot="input"
       className={cn(
-        "foco-control h-9 w-full min-w-0 rounded-md border border-input bg-card px-2.5 py-1 text-foreground placeholder:text-muted-foreground hover:not-focus-visible:not-disabled:border-primary disabled:cursor-not-allowed disabled:border-desactivado-borde disabled:bg-desactivado disabled:text-desactivado-texto",
+        "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
         className
       )}
       {...props}

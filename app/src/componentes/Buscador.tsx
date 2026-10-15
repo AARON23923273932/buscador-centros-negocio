@@ -1,5 +1,6 @@
 // Buscador global: una caja grande (Input de shadcn/ui); filtra 200 ms después de la última tecla (Enter = ya).
 // La lupa (izquierda) y la "×" para borrar (derecha) van centradas en la altura de la caja.
+// A los componentes de shadcn/ui solo se les agregan clases de medidas y ubicación (alto, espacio para los íconos).
 import type { RefObject } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ export function Buscador({ valor, alEscribir, alEnviar, alBorrar, campoRef }: Pr
           spellCheck={false}
           placeholder={esCelular ? 'Código, cliente, orden…' : 'Buscar por código, descripción, cliente u orden…'}
           aria-describedby="ayuda-busqueda"
-          className="h-[52px] rounded-lg pr-12 pl-11 text-[1.05rem] max-escritorio:text-base [&::-webkit-search-cancel-button]:appearance-none"
+          className="h-11 pr-12 pl-11 [&::-webkit-search-cancel-button]:appearance-none"
           value={valor}
           onChange={(ev) => alEscribir(ev.target.value)}
         />
@@ -54,8 +55,8 @@ export function Buscador({ valor, alEscribir, alEnviar, alBorrar, campoRef }: Pr
           type="button"
           id="btn-borrar-busqueda"
           variant="ghost"
-          size="icon"
-          className="absolute top-1/2 right-2 -mt-[18px] rounded-full text-muted-foreground"
+          size="icon-sm"
+          className="absolute top-1/2 right-1.5 -mt-4"
           aria-label="Borrar búsqueda"
           hidden={!valor}
           onClick={alBorrar}

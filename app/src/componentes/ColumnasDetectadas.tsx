@@ -1,9 +1,11 @@
 // "Columnas detectadas en el Excel": qué columna usó la app para cada cosa, cuáles ocultó y
 // (con el Excel real) dónde está el archivo en SharePoint/OneDrive (para fijarlo en config.json).
 import { memo } from 'react';
+import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { InfoArchivo } from '../hooks/useExcel.ts';
 import { NOMBRES_CAMPOS } from '../logica/filtros.ts';
+import { CLASE_ENCABEZADO, CLASE_FILA_ALTERNA } from '../logica/tabla.ts';
 import type { OrigenExcel, ResultadoLectura } from '../logica/tipos.ts';
 
 const ORIGENES: Record<OrigenExcel, string> = {
@@ -63,24 +65,26 @@ export const ColumnasDetectadas = memo(function ColumnasDetectadas({
         <strong>{d.columnasOcultas?.length ? d.columnasOcultas.map((c) => `${c.titulo} (${c.letra})`).join(', ') : 'ninguna'}</strong>
       </p>
       <UbicacionExcel archivo={archivo} />
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
-        <Table container={false}>
+      {/* La tabla va en una Card de shadcn/ui (borde, esquinas y sombra de shadcn); py-0 gap-0: sin el espacio
+          interior de la tarjeta (solo medidas). */}
+      <Card className="gap-0 py-0">
+        <Table>
           <TableHeader>
             <TableRow>
-              <TableHead scope="col" className="static">
+              <TableHead scope="col" className={CLASE_ENCABEZADO}>
                 Columna
               </TableHead>
-              <TableHead scope="col" className="static">
+              <TableHead scope="col" className={CLASE_ENCABEZADO}>
                 Título en el Excel
               </TableHead>
-              <TableHead scope="col" className="static">
+              <TableHead scope="col" className={CLASE_ENCABEZADO}>
                 La app la usa como
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {d.columnas.map((c) => (
-              <TableRow key={c.indice}>
+            {d.columnas.map((c, i) => (
+              <TableRow key={c.indice} className={i % 2 === 1 ? CLASE_FILA_ALTERNA : undefined}>
                 <TableCell>{c.letra}</TableCell>
                 <TableCell>{c.titulo}</TableCell>
                 <TableCell>{c.campo ? NOMBRES_CAMPOS[c.campo] : <span className="text-muted-foreground">(se muestra tal cual)</span>}</TableCell>
@@ -88,7 +92,7 @@ export const ColumnasDetectadas = memo(function ColumnasDetectadas({
             ))}
           </TableBody>
         </Table>
-      </div>
+      </Card>
     </>
   );
 });

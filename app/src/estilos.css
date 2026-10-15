@@ -1,25 +1,29 @@
 /* =============================================================================
    estilos.css — Apariencia de la app: Tailwind CSS v4 + componentes shadcn/ui (src/components/ui).
 
-   Colores y letra: GUÍA DE ESTILO OFICIAL DE AIC (pedido del supervisor, 15/10/2026). Solo se usan los
-   9 colores de la paleta oficial (nunca otros: tampoco para errores ni avisos) y la letra Calibri:
-     Primary Blue #1E3A6E · Dark Blue #2C5282 · Medium Blue #3B6BAA · Light Blue #E8EEF5 · Light Gray #F5F5F5
-     Black #000000 · White #FFFFFF · Gray #666666 · Border Gray #CCCCCC
-   Cada color se usa a través de una VARIABLE (--primary, --border…): los componentes de shadcn/ui ya vienen
-   preparados para esas variables, así que cambiar un color aquí lo cambia en toda la app. Tabla con cada
-   variable, su color en modo claro y oscuro y el contraste medido (WCAG 2.1 AA): README, sección 8.1.
-   No se usan transparencias ni sombras de color: mezclarían colores que no están en la paleta.
-
-   Modo oscuro: la guía de AIC no lo define. Se arma SOLO con colores de la paleta (fondo Black, textos White,
-   azules para tablas y botones) y cumpliendo AA. Es una interpretación (por confirmar con Gustavo).
+   Pedido de Gustavo (15/10/2026): "que use los estilos naturales de shadcn, componentes como los botones,
+   inputs, etc. que use de shadcn, sin cambios, solo agregando el estilo de marca".
+     - Los archivos de src/components/ui quedan EXACTAMENTE como los genera "npx shadcn add" (no se editan):
+       sombras, bordes redondeados, transiciones, anillos de foco y opacidades son los de shadcn/ui.
+     - La marca de AIC (guía de estilo oficial) entra SOLO por aquí: las VARIABLES del tema de shadcn/ui
+       (--primary, --border, --ring…, en claro y en oscuro) y la letra Calibri. Cambiar un color aquí lo cambia
+       en todos los componentes.
+       Paleta: Primary Blue #1E3A6E · Dark Blue #2C5282 · Medium Blue #3B6BAA · Light Blue #E8EEF5 ·
+               Light Gray #F5F5F5 · Black #000000 · White #FFFFFF · Gray #666666 · Border Gray #CCCCCC
+       Las transparencias que agregan los componentes (ej. hover:bg-primary/80, ring-ring/50) y sus sombras
+       neutras (negro con poca opacidad) son de esos mismos colores. Tabla de variables con el contraste
+       medido (WCAG 2.1 AA): README, sección 8.1.
+   Modo oscuro: shadcn/ui trae su variante "dark:"; aquí se conecta al botón ☀️/🌙 (data-tema) y sus variables
+   se arman con la misma paleta (por confirmar con Gustavo).
    ============================================================================= */
 
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Variante "dark:" de Tailwind = el modo oscuro de la app: el del sistema (salvo que la persona eligiera claro
-   con el botón ☀️/🌙) o el elegido con el botón (<html data-tema="oscuro">, ver src/hooks/useTema.ts). */
+/* Variante "dark:" de Tailwind (la usan los componentes de shadcn/ui) = el modo oscuro de la app: el del sistema
+   (salvo que la persona eligiera claro con el botón ☀️/🌙) o el elegido con el botón (<html data-tema="oscuro">,
+   ver src/hooks/useTema.ts). shadcn/ui usa la clase "dark"; esta app usa data-tema. */
 @custom-variant dark {
   @media (prefers-color-scheme: dark) {
     &:where(:root:not([data-tema="claro"]), :root:not([data-tema="claro"]) *) {
@@ -32,8 +36,8 @@
 }
 
 @theme inline {
-  /* Letra única de la guía: Calibri. Carlito es su equivalente libre (mismas medidas) y Segoe UI la de Windows
-     si faltara; no se descargan letras de internet (la política de seguridad solo permite archivos propios).
+  /* Letra de la guía: Calibri. Carlito es su equivalente libre (mismas medidas) y Segoe UI la de Windows si
+     faltara; no se descargan letras de internet (la política de seguridad solo permite archivos propios).
      La app no trae la letra adentro: en Android, iPhone y Mac sin Office se ve la del sistema (README, 8.1). */
   --font-sans: Calibri, Carlito, "Segoe UI", sans-serif;
   --font-heading: var(--font-sans);
@@ -42,6 +46,7 @@
   /* Celular: menos de 720 px. "escritorio:" = 720 px o más; "max-escritorio:" = celular. */
   --breakpoint-escritorio: 45rem;
 
+  /* Variables del tema de shadcn/ui → colores de Tailwind (bg-primary, text-muted-foreground…). */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -50,7 +55,6 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -61,93 +65,48 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  /* Propios de la app (también de la paleta). */
-  --color-titulo: var(--titulo);
-  --color-subtitulo: var(--subtitulo);
-  --color-enlace: var(--enlace);
-  --color-cebra: var(--cebra);
-  --color-fila-hover: var(--fila-hover);
-  --color-fila-abierta: var(--fila-abierta);
-  --color-encabezado: var(--encabezado);
-  --color-encabezado-texto: var(--encabezado-texto);
-  --color-encabezado-borde: var(--encabezado-borde);
-  --color-encabezado-hover: var(--encabezado-hover);
-  --color-encabezado-icono: var(--encabezado-icono);
-  --color-marca: var(--marca);
-  --color-marca-texto: var(--marca-texto);
-  --color-nota: var(--nota);
-  --color-nota-borde: var(--nota-borde);
-  --color-nota-titulo: var(--nota-titulo);
-  --color-nota-texto: var(--nota-texto);
-  --color-desactivado: var(--desactivado);
-  --color-desactivado-texto: var(--desactivado-texto);
-  --color-desactivado-borde: var(--desactivado-borde);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 /* ---------- Modo claro (el de la guía) ---------- */
 :root {
   color-scheme: light;
-  --background: #f5f5f5; /* Light Gray: fondo de la página */
-  --foreground: #000000; /* Black: texto */
-  --card: #ffffff; /* White: tarjetas, tablas, cajas */
+  /* Esquinas: el radio por defecto de shadcn/ui (más redondeado que antes: la "suavidad" que pidió Gustavo). */
+  --radius: 0.625rem;
+  --background: #ffffff; /* White */
+  --foreground: #000000; /* Black: texto de la guía */
+  --card: #ffffff;
   --card-foreground: #000000;
   --popover: #ffffff;
   --popover-foreground: #000000;
-  --primary: #1e3a6e; /* Primary Blue: botón principal, enlaces, encabezados */
+  --primary: #1e3a6e; /* Primary Blue: botón principal, opción elegida, enlaces, títulos, encabezado de tablas */
   --primary-foreground: #ffffff;
-  --primary-hover: #2c5282; /* Dark Blue */
-  --secondary: #e8eef5; /* Light Blue: insignias */
+  --secondary: #e8eef5; /* Light Blue: insignias ("N° de órdenes") e iniciales del usuario */
   --secondary-foreground: #1e3a6e;
-  --muted: #f5f5f5;
-  --muted-foreground: #666666; /* Gray: textos secundarios */
-  --accent: #e8eef5; /* Light Blue: fondo al pasar el mouse */
+  --muted: #f5f5f5; /* Light Gray: filas alternas de las tablas, fondo al pasar el mouse */
+  --muted-foreground: #666666; /* Gray: textos secundarios (5,7:1 sobre White) */
+  --accent: #e8eef5;
   --accent-foreground: #1e3a6e;
-  --destructive: #1e3a6e; /* sin rojo: la paleta no lo tiene */
-  --border: #cccccc; /* Border Gray: bordes de tablas y tarjetas */
-  --input: #666666; /* Gray: borde de cajas, desplegables y botones (contraste 5,7:1 con el blanco) */
-  --ring: #3b6baa; /* Medium Blue: anillo de foco con el teclado (5,4:1 con el blanco) */
-  --titulo: #1e3a6e;
-  --subtitulo: #2c5282;
-  --enlace: #1e3a6e;
-  /* Tablas (guía: encabezado Primary Blue con texto blanco en negrita, bordes Dark Blue; celdas con bordes
-     Border Gray; filas alternas Light Gray en tablas de datos). */
-  --cebra: #f5f5f5;
-  --fila-hover: #e8eef5;
-  /* Raya a la izquierda de la fila con el mouse encima: en claro, del mismo color que la fila (no se ve). */
-  --fila-hover-marca: #e8eef5;
-  /* Centro abierto ("Por centro"): como la caja de nota de la guía, fondo Light Blue y raya izquierda Primary Blue. */
-  --fila-abierta: #e8eef5;
-  --fila-abierta-marca: #1e3a6e;
-  --encabezado: #1e3a6e;
-  --encabezado-texto: #ffffff;
-  --encabezado-borde: #2c5282;
-  --encabezado-hover: #2c5282;
-  --encabezado-icono: #cccccc;
-  /* Coincidencias del buscador: invertidas (texto blanco sobre Primary Blue), se ven sobre cualquier fila. */
-  --marca: #1e3a6e;
-  --marca-texto: #ffffff;
-  /* Caja de nota de la guía: fondo Light Blue, borde izquierdo grueso Primary Blue, título Primary Blue. */
-  --nota: #e8eef5;
-  --nota-borde: #1e3a6e;
-  --nota-titulo: #1e3a6e;
-  --nota-texto: #000000;
-  /* Controles desactivados: sin transparencia (no saldrían colores fuera de la paleta). */
-  --desactivado: #f5f5f5;
-  --desactivado-texto: #666666;
-  --desactivado-borde: #cccccc;
-  --radius: 0.5rem;
+  --destructive: #1e3a6e; /* errores: la paleta no tiene rojo (la guía no permite colores fuera de ella) */
+  --border: #cccccc; /* Border Gray: bordes de tablas, tarjetas y botones */
+  --input: #666666; /* Gray: borde de cajas y desplegables (5,7:1: WCAG pide 3:1 para ver dónde está la caja) */
+  --ring: #3b6baa; /* Medium Blue: borde y anillo de foco con el teclado (5,4:1 sobre White) */
+
   /* Columna de contenido (pedido del supervisor, 15/10/2026: "un poco más" de margen a los lados): ancho
-     máximo más angosto y margen lateral que crece con la pantalla (6 % del ancho, entre 20 y 96 px). */
+     máximo de 1120 px y margen lateral que crece con la pantalla (6 % del ancho, entre 20 y 96 px). */
   --ancho-contenido: 1120px;
   --margen-lateral: clamp(20px, 6vw, 96px);
 }
 
-/* ---------- Modo oscuro (interpretación propia: la guía no lo define) ---------- */
+/* ---------- Modo oscuro (la guía no lo define; por confirmar con Gustavo) ----------
+   Mismo bloque dos veces: modo del sistema (si la persona no eligió claro) y modo elegido con el botón. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
     color-scheme: dark;
@@ -159,7 +118,6 @@
     --popover-foreground: #ffffff;
     --primary: #e8eef5;
     --primary-foreground: #1e3a6e;
-    --primary-hover: #ffffff;
     --secondary: #e8eef5;
     --secondary-foreground: #1e3a6e;
     --muted: #1e3a6e;
@@ -167,34 +125,9 @@
     --accent: #1e3a6e;
     --accent-foreground: #ffffff;
     --destructive: #e8eef5;
-    --border: #666666;
+    --border: rgb(255 255 255 / 10%);
     --input: #666666;
-    --ring: #cccccc;
-    --titulo: #ffffff;
-    --subtitulo: #e8eef5;
-    --enlace: #e8eef5;
-    --cebra: #1e3a6e;
-    /* Fila con el mouse encima y centro abierto: fondo Black con raya izquierda Light Blue. No van en Dark Blue,
-       el color del encabezado: el centro abierto parecía otra fila de títulos y el encabezado de sus órdenes se
-       confundía con ella. */
-    --fila-hover: #000000;
-    --fila-hover-marca: #e8eef5;
-    --fila-abierta: #000000;
-    --fila-abierta-marca: #e8eef5;
-    --encabezado: #2c5282;
-    --encabezado-texto: #ffffff;
-    --encabezado-borde: #1e3a6e;
-    --encabezado-hover: #1e3a6e;
-    --encabezado-icono: #cccccc;
-    --marca: #e8eef5;
-    --marca-texto: #000000;
-    --nota: #1e3a6e;
-    --nota-borde: #e8eef5;
-    --nota-titulo: #ffffff;
-    --nota-texto: #ffffff;
-    --desactivado: #000000;
-    --desactivado-texto: #666666;
-    --desactivado-borde: #666666;
+    --ring: #3b6baa;
   }
 }
 :root[data-tema="oscuro"] {
@@ -207,7 +140,6 @@
   --popover-foreground: #ffffff;
   --primary: #e8eef5;
   --primary-foreground: #1e3a6e;
-  --primary-hover: #ffffff;
   --secondary: #e8eef5;
   --secondary-foreground: #1e3a6e;
   --muted: #1e3a6e;
@@ -215,34 +147,9 @@
   --accent: #1e3a6e;
   --accent-foreground: #ffffff;
   --destructive: #e8eef5;
-  --border: #666666;
+  --border: rgb(255 255 255 / 10%);
   --input: #666666;
-  --ring: #cccccc;
-  --titulo: #ffffff;
-  --subtitulo: #e8eef5;
-  --enlace: #e8eef5;
-  --cebra: #1e3a6e;
-  /* Fila con el mouse encima y centro abierto: fondo Black con raya izquierda Light Blue. No van en Dark Blue,
-     el color del encabezado: el centro abierto parecía otra fila de títulos y el encabezado de sus órdenes se
-     confundía con ella. */
-  --fila-hover: #000000;
-  --fila-hover-marca: #e8eef5;
-  --fila-abierta: #000000;
-  --fila-abierta-marca: #e8eef5;
-  --encabezado: #2c5282;
-  --encabezado-texto: #ffffff;
-  --encabezado-borde: #1e3a6e;
-  --encabezado-hover: #1e3a6e;
-  --encabezado-icono: #cccccc;
-  --marca: #e8eef5;
-  --marca-texto: #000000;
-  --nota: #1e3a6e;
-  --nota-borde: #e8eef5;
-  --nota-titulo: #ffffff;
-  --nota-texto: #ffffff;
-  --desactivado: #000000;
-  --desactivado-texto: #666666;
-  --desactivado-borde: #666666;
+  --ring: #3b6baa;
 }
 
 /* Menos de 720 px: 16 px a cada lado en el celular vertical (hasta 400 px de ancho) y de ahí sube en línea recta
@@ -254,9 +161,7 @@
   }
 }
 
-/* ---------- Utilidades propias (se usan como clases de Tailwind) ---------- */
-
-/* Columna de contenido centrada: cabecera y pantalla principal. */
+/* Columna de contenido centrada: cabecera y pantalla principal (solo medidas, ningún color). */
 @utility columna {
   width: 100%;
   max-width: calc(var(--ancho-contenido) + 2 * var(--margen-lateral));
@@ -264,58 +169,33 @@
   padding-inline: var(--margen-lateral);
 }
 
-/* Foco con el TECLADO (pedido del supervisor, 14/10/2026: contornos suaves y anillo solo con el teclado):
-   borde del control en el color principal + anillo sólido de 2 px (--ring). El contorno transparente hace que
-   el foco se siga viendo en el modo de alto contraste de Windows (ahí no se dibujan sombras). Solo con
-   :focus-visible: al hacer clic con el mouse no aparece (ver también la regla de data-modalidad, abajo). */
-@utility foco-control {
-  &:focus-visible {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px var(--ring);
-  }
-}
-/* Botón principal (su relleno ya es del color principal): el anillo va separado por una línea del color de la tarjeta. */
-@utility foco-primario {
-  &:focus-visible {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    box-shadow:
-      0 0 0 2px var(--card),
-      0 0 0 4px var(--ring);
-  }
-}
-/* Botones del encabezado de las tablas (fondo azul): la marca de foco va por dentro, en blanco. */
-@utility foco-encabezado {
-  &:focus-visible {
-    outline: 2px solid transparent;
-    box-shadow: inset 0 0 0 2px var(--encabezado-texto);
-  }
-}
-
 @layer base {
+  /* Lo que agrega "shadcn init" (estilo de shadcn/ui). */
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
+  body {
+    @apply bg-background text-foreground;
+  }
+
   html {
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
   }
-  body {
-    /* Calibri se ve más chica que otras letras del mismo tamaño: 16 px (15 px en el celular). */
-    @apply min-h-screen bg-background text-base leading-normal text-foreground max-escritorio:text-[15px];
+  /* Tailwind v4 dejó los botones con la flecha del mouse: la guía de Tailwind recomienda volver a la "manito". */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
+  /* Títulos propios de la app (h1, h2, h3): Primary Blue en negrita, como en la guía. */
   h1,
   h2,
   h3 {
-    @apply leading-tight font-bold text-titulo;
+    @apply leading-tight font-bold text-primary;
   }
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]) {
-    cursor: pointer;
-  }
-  /* Enlaces y demás (sin borde propio): contorno de 2 px con el teclado. */
+  /* Foco con el teclado en lo que NO es un componente de shadcn/ui (enlaces, la caja con scroll de la tabla,
+     "Página X de Y", los títulos que ordenan): contorno de 2 px en el color del anillo. Los componentes de
+     shadcn/ui no lo usan: traen su propio anillo (outline-none + ring-3) y sus clases ganan a esta regla. */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
@@ -326,14 +206,13 @@
     outline: none;
   }
   code {
-    @apply rounded-sm border border-border bg-muted px-1 text-[0.95em] text-foreground;
+    @apply rounded-sm border bg-muted px-1 text-[0.95em] text-foreground;
   }
   /* Coincidencias del buscador (componentes/Resaltado.tsx). */
   mark {
-    @apply rounded-[2px] bg-marca px-px text-marca-texto;
+    @apply rounded-[2px] bg-primary px-px text-primary-foreground;
   }
-  /* Texto seleccionado (también el del buscador al llegar con Tab): colores de la paleta en vez del azul del
-     navegador. Claro: blanco sobre Primary Blue; oscuro: Primary Blue sobre Light Blue. */
+  /* Texto seleccionado: colores de la marca en vez del azul del navegador. */
   ::selection {
     background-color: var(--primary);
     color: var(--primary-foreground);
@@ -351,21 +230,22 @@
 
 @layer components {
   /* Código del centro (texto) y su enlace al detalle (/centros/:codigo). Estas dos clases las usan también las
-     pruebas y VistaLista.tsx (para devolver el foco al enlace): por eso se dibujan aquí y no con clases sueltas. */
+     pruebas y VistaLista.tsx (para devolver el foco al enlace). Enlace con el aspecto del Button variant="link"
+     de shadcn/ui (text-primary, subrayado a 4 px), siempre subrayado: en una tabla se distingue del texto. */
   .codigo {
     font-variant-numeric: tabular-nums;
   }
   .enlace-codigo {
-    @apply rounded-[3px] font-semibold text-enlace underline decoration-1 underline-offset-[3px] hover:decoration-2;
-  }
-  .enlace-codigo:focus-visible {
-    outline-offset: 1px;
+    @apply font-medium text-primary underline underline-offset-4;
   }
 }
 
-/* Cajas de texto y desplegables: Chromium los marca :focus-visible también al hacer CLIC con el mouse. Si lo
-   último que se usó fue el mouse (<html data-modalidad="puntero">, ver src/logica/modalidad.ts), solo queda el
-   borde azul (dice dónde se va a escribir), sin el anillo. Fuera de las capas de Tailwind: gana siempre. */
-:root[data-modalidad="puntero"] :is(input, select).foco-control:focus-visible {
-  box-shadow: none;
+/* Alto contraste de Windows (forced-colors): ahí el navegador no dibuja sombras y el anillo de shadcn/ui
+   (ring-3 = box-shadow) desaparecería. Solo en ese modo se dibuja un contorno del color del sistema. Fuera de las
+   capas de Tailwind para que gane; no cambia nada de lo que se ve en el modo normal. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
 }

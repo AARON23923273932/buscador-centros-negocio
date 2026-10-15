@@ -1,15 +1,16 @@
 // Barra sobre la tabla: "Por orden / Por centro de negocio", el contador, filas por página y "Exportar a Excel".
 //
-// "Por orden / Por centro" es un RadioGroup de shadcn/ui (Radix) con forma de botones pegados: para los lectores
-// de pantalla es un grupo de opciones (role="radiogroup", cada una role="radio" con aria-checked) y se usa con el
-// teclado igual que los botones de opción del navegador: Tab llega a la opción elegida y las flechas pasan a la
-// otra Y la eligen (cambia la vista al instante); Espacio también elige. Si "Por centro" está desactivado (el
-// Excel no tiene columna de centro), las flechas lo saltan.
+// "Por orden / Por centro" es un grupo de opciones con forma de botones pegados (OpcionesBoton.tsx: RadioGroup,
+// ButtonGroup y Button de shadcn/ui): para los lectores de pantalla es un grupo de opciones (role="radiogroup",
+// cada una role="radio" con aria-checked) y se usa con el teclado igual que los botones de opción del navegador:
+// Tab llega a la opción elegida y las flechas pasan a la otra Y la eligen (cambia la vista al instante); Espacio
+// también elige. Si "Por centro" está desactivado (el Excel no tiene columna de centro), las flechas lo saltan.
+// A los componentes de shadcn/ui solo se les agregan clases de medidas y ubicación (colores: el tema, estilos.css).
 import { Button } from '@/components/ui/button';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { RadioGroup, RadioGroupBoton } from '@/components/ui/radio-group';
 import type { Vista } from '../logica/tipos.ts';
 import { IconoDescargar } from './Iconos.tsx';
+import { GrupoOpciones, OpcionBoton } from './OpcionesBoton.tsx';
 
 interface Props {
   vista: Vista;
@@ -28,22 +29,22 @@ const esVista = (valor: string): valor is Vista => valor === 'orden' || valor ==
 export function BarraResultados(props: Props) {
   return (
     <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 max-escritorio:flex-col max-escritorio:items-stretch">
-      <RadioGroup
+      <GrupoOpciones
         id="selector-vista"
-        className="flex w-fit gap-0 max-escritorio:w-full"
+        className="max-escritorio:w-full"
         aria-label="Forma de ver los resultados"
         value={props.vista}
         onValueChange={(valor) => {
           if (esVista(valor)) props.alCambiarVista(valor);
         }}
       >
-        <RadioGroupBoton value="orden" className="max-escritorio:flex-1">
+        <OpcionBoton value="orden" elegida={props.vista === 'orden'} className="max-escritorio:flex-1">
           Por orden
-        </RadioGroupBoton>
-        <RadioGroupBoton value="centro" className="max-escritorio:flex-1" disabled={!props.vistaCentroDisponible}>
+        </OpcionBoton>
+        <OpcionBoton value="centro" elegida={props.vista === 'centro'} className="max-escritorio:flex-1" disabled={!props.vistaCentroDisponible}>
           Por centro de negocio
-        </RadioGroupBoton>
-      </RadioGroup>
+        </OpcionBoton>
+      </GrupoOpciones>
       <p id="contador" className="m-0 flex-[1_1_260px] text-sm text-muted-foreground max-escritorio:flex-none" aria-live="polite">
         {props.contador}
       </p>

@@ -1,7 +1,7 @@
 // Cabecera: nombre de la app, quién inició sesión (o "Modo demostración") y el botón de tema.
 // Guía de AIC: título en Primary Blue y negrita con una línea inferior gruesa del mismo color (como el
-// "Heading 1" de la guía). Si se cambia algo aquí, cambiarlo también en index.html (lo revisa
-// tests/unit/pagina-inicial.test.tsx).
+// "Heading 1" de la guía); colores del tema (estilos.css). Badge y Button de shadcn/ui sin clases de color.
+// Si se cambia algo aquí, cambiarlo también en index.html (lo revisa tests/unit/pagina-inicial.test.tsx).
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { EstadoTema } from '../hooks/useTema.ts';
@@ -44,7 +44,7 @@ export function Cabecera({ titulo, subtitulo, usuario, demo, tema }: Props) {
         </div>
         <div className="ml-auto flex min-w-0 items-center gap-3">
           <div id="zona-usuario" className="flex min-w-0 items-center gap-3" hidden={!demo && !usuario}>
-            <Badge id="insignia-demo" variant="outline" className="px-2.5 py-1 text-[0.8rem]" hidden={!demo}>
+            <Badge id="insignia-demo" variant="outline" hidden={!demo}>
               Modo demostración
             </Badge>
             <div id="datos-usuario" className="flex min-w-0 items-center gap-2.5" hidden={!usuario}>

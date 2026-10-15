@@ -1,17 +1,9 @@
-"use client"
-
 import * as React from "react"
 import { cn } from "cn"
-import { Slot, Tooltip as TooltipPrimitive } from "radix-ui"
+import { Tooltip as TooltipPrimitive } from "radix-ui"
 
-// Ayuda flotante de shadcn/ui (Radix): aparece al pasar el mouse Y al llegar con el teclado (un "title" no se
-// ve con el teclado ni en el celular), se cierra con Escape y la leen los lectores de pantalla.
-// Un solo TooltipProvider para toda la app (en App.tsx, como recomienda shadcn/ui): cada Tooltip ya no trae el
-// suyo, que con muchas ayudas (ej. una por fila) hacía más lento dibujar la tabla.
-// Guía de AIC: aparece y desaparece SIN fundido (el fundido de shadcn/ui, fade-in/fade-out, mostraba por unos
-// 200 ms colores intermedios que no son de la paleta); solo se desliza y se agranda un poco al aparecer.
 function TooltipProvider({
-  delayDuration = 300,
+  delayDuration = 0,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
@@ -29,43 +21,15 @@ function Tooltip({
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-/** Le pasa las props a su hijo (como asChild), menos aria-describedby. */
-function SinDescripcion({
-  "aria-describedby": _descripcion,
-  ...props
-}: React.ComponentProps<typeof Slot.Root>) {
-  return <Slot.Root {...props} />
-}
-
-/**
- * Radix describe al botón con la ayuda flotante (aria-describedby). Si la ayuda solo repite el nombre del botón
- * (ej. ☀️/🌙: nombre y ayuda "Cambiar a modo oscuro"), el lector de pantalla lo diría dos veces: con
- * sinDescripcion (agregado para la app; siempre con asChild) el botón queda sin esa descripción.
- */
 function TooltipTrigger({
-  sinDescripcion = false,
-  children,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger> & {
-  sinDescripcion?: boolean
-}) {
-  if (sinDescripcion) {
-    return (
-      <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} asChild>
-        <SinDescripcion>{children}</SinDescripcion>
-      </TooltipPrimitive.Trigger>
-    )
-  }
-  return (
-    <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props}>
-      {children}
-    </TooltipPrimitive.Trigger>
-  )
+}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
 }
 
 function TooltipContent({
   className,
-  sideOffset = 4,
+  sideOffset = 0,
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
@@ -75,7 +39,7 @@ function TooltipContent({
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          "z-50 w-fit max-w-xs origin-(--radix-tooltip-content-transform-origin) rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-card data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=delayed-open]:animate-in data-[state=delayed-open]:zoom-in-95 data-open:animate-in data-open:zoom-in-95",
+          "z-50 inline-flex w-fit max-w-xs origin-(--radix-tooltip-content-transform-origin) items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs text-background has-data-[slot=kbd]:pr-1.5 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

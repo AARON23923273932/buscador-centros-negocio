@@ -14,13 +14,12 @@ import { CircleAlertIcon, TriangleAlertIcon } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableHeader } from '@/components/ui/table';
 import { buscarCentro, estadosDeCentro } from '../logica/centro.ts';
 import { numero } from '../logica/formato.ts';
 import { codigoDeRuta, rutaVolver, type EstadoNavegacion } from '../logica/rutas.ts';
-import { ContenidoCelda, EncabezadosFijos, FilasDatos } from './Celdas.tsx';
-import { CONTENEDOR_TABLA, ESTADO_TABLA } from './clases.ts';
+import { CajaTabla, ContenidoCelda, EncabezadosFijos, FilasDatos, MensajeTabla } from './Celdas.tsx';
 import { IconoVolver, IndicadorCarga } from './Iconos.tsx';
 import { useContextoApp } from './PantallaApp.tsx';
 
@@ -85,14 +84,18 @@ export function DetalleCentro() {
   if (!datos) {
     contenido =
       excel.sinDatos === 'error' ? (
-        <Card className={`${ESTADO_TABLA} p-0`}>
-          <CircleAlertIcon aria-hidden="true" className="size-[18px] shrink-0 text-titulo" />
-        No hay datos para mostrar. Revisa el mensaje de arriba.
+        <Card className="py-0">
+          <MensajeTabla>
+            <CircleAlertIcon aria-hidden="true" className="size-[18px] shrink-0" />
+            No hay datos para mostrar. Revisa el mensaje de arriba.
+          </MensajeTabla>
         </Card>
       ) : (
-        <Card className={`${ESTADO_TABLA} p-0`} aria-busy="true">
-          <IndicadorCarga />
-          Cargando datos del Excel…
+        <Card className="py-0" aria-busy="true">
+          <MensajeTabla>
+            <IndicadorCarga />
+            Cargando datos del Excel…
+          </MensajeTabla>
         </Card>
       );
   } else if (!grupo) {
@@ -108,48 +111,50 @@ export function DetalleCentro() {
   } else {
     contenido = (
       <>
-        <Card className="mb-5 px-5 py-4 max-escritorio:px-4 max-escritorio:py-3.5">
-          <dl id="ficha-centro" className="m-0 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-7 gap-y-3.5 max-escritorio:grid-cols-1">
-            <div className={DATO}>
-              <dt className={TITULO_DATO}>Código</dt>
-              <dd className={VALOR_DATO}>
-                <ContenidoCelda columna={{ campo: 'codigoCentro' }} celda={{ t: grupo.codigo }} terminos={[]} alCopiar={copiar} enlazar={false} />
-              </dd>
-            </div>
-            <div className={DATO_ANCHO}>
-              <dt className={TITULO_DATO}>Descripción</dt>
-              <dd className={VALOR_DATO}>{grupo.descripcion || '—'}</dd>
-            </div>
-            <div className={DATO_ANCHO}>
-              <dt className={TITULO_DATO}>{grupo.clientes.length > 1 ? 'Clientes' : 'Cliente'}</dt>
-              <dd className={VALOR_DATO}>{grupo.clientes.join(', ') || '—'}</dd>
-            </div>
-            {conEstado && (
+        <Card className="mb-5">
+          <CardContent>
+            <dl id="ficha-centro" className="m-0 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-7 gap-y-3.5 max-escritorio:grid-cols-1">
               <div className={DATO}>
-                <dt className={TITULO_DATO}>{estados.length > 1 ? 'Estados' : 'Estado'}</dt>
-                <dd className={VALOR_DATO}>{estados.join(', ') || '—'}</dd>
+                <dt className={TITULO_DATO}>Código</dt>
+                <dd className={VALOR_DATO}>
+                  <ContenidoCelda columna={{ campo: 'codigoCentro' }} celda={{ t: grupo.codigo }} terminos={[]} alCopiar={copiar} enlazar={false} />
+                </dd>
               </div>
-            )}
-            <div className={DATO}>
-              {/* Cuenta cada orden aunque varias vengan juntas en una celda (ver logica/ordenes.ts). */}
-              <dt className={TITULO_DATO}>N° de órdenes</dt>
-              <dd className={VALOR_DATO}>
-                <Badge variant="secondary" id="numero-ordenes" className="insignia min-w-6">
-                  {numero(grupo.ordenes)}
-                </Badge>
-              </dd>
-            </div>
-          </dl>
+              <div className={DATO_ANCHO}>
+                <dt className={TITULO_DATO}>Descripción</dt>
+                <dd className={VALOR_DATO}>{grupo.descripcion || '—'}</dd>
+              </div>
+              <div className={DATO_ANCHO}>
+                <dt className={TITULO_DATO}>{grupo.clientes.length > 1 ? 'Clientes' : 'Cliente'}</dt>
+                <dd className={VALOR_DATO}>{grupo.clientes.join(', ') || '—'}</dd>
+              </div>
+              {conEstado && (
+                <div className={DATO}>
+                  <dt className={TITULO_DATO}>{estados.length > 1 ? 'Estados' : 'Estado'}</dt>
+                  <dd className={VALOR_DATO}>{estados.join(', ') || '—'}</dd>
+                </div>
+              )}
+              <div className={DATO}>
+                {/* Cuenta cada orden aunque varias vengan juntas en una celda (ver logica/ordenes.ts). */}
+                <dt className={TITULO_DATO}>N° de órdenes</dt>
+                <dd className={VALOR_DATO}>
+                  <Badge variant="secondary" id="numero-ordenes" className="insignia min-w-6">
+                    {numero(grupo.ordenes)}
+                  </Badge>
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
         </Card>
 
-        <h3 className="mt-0 mb-2 text-base text-subtitulo" id="titulo-ordenes-centro">
+        <h3 className="mt-0 mb-2 text-base" id="titulo-ordenes-centro">
           Órdenes del centro{' '}
           <span className="text-[0.9rem] font-normal text-muted-foreground">
             ({numero(grupo.filas.length)} {grupo.filas.length === 1 ? 'fila' : 'filas'} del Excel)
           </span>
         </h3>
-        <div id="contenedor-detalle" className={`${CONTENEDOR_TABLA} mb-3`} role="region" aria-labelledby="titulo-ordenes-centro" tabIndex={0}>
-          <Table container={false} id="tabla-detalle">
+        <CajaTabla id="contenedor-detalle" className="mb-3" aria-labelledby="titulo-ordenes-centro">
+          <Table id="tabla-detalle">
             <caption className="sr-only">Órdenes del centro {grupo.codigo}</caption>
             <TableHeader>
               <EncabezadosFijos columnas={datos.columnas} />
@@ -158,7 +163,7 @@ export function DetalleCentro() {
               <FilasDatos columnas={datos.columnas} filas={grupo.filas} terminosDe={sinTerminos} alCopiar={copiar} enlazarCodigo={false} />
             </TableBody>
           </Table>
-        </div>
+        </CajaTabla>
       </>
     );
   }

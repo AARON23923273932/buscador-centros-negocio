@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { Sesion } from '../logica/auth.ts';
 import { IconoMicrosoft } from './Iconos.tsx';
 
@@ -33,14 +33,18 @@ export function PantallaLogin({ sesion }: { sesion: Sesion }) {
   return (
     <section id="pantalla-login" className="grid min-h-[60vh] place-items-center">
       <Card className="tarjeta-centro w-full max-w-[480px] text-center">
-        <h2 className="mt-0 mb-5 text-2xl">Bienvenido</h2>
-        <Button type="button" id="btn-login" ref={boton} size="lg" className="w-full max-w-[320px]" disabled={ocupado} onClick={() => void iniciar()}>
-          <IconoMicrosoft />
-          Iniciar sesión con Microsoft
-        </Button>
-        <Alert id="error-login" variant="error" className="mt-4" hidden={!error}>
-          {error}
-        </Alert>
+        <CardHeader>
+          <h2 className="m-0 text-2xl">Bienvenido</h2>
+        </CardHeader>
+        <CardContent className="items-center">
+          <Button type="button" id="btn-login" ref={boton} size="lg" className="w-full max-w-[320px]" disabled={ocupado} onClick={() => void iniciar()}>
+            <IconoMicrosoft />
+            Iniciar sesión con Microsoft
+          </Button>
+          <Alert id="error-login" variant="destructive" hidden={!error}>
+            {error}
+          </Alert>
+        </CardContent>
       </Card>
     </section>
   );

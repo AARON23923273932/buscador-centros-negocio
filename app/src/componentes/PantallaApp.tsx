@@ -152,7 +152,7 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
       {/* Se abre y se cierra con un botón (Collapsible de shadcn/ui: aria-expanded y aria-controls). */}
       <Collapsible className="mt-4 mb-2 text-sm print:hidden">
         <CollapsibleTrigger asChild>
-          <Button type="button" variant="ghost" size="sm" className="group/columnas -ml-2.5 text-muted-foreground">
+          <Button type="button" variant="ghost" size="sm" className="group/columnas -ml-2.5">
             <ChevronRightIcon aria-hidden="true" className="size-4 transition-transform group-data-[state=open]/columnas:rotate-90" />
             Columnas detectadas en el Excel
           </Button>

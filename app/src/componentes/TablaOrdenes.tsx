@@ -1,4 +1,5 @@
-// Tabla "Por orden": una fila por cada fila del Excel (Table de shadcn/ui con el formato de la guía de AIC).
+// Tabla "Por orden": una fila por cada fila del Excel (Table de shadcn/ui con el encabezado de marca y las filas
+// alternas de la guía de AIC).
 // memo(): no se vuelve a dibujar si sus props no cambian (ej. mientras se escribe en el buscador).
 import { memo } from 'react';
 import { Table, TableBody, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,7 +24,7 @@ export const TablaOrdenes = memo(function TablaOrdenes({ columnas, filas, termin
     return <p className="px-4 py-8 text-center text-muted-foreground">El Excel no tiene columnas con datos.</p>;
   }
   return (
-    <Table container={false} id="tabla-resultados">
+    <Table id="tabla-resultados">
       <caption className="sr-only">Resultados de la búsqueda. Pulsa un título de columna para ordenar.</caption>
       <TableHeader>
         <TableRow>

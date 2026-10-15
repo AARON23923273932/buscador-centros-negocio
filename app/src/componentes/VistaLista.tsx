@@ -30,7 +30,7 @@ import type { Columna } from '../logica/tipos.ts';
 import { calcularResultados, estadoControles, opcionesDesplegables, paginarResultados, terminosDeColumna, vistaCentroDisponible } from '../logica/vista.ts';
 import { BarraResultados } from './BarraResultados.tsx';
 import { Buscador } from './Buscador.tsx';
-import { CONTENEDOR_TABLA, ESTADO_TABLA } from './clases.ts';
+import { CajaTabla, MensajeTabla } from './Celdas.tsx';
 import { Filtros } from './Filtros.tsx';
 import { IndicadorCarga } from './Iconos.tsx';
 import { Paginacion } from './Paginacion.tsx';
@@ -220,17 +220,17 @@ export function VistaLista() {
       );
   } else if (excel.sinDatos === 'error') {
     tabla = (
-      <div className={ESTADO_TABLA}>
-        <CircleAlertIcon aria-hidden="true" className="size-[18px] shrink-0 text-titulo" />
+      <MensajeTabla>
+        <CircleAlertIcon aria-hidden="true" className="size-[18px] shrink-0" />
         No hay datos para mostrar. Revisa el mensaje de arriba.
-      </div>
+      </MensajeTabla>
     );
   } else {
     tabla = (
-      <div className={ESTADO_TABLA}>
+      <MensajeTabla>
         <IndicadorCarga />
-          Cargando datos del Excel…
-      </div>
+        Cargando datos del Excel…
+      </MensajeTabla>
     );
   }
 
@@ -276,18 +276,9 @@ export function VistaLista() {
         Saltar a la paginación
       </Button>
 
-      <div
-        id="contenedor-tabla"
-        ref={contenedorTabla}
-        className={CONTENEDOR_TABLA}
-        role="region"
-        aria-label="Resultados"
-        tabIndex={0}
-        aria-busy={cargando}
-        onClickCapture={recordarEnlace}
-      >
+      <CajaTabla id="contenedor-tabla" ref={contenedorTabla} aria-label="Resultados" aria-busy={cargando} onClickCapture={recordarEnlace}>
         {tabla}
-      </div>
+      </CajaTabla>
 
       <Paginacion pagina={vista?.pagina ?? null} alIrA={irAPagina} navRef={paginacion} />
     </>

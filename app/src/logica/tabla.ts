@@ -20,6 +20,17 @@ export function estadoOrden(clave: string, ordenarPor: string, direccion: Direcc
   return direccion === 'desc' ? { aria: 'descending', activo: true } : { aria: 'ascending', activo: true };
 }
 
+/**
+ * Encabezado de tabla "de marca" (guía de AIC: fondo Primary Blue, texto blanco en negrita y centrado). Es lo único
+ * de color que se agrega a la Table de shadcn/ui (además de las filas alternas): usa las variables del tema
+ * (bg-primary / text-primary-foreground), así que en modo oscuro toma los colores oscuros del tema.
+ */
+export const CLASE_ENCABEZADO = 'bg-primary text-center font-bold text-primary-foreground';
+/** Encabezado fijo arriba al bajar dentro de la caja con scroll de la tabla (solo ubicación). */
+export const CLASE_ENCABEZADO_FIJO = 'sticky top-0 z-10';
+/** Filas alternas (guía de AIC: Light Gray en las tablas de datos; en oscuro, el --muted del tema). */
+export const CLASE_FILA_ALTERNA = 'bg-muted';
+
 /** Clases (Tailwind) de las columnas de números: alineadas a la derecha, con cifras del mismo ancho. */
 export const CLASE_NUMERO = 'text-right tabular-nums';
 /** Clases (Tailwind) de la descripción: puede ocupar varias líneas (las demás columnas, no). */

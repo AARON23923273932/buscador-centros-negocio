@@ -5,8 +5,8 @@
 // inline-flex + items-center. Así no "bailan" con la línea del texto. La clase "size-…" también evita que el
 // botón de shadcn/ui les cambie el tamaño.
 // Los de la cabecera (logo, luna/sol) están también en index.html: si se cambian aquí, cambiarlos allá.
-// Colores: heredan el del texto (currentColor), que siempre es de la paleta de AIC. El logo de Microsoft
-// conserva sus 4 colores: es la marca de Microsoft (sus reglas de uso piden no cambiarla), no un color de la app.
+// Colores: heredan el del texto (currentColor), que siempre es un color del tema (paleta de AIC). El logo de
+// Microsoft conserva sus 4 colores: es la marca de Microsoft (sus reglas de uso piden no cambiarla).
 
 import type { ReactNode } from 'react';
 
@@ -144,14 +144,14 @@ export function IconoVolver() {
 }
 
 /**
- * Indicador de orden de una columna: sin ordenar (▲▼ en Border Gray), ascendente (▲) o descendente (▼) en el
- * color del texto del encabezado. Sin transparencias (la guía de AIC no permite colores fuera de la paleta).
+ * Indicador de orden de una columna: sin ordenar (▲▼ tenues: el color del texto del encabezado al 60 %, contraste
+ * 5,1:1 en claro y 3,3:1 en oscuro), ascendente (▲) o descendente (▼) en el color del texto del encabezado.
  */
 export function IconoOrden({ aria }: { aria: 'none' | 'ascending' | 'descending' }) {
   const arriba = 'M12 4.5 17 10H7l5-5.5Z';
   const abajo = 'M12 19.5 7 14h10l-5 5.5Z';
   return (
-    <Svg clase={aria === 'none' ? 'text-encabezado-icono' : ''}>
+    <Svg clase={aria === 'none' ? 'opacity-60' : ''}>
       {aria !== 'descending' && <path fill="currentColor" d={arriba} />}
       {aria !== 'ascending' && <path fill="currentColor" d={abajo} />}
     </Svg>
@@ -174,8 +174,8 @@ export function IconoPagina({ tipo }: { tipo: 'primera' | 'anterior' | 'siguient
 }
 
 /**
- * Ruedita de "Cargando…" (un círculo Border Gray con un tramo en el color principal que gira). No es un SVG:
- * es un borde redondo. Está también en index.html (pantalla "Cargando…" antes de que cargue React).
+ * Ruedita de "Cargando…" (un círculo del color de los bordes con un tramo en el color principal que gira). No es un
+ * SVG: es un borde redondo. Está también en index.html (pantalla "Cargando…" antes de que cargue React).
  */
 export function IndicadorCarga() {
   return <span className="inline-block size-[22px] shrink-0 animate-spin rounded-full border-3 border-border border-t-primary align-middle" aria-hidden="true" />;

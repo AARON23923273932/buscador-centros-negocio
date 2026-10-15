@@ -1,6 +1,7 @@
 // Paginación: « ‹ Anterior · Página X de Y · Siguiente › » (las flechas son íconos SVG, ver Iconos.tsx).
-// Botones de shadcn/ui (Button). No se usa el componente "Pagination" de shadcn/ui: está hecho con enlaces (<a>),
-// que no se pueden desactivar, y aquí los botones de la primera/última página se desactivan y cuidan el foco.
+// Botones de shadcn/ui (Button variant="outline", tal cual). No se usa el componente "Pagination" de shadcn/ui: está
+// hecho con enlaces (<a>), que no se pueden desactivar, y aquí los botones de la primera/última página se desactivan
+// y cuidan el foco.
 //
 // Teclado: si el botón que tenía el foco queda desactivado (ej. "Siguiente" al llegar a la
 // última página), el foco pasa al texto "Página X de Y" para que no se pierda.
@@ -51,7 +52,7 @@ export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef 
     <Button
       type="button"
       variant="outline"
-      className="btn-pagina min-w-[38px] px-2.5"
+      className="btn-pagina"
       data-pagina={destino}
       aria-label={etiqueta}
       disabled={deshabilitado}

@@ -48,13 +48,16 @@ describe('TablaOrdenes', () => {
 
 describe('IconoOrden (indicador ▲▼ de los títulos)', () => {
   /**
-   * Las flechas que dibuja: "arriba" / "abajo" y si van tenues. Guía de AIC (15/10/2026): sin transparencias (antes
-   * opacity 0.55, que daba un color fuera de la paleta); "tenue" = el ícono va en Border Gray (text-encabezado-icono).
+   * Las flechas que dibuja: "arriba" / "abajo" y si van tenues. Desde el pedido de Gustavo del 15/10/2026 (estilos
+   * naturales de shadcn/ui: se permiten las transparencias de los colores de la marca), "tenue" = el ícono va al 60 %
+   * del color del texto del encabezado (opacity-60; antes Border Gray con text-encabezado-icono, una variable propia
+   * que ya no existe). Contraste medido: 5,1:1 en claro y 3,3:1 en oscuro (WCAG pide 3:1 en íconos).
    */
   const flechas = (aria: 'none' | 'ascending' | 'descending') => {
     const html = renderToStaticMarkup(<IconoOrden aria={aria} />);
-    const tenue = /<svg[^>]*class="[^"]*\btext-encabezado-icono\b/.test(html);
-    expect(html).not.toContain('opacity');
+    const tenue = /<svg[^>]*class="[^"]*\bopacity-60\b/.test(html);
+    // Ninguna otra transparencia: solo la del ícono tenue.
+    expect(html.match(/opacity/g) ?? []).toHaveLength(tenue ? 1 : 0);
     return [...html.matchAll(/<path[^>]*d="M12 (4\.5|19\.5)[^"]*"[^>]*>/g)].map((m) => ({
       flecha: m[1] === '4.5' ? 'arriba' : 'abajo',
       tenue,
