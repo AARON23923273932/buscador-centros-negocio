@@ -203,7 +203,7 @@ export function FilaSinResultados({ columnas, hayDatos }: { columnas: number; ha
     ? 'No hay resultados con esa búsqueda o filtros. Prueba con menos palabras o pulsa “Limpiar filtros”.'
     : 'El Excel no tiene filas con datos todavía.';
   return (
-    <TableRow className="fila-vacia hover:bg-card">
+    <TableRow className="fila-vacia hover:bg-card hover:[&>td:first-child]:shadow-none">
       <TableCell colSpan={columnas} className="px-4 py-10 text-center whitespace-normal text-muted-foreground">
         {mensaje}
       </TableCell>

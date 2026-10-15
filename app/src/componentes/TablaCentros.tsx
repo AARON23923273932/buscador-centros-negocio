@@ -29,8 +29,13 @@ interface Props {
   alCopiar?: AlCopiar;
 }
 
-/** Fila de un centro abierto y la fila con sus órdenes: Light Blue (Dark Blue en modo oscuro), también al pasar el mouse. */
-const ABIERTA = 'bg-fila-abierta even:bg-fila-abierta hover:bg-fila-abierta';
+/**
+ * Fila de un centro abierto y la fila con sus órdenes, también con el mouse encima: fondo --fila-abierta con una raya
+ * izquierda de 4 px (--fila-abierta-marca), como la caja de nota de la guía. Claro: Light Blue + Primary Blue.
+ * Oscuro: Black + Light Blue (no Dark Blue: es el color del encabezado y el centro abierto parecía otra fila de títulos).
+ */
+const ABIERTA =
+  'bg-fila-abierta even:bg-fila-abierta hover:bg-fila-abierta [&>td:first-child]:shadow-[inset_4px_0_0_var(--fila-abierta-marca)] hover:[&>td:first-child]:shadow-[inset_4px_0_0_var(--fila-abierta-marca)]';
 
 export const TablaCentros = memo(function TablaCentros({
   grupos,

@@ -4,7 +4,8 @@ import { cn } from "cn"
 // Tabla de shadcn/ui con el formato de tablas de la guía de AIC (colores en src/estilos.css):
 //  - encabezado: fondo Primary Blue, texto blanco en negrita y centrado, bordes Dark Blue; se queda fijo arriba
 //    al bajar (sticky) dentro de la caja con scroll de la tabla;
-//  - celdas: bordes Border Gray; filas alternas Light Gray (tabla de datos); al pasar el mouse, Light Blue;
+//  - celdas: bordes Border Gray; filas alternas Light Gray (tabla de datos); al pasar el mouse, Light Blue (en
+//    modo oscuro, Black con una raya izquierda Light Blue: --fila-hover y --fila-hover-marca);
 //  - padding de la guía: encabezado 6 pt arriba/abajo y 4 pt a los lados (8 px / 5 px); datos 4 pt arriba/abajo
 //    y 6 pt a los lados (5 px / 8 px).
 // container={false}: sin la caja con scroll horizontal de shadcn (la app pone su propia caja con scroll: si
@@ -41,7 +42,10 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
       data-slot="table-row"
-      className={cn("bg-card even:bg-cebra hover:bg-fila-hover", className)}
+      className={cn(
+        "bg-card even:bg-cebra hover:bg-fila-hover hover:[&>td:first-child]:shadow-[inset_4px_0_0_var(--fila-hover-marca)]",
+        className
+      )}
       {...props}
     />
   )

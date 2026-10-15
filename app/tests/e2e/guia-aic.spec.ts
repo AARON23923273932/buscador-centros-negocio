@@ -227,6 +227,63 @@ test.describe('Guía de estilo oficial de AIC', () => {
     expect(await estilo(page, '#tabla-resultados thead th')).toMatchObject({ fondo: PALETA.darkBlue, texto: PALETA.white, peso: '700' });
     expect((await estilo(page, '#tabla-resultados tbody tr:nth-child(2)')).fondo).toBe(PALETA.primaryBlue);
   });
+
+  /**
+   * Fondo de una fila y la raya izquierda de su primera celda (sombra interior de 4 px; Tailwind agrega otras
+   * sombras vacías, transparentes, que no se ven), con el mouse donde esté.
+   */
+  const fila = (page: Page, selector: string) =>
+    page.locator(selector).first().evaluate((tr) => ({
+      fondo: getComputedStyle(tr).backgroundColor,
+      raya: /rgba?\([^)]*\) 4px 0px 0px 0px inset/.exec(getComputedStyle(tr.querySelector(':scope > td')!).boxShadow)?.[0] ?? 'ninguna',
+    }));
+  const raya = (color: string) => `${color} 4px 0px 0px 0px inset`;
+
+  test('"Por centro": el centro abierto no se confunde con un encabezado (claro y oscuro)', async ({ page }) => {
+    for (const tema of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: tema });
+      await abrir(page, '/centros');
+      const centro = page.locator('.fila-centro').nth(1); // fila par (en oscuro, Primary Blue antes de abrirla)
+      await centro.locator('.btn-expandir').click();
+      await expect(page.locator('.fila-detalle')).toBeVisible();
+      await page.locator('h1').hover(); // el mouse lejos de la tabla
+      const encabezado = (await estilo(page, '#tabla-resultados > thead th')).fondo;
+      const abierta = await fila(page, '.fila-centro.abierta');
+      const detalle = await fila(page, '.fila-detalle');
+      const encabezadoAnidado = (await estilo(page, '.fila-detalle .tabla-anidada thead th')).fondo;
+      if (tema === 'light') {
+        // Como la caja de nota de la guía: fondo Light Blue y raya izquierda Primary Blue.
+        expect(abierta).toEqual({ fondo: PALETA.lightBlue, raya: raya(PALETA.primaryBlue) });
+        expect(encabezado).toBe(PALETA.primaryBlue);
+      } else {
+        // Antes: fila abierta, encabezado y encabezado de sus órdenes, los tres Dark Blue.
+        expect(abierta).toEqual({ fondo: PALETA.black, raya: raya(PALETA.lightBlue) });
+        expect(encabezado).toBe(PALETA.darkBlue);
+      }
+      expect(detalle).toEqual(abierta); // la fila con sus órdenes sigue a la del centro
+      expect(abierta.fondo).not.toBe(encabezado);
+      expect(encabezadoAnidado).toBe(encabezado);
+      expect(encabezadoAnidado).not.toBe(detalle.fondo);
+      // Con el mouse encima, el centro abierto no cambia (ni pierde su raya).
+      await centro.locator('td').nth(2).hover();
+      expect(await fila(page, '.fila-centro.abierta')).toEqual(abierta);
+    }
+  });
+
+  test('modo oscuro: la fila con el mouse encima no se pinta del color del encabezado', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await abrir(page, '/ordenes');
+    for (const n of [1, 2]) {
+      const selector = `#tabla-resultados > tbody > tr:nth-child(${n})`;
+      await page.locator(`${selector} > td`).nth(2).hover();
+      expect(await fila(page, selector), `fila ${n}`).toEqual({ fondo: PALETA.black, raya: raya(PALETA.lightBlue) });
+    }
+    // En claro la fila con el mouse encima es Light Blue, sin raya (la "raya" es del mismo color que la fila).
+    await page.emulateMedia({ colorScheme: 'light' });
+    const selector = '#tabla-resultados > tbody > tr:nth-child(2)';
+    await page.locator(`${selector} > td`).nth(2).hover();
+    expect(await fila(page, selector)).toEqual({ fondo: PALETA.lightBlue, raya: raya(PALETA.lightBlue) });
+  });
 });
 
 // ---------------------------------------------------------------------------------------------------------------

@@ -117,7 +117,11 @@
      Border Gray; filas alternas Light Gray en tablas de datos). */
   --cebra: #f5f5f5;
   --fila-hover: #e8eef5;
+  /* Raya a la izquierda de la fila con el mouse encima: en claro, del mismo color que la fila (no se ve). */
+  --fila-hover-marca: #e8eef5;
+  /* Centro abierto ("Por centro"): como la caja de nota de la guía, fondo Light Blue y raya izquierda Primary Blue. */
   --fila-abierta: #e8eef5;
+  --fila-abierta-marca: #1e3a6e;
   --encabezado: #1e3a6e;
   --encabezado-texto: #ffffff;
   --encabezado-borde: #2c5282;
@@ -169,8 +173,13 @@
     --subtitulo: #e8eef5;
     --enlace: #e8eef5;
     --cebra: #1e3a6e;
-    --fila-hover: #2c5282;
-    --fila-abierta: #2c5282;
+    /* Fila con el mouse encima y centro abierto: fondo Black con raya izquierda Light Blue. No van en Dark Blue,
+       el color del encabezado: el centro abierto parecía otra fila de títulos y el encabezado de sus órdenes se
+       confundía con ella. */
+    --fila-hover: #000000;
+    --fila-hover-marca: #e8eef5;
+    --fila-abierta: #000000;
+    --fila-abierta-marca: #e8eef5;
     --encabezado: #2c5282;
     --encabezado-texto: #ffffff;
     --encabezado-borde: #1e3a6e;
@@ -212,8 +221,13 @@
   --subtitulo: #e8eef5;
   --enlace: #e8eef5;
   --cebra: #1e3a6e;
-  --fila-hover: #2c5282;
-  --fila-abierta: #2c5282;
+  /* Fila con el mouse encima y centro abierto: fondo Black con raya izquierda Light Blue. No van en Dark Blue,
+     el color del encabezado: el centro abierto parecía otra fila de títulos y el encabezado de sus órdenes se
+     confundía con ella. */
+  --fila-hover: #000000;
+  --fila-hover-marca: #e8eef5;
+  --fila-abierta: #000000;
+  --fila-abierta-marca: #e8eef5;
   --encabezado: #2c5282;
   --encabezado-texto: #ffffff;
   --encabezado-borde: #1e3a6e;
