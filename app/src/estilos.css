@@ -230,10 +230,12 @@
   --desactivado-borde: #666666;
 }
 
-/* En el celular: 16 px a cada lado. */
+/* Menos de 720 px: 16 px a cada lado en el celular vertical (hasta 400 px de ancho) y de ahí sube en línea recta
+   hasta empalmar con el 6 % de 720 px (43,2 px): sin salto al pasar a 720 px y nunca menos que antes (4 % del
+   ancho). Ej.: 375 px → 16 · 480 → 22,8 · 600 → 33 · 700 → 41,5 · 719 → 43,1. */
 @media (max-width: 44.9375rem) {
   :root {
-    --margen-lateral: 16px;
+    --margen-lateral: max(16px, 8.5vw - 18px);
   }
 }
 

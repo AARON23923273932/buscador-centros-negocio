@@ -125,6 +125,34 @@ test.describe('Diseño (pedido del supervisor)', () => {
     expect(celular.pagina).toBeLessThanOrEqual(celular.ventana);
   });
 
+  test('1. entre 400 y 719 px (celular horizontal, ventana angosta): el margen crece sin saltos y nunca es menor que antes', async ({ page }) => {
+    const medir = async (ancho: number) => {
+      await page.setViewportSize({ width: ancho, height: 700 });
+      await abrir(page, '/ordenes');
+      return page.evaluate(() => ({
+        margen: parseFloat(getComputedStyle(document.querySelector('#principal')!).paddingLeft),
+        buscador: document.querySelector('#form-busqueda')!.getBoundingClientRect().left,
+        pagina: document.documentElement.scrollWidth,
+        ventana: document.documentElement.clientWidth,
+      }));
+    };
+    let anterior = 0;
+    for (const ancho of [375, 400, 480, 600, 667, 700, 719]) {
+      const m = await medir(ancho);
+      const esperado = Math.max(16, 0.085 * ancho - 18); // max(16px, 8.5vw - 18px)
+      expect(m.margen, `margen a ${ancho} px`).toBeCloseTo(esperado, 0);
+      expect(m.margen, `a ${ancho} px no es menor que antes (clamp(16px, 4vw, 56px))`).toBeGreaterThanOrEqual(Math.max(16, ancho * 0.04) - 0.1);
+      expect(m.margen, `a ${ancho} px no baja al agrandar la ventana`).toBeGreaterThanOrEqual(anterior);
+      expect(m.buscador).toBeCloseTo(m.margen, 0); // el buscador empieza donde termina el margen
+      expect(m.pagina, `sin scroll horizontal a ${ancho} px`).toBeLessThanOrEqual(m.ventana);
+      anterior = m.margen;
+    }
+    // Sin salto al pasar de 719 a 720 px (antes de este ajuste: de 16 px a 43,2 px).
+    const a720 = await medir(720);
+    expect(a720.margen).toBeCloseTo(43.2, 0);
+    expect(a720.margen - anterior).toBeLessThan(1);
+  });
+
   test('2. contornos suaves: bordes de 1 px; anillo de foco solo con el teclado', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
