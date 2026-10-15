@@ -43,6 +43,17 @@ describe('separarOrdenes', () => {
     ]);
   });
 
+  it('otras formas comunes: "N.°" / "N.º" (RAE), "OC." y "O.C." con puntos, "OC/OS" como una sola orden', () => {
+    expect(separarOrdenes('OC N.° 3519348 OC N.º 3519349')).toEqual(['OC N.° 3519348', 'OC N.º 3519349']);
+    expect(separarOrdenes('OC. 123 OC. 456 OS. 7')).toEqual(['OC. 123', 'OC. 456', 'OS. 7']);
+    expect(separarOrdenes('O.C. 123 O.C. 456 o.s. N° 7 O. C. 8')).toEqual(['O.C. 123', 'O.C. 456', 'o.s. N° 7', 'O. C. 8']);
+    expect(separarOrdenes('OC/OS 123')).toEqual(['OC/OS 123']);
+    expect(separarOrdenes('OC/OS 123 OC 456')).toEqual(['OC/OS 123', 'OC 456']);
+    expect(separarOrdenes('OC 1/OS 2')).toEqual(['OC 1/', 'OS 2']); // dos órdenes (cada una con su número)
+    // Siguen sin cortarse: puntos dentro de otra palabra ("PRO.C 5") y "O C" sin punto.
+    expect(separarOrdenes('PRO.C 5 O C 6')).toEqual(['PRO.C 5 O C 6']);
+  });
+
   it('no pierde texto: lo de antes de la primera orden y los signos entre órdenes se conservan', () => {
     expect(separarOrdenes('Ver: OC 1, OC 2 / OS 3')).toEqual(['Ver:', 'OC 1,', 'OC 2 /', 'OS 3']);
     const lineas = separarOrdenes(REAL_7);
@@ -78,6 +89,17 @@ describe('contar órdenes ("N° de órdenes")', () => {
     expect(clavesDeOrdenes('Ver: OC 1')).toEqual(['oc1']); // "Ver:" no es una orden
     expect(clavesDeOrdenes('0004500100')).toEqual(['0004500100']); // sin "OC"/"OS": la celda entera, como antes
     expect(clavesDeOrdenes('')).toEqual([]);
+  });
+
+  it('con puntos, "N.°" o un texto después del número, sigue siendo la misma orden', () => {
+    const clave = clavesDeOrdenes('OC 3519348');
+    for (const forma of ['O.C. 3519348', 'OC. 3519348', 'OC N.° 3519348', 'oc n.º 3519348', 'OC 3519348 (parcial)', 'OC 3519348, pendiente']) {
+      expect(clavesDeOrdenes(forma), forma).toEqual(clave);
+    }
+    expect(new Set(clavesDeOrdenes('OC 123 (parcial) OC 123')).size).toBe(1);
+    expect(clavesDeOrdenes('OC-0000098263-2025')).toEqual(['oc00000982632025']); // guiones del número: fuera
+    expect(clavesDeOrdenes('OC 4500123A')).not.toEqual(clavesDeOrdenes('OC 4500123B')); // letras pegadas: cuentan
+    expect(clavesDeOrdenes('OC/OS 123')).toEqual(['ocos123']);
   });
 
   it('agruparPorCentro cuenta las órdenes separadas, sin repetir entre filas', () => {

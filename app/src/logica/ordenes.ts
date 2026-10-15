@@ -11,19 +11,32 @@
 
 import type { Segmento } from './filtros.ts';
 
+/** "OC" u "OS", también con puntos: "OC." · "O.C." · "O. S.". */
+const TIPO = String.raw`(?:O\.\s?|O)[CS]\.?`;
+/** Uno o dos tipos: "OC" u "OC/OS" ("OC/OS 123" es UNA orden). */
+const TIPOS = String.raw`${TIPO}(?:\s*\/\s*${TIPO})?`;
 /**
- * Dónde empieza una orden: "OC" u "OS" como palabra completa (mayúsculas o minúsculas) seguida del número, con
- * o sin "-", ":", "N°", "Nº", "No.", "Nro." o "#" en medio:
- *   OC 3519155 · OC N° 3519348 · OC-0000098263-2025 · OS-2026-0001 · oc #12 · OC No. 8702
+ * Lo que puede ir entre el tipo y el número: espacios, "-", ":" y "N°", "Nº", "N.°", "N.º", "No.", "Nro." o "#".
+ * (°: signo de grado U+00B0; º: ordinal U+00BA. Se escriben con su código para que no se confundan.)
+ */
+const SEPARACION = String.raw`[\s:-]*(?:(?:N\.?\s*[\u00b0\u00ba]|Nro\.?|No\.?|#)[\s:-]*)?`;
+
+/**
+ * Dónde empieza una orden: "OC" u "OS" como palabra completa (mayúsculas o minúsculas, con o sin puntos) seguida
+ * del número, con o sin SEPARACION en medio:
+ *   OC 3519155 · OC N° 3519348 · OC N.° 3519348 · OC-0000098263-2025 · OS-2026-0001 · oc #12 · OC No. 8702 ·
+ *   OC. 123 · O.C. 123 · OC/OS 123
  *  - Palabra completa: no corta dentro de otra palabra ("ROC 12", "BLOC 5", "OC" pegado a una letra o número).
  *  - El número es obligatorio: "OS de mantenimiento" no es una orden (no se corta).
  *  - "N°" y el guion van DESPUÉS del "OC": por eso nunca se corta "OC N° 3519348" ni "OC-0000098263-2025".
- * (°: signo de grado U+00B0; º: ordinal U+00BA. Se escriben con su código para que no se confundan.)
  */
-const INICIO_ORDEN = /(?<![\p{L}\p{N}_])(?:OC|OS)(?=[\s:-]*(?:(?:N\s*[\u00b0\u00ba]|Nro\.?|No\.?|#)[\s:-]*)?\d)/giu;
+const INICIO_ORDEN = new RegExp(String.raw`(?<![\p{L}\p{N}_])${TIPOS}(?=${SEPARACION}\d)`, 'giu');
 
-/** Lo que va entre "OC"/"OS" y el número (para reconocer la misma orden escrita de dos formas). */
-const PARTES_ORDEN = /^(OC|OS)[\s:-]*(?:(?:N\s*[\u00b0\u00ba]|Nro\.?|No\.?|#)[\s:-]*)?(.*)$/iu;
+/** El tipo y lo que va después de la SEPARACION (para reconocer la misma orden escrita de varias formas). */
+const PARTES_ORDEN = new RegExp(String.raw`^(${TIPOS})${SEPARACION}(.*)$`, 'iu');
+
+/** El número de la orden: lo que va pegado al principio (hasta un espacio, una coma, un punto y coma o un paréntesis). */
+const NUMERO_ORDEN = /^[^\s,;()]+/u;
 
 /** Tildes "sueltas" que deja normalize('NFD') (igual que en filtros.ts). */
 const MARCAS_TILDE = /[\u0300-\u036f]/g;
@@ -59,7 +72,8 @@ const normal = (texto: string): string => limpiarEspacios(texto.normalize('NFD')
 
 /**
  * Órdenes de una celda, listas para contarlas sin repetir ("N° de órdenes" de cada centro): una clave por orden.
- * La misma orden escrita de dos formas es UNA sola ("OC N° 3519348", "OC 3519348" y "oc-3519348" → "oc3519348").
+ * La misma orden escrita de varias formas es UNA sola ("OC N° 3519348", "OC 3519348", "O.C. 3519348",
+ * "oc-3519348" y "OC 3519348 (parcial)" → "oc3519348").
  * Si la celda no tiene órdenes reconocibles (ej. "0004500100"), toda la celda cuenta como una (como antes).
  * Lo que va antes de la primera orden (ej. "Ver:") no es una orden y no se cuenta.
  */
@@ -72,8 +86,10 @@ export function clavesDeOrdenes(texto: string): string[] {
   return inicios.map((desde, i) => {
     const orden = texto.slice(desde, inicios[i + 1] ?? texto.length);
     const partes = PARTES_ORDEN.exec(limpiarEspacios(orden));
-    const tipo = (partes?.[1] ?? '').toLowerCase();
-    const numero = normal(partes?.[2] ?? '').replace(/[^a-z0-9]/g, '');
+    // Tipo sin puntos ni espacios ("O.C." → "oc", "OC/OS" → "ocos") y solo el número, sin lo que venga después
+    // ("OC 123 (parcial)" y "OC N.° 123" → "oc123").
+    const tipo = (partes?.[1] ?? '').toLowerCase().replace(/[^a-z]/g, '');
+    const numero = normal(NUMERO_ORDEN.exec(partes?.[2] ?? '')?.[0] ?? '').replace(/[^a-z0-9]/g, '');
     return `${tipo}${numero}`;
   });
 }
