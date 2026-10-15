@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { abrir, usarExcel, vigilarErrores } from './ayuda.ts';
 import { usarConfigPruebas } from './config-pruebas.ts';
 
-// "Por orden / Por centro" es un ToggleGroup de shadcn/ui: cada opción es un botón role="radio" con aria-checked
+// "Por orden / Por centro" es un RadioGroup de shadcn/ui: cada opción es un botón role="radio" con aria-checked
 // (antes, <input type="radio" name="vista">). toBeChecked() revisa aria-checked igual que el "checked" de antes.
 
 test.beforeEach(async ({ context }) => {

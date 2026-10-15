@@ -1,11 +1,13 @@
 // Barra sobre la tabla: "Por orden / Por centro de negocio", el contador, filas por página y "Exportar a Excel".
 //
-// "Por orden / Por centro" es un ToggleGroup de shadcn/ui (Radix) de una sola opción: para los lectores de
-// pantalla es un grupo de opciones (role="radiogroup", cada una role="radio" con aria-checked). Con el teclado:
-// Tab llega a la opción elegida, las flechas pasan a la otra y Espacio o Enter la elige.
+// "Por orden / Por centro" es un RadioGroup de shadcn/ui (Radix) con forma de botones pegados: para los lectores
+// de pantalla es un grupo de opciones (role="radiogroup", cada una role="radio" con aria-checked) y se usa con el
+// teclado igual que los botones de opción del navegador: Tab llega a la opción elegida y las flechas pasan a la
+// otra Y la eligen (cambia la vista al instante); Espacio también elige. Si "Por centro" está desactivado (el
+// Excel no tiene columna de centro), las flechas lo saltan.
 import { Button } from '@/components/ui/button';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { RadioGroup, RadioGroupBoton } from '@/components/ui/radio-group';
 import type { Vista } from '../logica/tipos.ts';
 import { IconoDescargar } from './Iconos.tsx';
 
@@ -26,26 +28,22 @@ const esVista = (valor: string): valor is Vista => valor === 'orden' || valor ==
 export function BarraResultados(props: Props) {
   return (
     <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 max-escritorio:flex-col max-escritorio:items-stretch">
-      <ToggleGroup
-        type="single"
-        variant="outline"
-        spacing={0}
+      <RadioGroup
         id="selector-vista"
-        className="max-escritorio:w-full"
+        className="flex w-fit gap-0 max-escritorio:w-full"
         aria-label="Forma de ver los resultados"
         value={props.vista}
-        // Al pulsar la opción ya elegida, Radix la "desmarca" (valor ""): se ignora, siempre hay una vista.
         onValueChange={(valor) => {
           if (esVista(valor)) props.alCambiarVista(valor);
         }}
       >
-        <ToggleGroupItem value="orden" className="max-escritorio:flex-1">
+        <RadioGroupBoton value="orden" className="max-escritorio:flex-1">
           Por orden
-        </ToggleGroupItem>
-        <ToggleGroupItem value="centro" className="max-escritorio:flex-1" disabled={!props.vistaCentroDisponible}>
+        </RadioGroupBoton>
+        <RadioGroupBoton value="centro" className="max-escritorio:flex-1" disabled={!props.vistaCentroDisponible}>
           Por centro de negocio
-        </ToggleGroupItem>
-      </ToggleGroup>
+        </RadioGroupBoton>
+      </RadioGroup>
       <p id="contador" className="m-0 flex-[1_1_260px] text-sm text-muted-foreground max-escritorio:flex-none" aria-live="polite">
         {props.contador}
       </p>

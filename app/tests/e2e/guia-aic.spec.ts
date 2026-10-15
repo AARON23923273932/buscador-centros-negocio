@@ -191,6 +191,12 @@ test.describe('Guía de estilo oficial de AIC', () => {
     expect(nota).toMatchObject({ fondo: PALETA.lightBlue, bordeIzquierda: PALETA.primaryBlue, anchoBordeIzquierda: '4px', bordeArriba: PALETA.borderGray });
     // Opción elegida de "Por orden / Por centro": Primary Blue con texto blanco.
     expect(await estilo(page, '[role="radio"][aria-checked="true"]')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
+    // …también con el mouse encima (no se confunde con la otra opción, que con el mouse encima va en Light Blue).
+    await page.locator('[role="radio"][aria-checked="true"]').hover();
+    expect(await estilo(page, '[role="radio"][aria-checked="true"]')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
+    await page.locator('[role="radio"][aria-checked="false"]').hover();
+    expect(await estilo(page, '[role="radio"][aria-checked="false"]')).toMatchObject({ fondo: PALETA.lightBlue, texto: PALETA.primaryBlue });
+    expect(await estilo(page, '[role="radio"][aria-checked="true"]')).toMatchObject({ fondo: PALETA.primaryBlue, texto: PALETA.white });
 
     // Botón principal.
     await page.goto('/no-existe');

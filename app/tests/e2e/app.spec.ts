@@ -189,7 +189,7 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await abrir(otra, enlace);
     await expect(otra.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
     await expect(otra.getByLabel('Cliente', { exact: true })).toHaveValue(valorCliente);
-    // "Por orden / Por centro" es un ToggleGroup de shadcn/ui: cada opción es un botón role="radio" (aria-checked).
+    // "Por orden / Por centro" es un RadioGroup de shadcn/ui: cada opción es un botón role="radio" (aria-checked).
     await expect(otra.getByRole('radio', { name: 'Por centro de negocio' })).toBeChecked();
     await expect(otra.locator('#contador')).toContainText('centro');
   });
@@ -577,6 +577,78 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await page.getByRole('button', { name: /^Cliente/ }).focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#tabla-resultados thead th').nth(2)).toHaveAttribute('aria-sort', 'ascending');
+  });
+
+  // "Por orden / Por centro" es un grupo de opciones (radiogroup): como los botones de opción del sistema, Tab
+  // entra por la opción elegida y las FLECHAS eligen la otra (patrón de WAI-ARIA; antes eran <input type=radio>).
+  test('teclado: "Por orden / Por centro" se elige con las flechas; Tab entra por la opción elegida', async ({ page }) => {
+    await abrir(page, '/ordenes');
+    const grupo = page.getByRole('radiogroup', { name: 'Forma de ver los resultados' });
+    const porOrden = grupo.getByRole('radio', { name: 'Por orden' });
+    const porCentro = grupo.getByRole('radio', { name: 'Por centro de negocio' });
+    // Con Tab de verdad (desde el control anterior) se llega a la opción elegida.
+    await porOrden.focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(porOrden).not.toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(porOrden).toBeFocused();
+    await expect(porOrden).toHaveAttribute('aria-checked', 'true');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page).toHaveURL(/\/centros$/);
+    await expect(porCentro).toBeFocused();
+    await expect(porCentro).toHaveAttribute('aria-checked', 'true');
+    await expect(porOrden).toHaveAttribute('aria-checked', 'false');
+    await expect(page.locator('#contador')).toContainText('centro');
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(page).toHaveURL(/\/ordenes$/);
+    await expect(porOrden).toBeFocused();
+    await expect(porOrden).toHaveAttribute('aria-checked', 'true');
+    await expect(porCentro).toHaveAttribute('aria-checked', 'false');
+
+    // Abajo/arriba también (y vuelve a empezar al llegar al final); Tab sale del grupo y Shift+Tab vuelve a la elegida.
+    await page.keyboard.press('ArrowDown');
+    await expect(page).toHaveURL(/\/centros$/);
+    await page.keyboard.press('Tab');
+    await expect(porCentro).not.toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(porCentro).toBeFocused();
+  });
+
+  test('teclado: sin columna de centro, "Por centro" está desactivado y las flechas no cambian la vista', async ({ page }) => {
+    await usarExcel(page, [
+      ['Cliente', 'Orden de compra'],
+      ['Cliente Demo A', 'OC-1'],
+    ]);
+    await abrir(page, '/ordenes');
+    const porOrden = page.getByRole('radio', { name: 'Por orden' });
+    await expect(page.getByRole('radio', { name: 'Por centro de negocio' })).toBeDisabled();
+    await porOrden.focus();
+    for (const tecla of ['ArrowRight', 'ArrowLeft', 'ArrowDown']) {
+      await page.keyboard.press(tecla);
+      await expect(porOrden).toBeFocused();
+      await expect(porOrden).toHaveAttribute('aria-checked', 'true');
+    }
+    await expect(page).toHaveURL(/\/ordenes$/);
+  });
+
+  test('teclado: "Columnas detectadas en el Excel" se abre y se cierra con Enter y con Espacio', async ({ page }) => {
+    await abrir(page, '/ordenes');
+    const boton = page.getByRole('button', { name: 'Columnas detectadas en el Excel' });
+    await boton.focus();
+    await expect(boton).toHaveAttribute('aria-expanded', 'false');
+    await page.keyboard.press('Enter');
+    await expect(boton).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#info-columnas')).toBeVisible();
+    await page.keyboard.press('Enter');
+    await expect(boton).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#info-columnas')).toBeHidden();
+    await page.keyboard.press('Space');
+    await expect(boton).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('Space');
+    await expect(boton).toHaveAttribute('aria-expanded', 'false');
+    await expect(boton).toBeFocused();
   });
 });
 
