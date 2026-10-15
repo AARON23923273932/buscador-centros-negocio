@@ -48,4 +48,26 @@ describe('documentación', () => {
     });
     expect(faltan).toEqual([]);
   });
+
+  // shadcn/ui: la receta para agregar componentes usa la versión de la herramienta instalada en el proyecto (la
+  // que generó los componentes actuales); "shadcn@latest" descargaría otra.
+  it('la receta de shadcn/ui usa la herramienta instalada ("npx.cmd shadcn add", sin @latest)', () => {
+    const malas: string[] = [];
+    for (const doc of DOCUMENTOS) {
+      for (const { numero, linea } of lineasPowerShell(leer(doc))) {
+        if (/shadcn@latest\s+add\b/.test(linea)) malas.push(`${doc}:${numero}: ${linea.trim()}`);
+      }
+    }
+    expect(malas).toEqual([]);
+    expect(lineasPowerShell(leer('README.md')).some(({ linea }) => /^\s*npx\.cmd shadcn add \w/.test(linea))).toBe(true);
+  });
+
+  it('el paquete "shadcn" se usa al compilar (shadcn/tailwind.css): queda instalado y el README lo explica', () => {
+    expect(leer('app/src/estilos.css')).toContain('@import "shadcn/tailwind.css";');
+    const { devDependencies } = JSON.parse(leer('app/package.json')) as { devDependencies: Record<string, string> };
+    expect(devDependencies.shadcn).toBeTruthy();
+    const readme = leer('README.md');
+    expect(readme).toContain('shadcn/tailwind.css');
+    expect(readme).not.toMatch(/`shadcn` \(solo para agregar componentes/);
+  });
 });

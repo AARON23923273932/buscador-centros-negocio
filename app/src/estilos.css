@@ -33,7 +33,8 @@
 
 @theme inline {
   /* Letra única de la guía: Calibri. Carlito es su equivalente libre (mismas medidas) y Segoe UI la de Windows
-     si faltara; no se descargan letras de internet (la política de seguridad solo permite archivos propios). */
+     si faltara; no se descargan letras de internet (la política de seguridad solo permite archivos propios).
+     La app no trae la letra adentro: en Android, iPhone y Mac sin Office se ve la del sistema (README, 8.1). */
   --font-sans: Calibri, Carlito, "Segoe UI", sans-serif;
   --font-heading: var(--font-sans);
   --font-mono: var(--font-sans);
