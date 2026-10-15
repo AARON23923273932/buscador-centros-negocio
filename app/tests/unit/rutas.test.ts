@@ -110,7 +110,9 @@ describe('detalle de un centro (buscarCentro)', () => {
     expect(g?.codigo).toBe('A2338PY01');
     expect(g?.filas.map((f) => f.id)).toEqual([2, 4, 5]);
     expect(g?.clientes).toEqual(['Cliente 1', 'Cliente 3']);
-    expect(g?.ordenes).toBe(3); // una celda con varias órdenes juntas cuenta como una (igual que "Por centro")
+    // Una celda con varias órdenes juntas ("OC N° 45001 OC N° 45002") cuenta cada una (pedido del supervisor,
+    // 15/10/2026; antes contaba como una): 45001, 45002, OS-7 y OS-8 (igual que "Por centro").
+    expect(g?.ordenes).toBe(4);
   });
 
   it('estados distintos, sin repetir (como el desplegable "Estado")', () => {

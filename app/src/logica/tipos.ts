@@ -86,7 +86,7 @@ export interface Grupo {
   codigo: string;
   descripcion: string;
   clientes: string[];
-  /** Cantidad de órdenes distintas. */
+  /** Cantidad de órdenes distintas (las que vienen juntas en una celda cuentan por separado: ver ordenes.ts). */
   ordenes: number;
   filas: Fila[];
   /** Fila del Excel donde aparece por primera vez (desempate al ordenar). */

@@ -6,7 +6,7 @@ import { codigoEnlazable, rutaDetalleCentro, type EstadoNavegacion } from '../lo
 import type { Celda, Columna, Direccion, Fila } from '../logica/tipos.ts';
 import { claseColumna, estadoOrden } from '../logica/tabla.ts';
 import { IconoCopiar, IconoOrden } from './Iconos.tsx';
-import { Resaltado } from './Resaltado.tsx';
+import { Resaltado, ResaltadoOrdenes } from './Resaltado.tsx';
 
 /** Copiar un código (lo hace la pantalla principal: copia y avisa). */
 export type AlCopiar = (texto: string) => void;
@@ -86,6 +86,8 @@ export function ContenidoCelda({
   enlazar?: boolean;
 }) {
   const texto = celda?.t ?? '';
+  // Órdenes: una por línea (una celda del Excel puede traer varias: "OC 3519155 OC 3519252…").
+  if (columna.campo === 'ordenCompra') return <ResaltadoOrdenes texto={texto} terminos={terminos} />;
   const contenido = <Resaltado texto={texto} terminos={terminos} />;
   if (columna.campo === 'codigoCentro' && texto) {
     return (

@@ -2,7 +2,7 @@
 // renderToStaticMarkup = el HTML que React pondría en la página (sin abrir un navegador).
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { Resaltado } from '../../src/componentes/Resaltado.tsx';
+import { Resaltado, ResaltadoOrdenes } from '../../src/componentes/Resaltado.tsx';
 
 const html = (texto: string, terminos: string[]) => renderToStaticMarkup(<Resaltado texto={texto} terminos={terminos} />);
 
@@ -34,5 +34,22 @@ describe('escapado y resaltado (componente Resaltado)', () => {
   it('sin términos solo escapa', () => {
     expect(html('a & b', [])).toBe('a &amp; b');
     expect(html('', ['x'])).toBe(''); // (segmentosResaltado con null/undefined: filtros.test.ts)
+  });
+});
+
+describe('celda de órdenes (componente ResaltadoOrdenes)', () => {
+  const ordenes = (texto: string, terminos: string[]) => renderToStaticMarkup(<ResaltadoOrdenes texto={texto} terminos={terminos} />);
+
+  it('varias órdenes: una línea (bloque) por orden, con el resaltado dentro de su línea', () => {
+    expect(ordenes('OC 533 OC N° 3519522', ['3519522'])).toBe(
+      '<span class="orden-linea block">OC 533</span><span class="orden-linea block">OC N° <mark>3519522</mark></span>',
+    );
+  });
+  it('una sola orden (o ninguna reconocible): igual que antes, sin líneas', () => {
+    expect(ordenes('OC-0000098263-2025', ['2025'])).toBe('OC-0000098263-<mark>2025</mark>');
+    expect(ordenes('0004500100', [])).toBe('0004500100');
+  });
+  it('también escapa el texto del Excel', () => {
+    expect(ordenes('OC 1 <b>OC 2</b>', [])).toBe('<span class="orden-linea block">OC 1 &lt;b&gt;</span><span class="orden-linea block">OC 2&lt;/b&gt;</span>');
   });
 });

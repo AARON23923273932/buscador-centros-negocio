@@ -26,6 +26,7 @@ import type {
   Pagina,
 } from './tipos.ts';
 import { en } from './listas.ts';
+import { clavesDeOrdenes } from './ordenes.ts';
 
 /** Comparador de textos en español: "a" = "á", "2" < "10". */
 const COMPARADOR = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
@@ -213,6 +214,7 @@ interface GrupoEnConstruccion extends Grupo {
 
 /**
  * Agrupa las filas por centro de negocio (por código; si no hay código, por descripción).
+ * "ordenes" = órdenes distintas del centro, contando por separado las que vienen juntas en una celda.
  * Devuelve los grupos en el orden en que aparecen en el Excel.
  */
 export function agruparPorCentro(filas: readonly Fila[]): Grupo[] {
@@ -244,10 +246,12 @@ export function agruparPorCentro(filas: readonly Fila[]): Grupo[] {
       g._clientesVistos.add(fila._norm.cliente);
       g.clientes.push(cliente);
     }
-    const orden = fila._norm.ordenCompra;
-    if (orden && !g._ordenesVistas.has(orden)) {
-      g._ordenesVistas.add(orden);
-      g.ordenes += 1;
+    // Una celda puede traer varias órdenes ("OC 3519155 OC 3519252…"): se cuenta cada una (ver ordenes.ts).
+    for (const orden of clavesDeOrdenes(fila.campos.ordenCompra)) {
+      if (!g._ordenesVistas.has(orden)) {
+        g._ordenesVistas.add(orden);
+        g.ordenes += 1;
+      }
     }
   }
   return [...grupos.values()].map(({ _clientesVistos, _ordenesVistas, ...g }) => g);
