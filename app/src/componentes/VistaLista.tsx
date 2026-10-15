@@ -271,8 +271,15 @@ export function VistaLista() {
         alExportar={() => void exportar()}
       />
 
-      {/* Solo se ve al llegar con la tecla Tab: evita recorrer todos los botones de la tabla. */}
-      <Button type="button" id="btn-saltar-paginacion" className="sr-only focus:not-sr-only focus:mb-2" onClick={saltarAPaginacion}>
+      {/* Solo se ve al llegar con la tecla Tab: evita recorrer todos los botones de la tabla. "not-sr-only" deja el
+          alto y el espacio interior en "auto" y 0: focus:h-9 focus:px-2.5 le devuelven las medidas del Button de
+          shadcn/ui (solo medidas). */}
+      <Button
+        type="button"
+        id="btn-saltar-paginacion"
+        className="sr-only focus:not-sr-only focus:mb-2 focus:h-9 focus:px-2.5"
+        onClick={saltarAPaginacion}
+      >
         Saltar a la paginación
       </Button>
 

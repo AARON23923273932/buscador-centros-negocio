@@ -13,6 +13,10 @@
        Las transparencias que agregan los componentes (ej. hover:bg-primary/80, ring-ring/50) y sus sombras
        neutras (negro con poca opacidad) son de esos mismos colores. Tabla de variables con el contraste
        medido (WCAG 2.1 AA): README, sección 8.1.
+     - Reglas GLOBALES de este archivo que también alcanzan a los componentes (README 8.2): la "manito" en los
+       botones (receta de shadcn/ui para Tailwind v4), el texto seleccionado con la marca (::selection) y dos de
+       accesibilidad que solo actúan si la persona las pidió en su sistema: menos movimiento
+       (prefers-reduced-motion) y alto contraste (forced-colors).
    Modo oscuro: shadcn/ui trae su variante "dark:"; aquí se conecta al botón ☀️/🌙 (data-tema) y sus variables
    se arman con la misma paleta (por confirmar con Gustavo).
    ============================================================================= */
@@ -97,7 +101,10 @@
   --destructive: #1e3a6e; /* errores: la paleta no tiene rojo (la guía no permite colores fuera de ella) */
   --border: #cccccc; /* Border Gray: bordes de tablas, tarjetas y botones */
   --input: #666666; /* Gray: borde de cajas y desplegables (5,7:1: WCAG pide 3:1 para ver dónde está la caja) */
-  --ring: #3b6baa; /* Medium Blue: borde y anillo de foco con el teclado (5,4:1 sobre White) */
+  /* Medium Blue: foco con el teclado. El BORDE (1 px, sólido) es el que cumple WCAG: 5,4:1 sobre White y 5,0:1 sobre
+     Light Gray. El anillo de 3 px de shadcn/ui va al 50 % (ring-ring/50): 2,1:1 sobre White, es decorativo (ningún
+     azul de la paleta llega a 3:1 al 50 % sobre blanco; por confirmar con Gustavo). */
+  --ring: #3b6baa;
 
   /* Columna de contenido (pedido del supervisor, 15/10/2026: "un poco más" de margen a los lados): ancho
      máximo de 1120 px y margen lateral que crece con la pantalla (6 % del ancho, entre 20 y 96 px). */
@@ -106,7 +113,10 @@
 }
 
 /* ---------- Modo oscuro (la guía no lo define; por confirmar con Gustavo) ----------
-   Mismo bloque dos veces: modo del sistema (si la persona no eligió claro) y modo elegido con el botón. */
+   Mismo bloque dos veces: modo del sistema (si la persona no eligió claro) y modo elegido con el botón.
+   --ring = Light Blue (no Medium Blue): sobre Black y sobre las filas alternas Primary Blue, Medium Blue casi no se
+   veía (borde 3,9:1 y 2,1:1; anillo al 50 %: 1,7:1 y 1,4:1). Con Light Blue: borde 18,0:1 y 9,5:1; anillo al 50 %:
+   4,7:1 y 3,6:1. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
     color-scheme: dark;
@@ -127,7 +137,7 @@
     --destructive: #e8eef5;
     --border: rgb(255 255 255 / 10%);
     --input: #666666;
-    --ring: #3b6baa;
+    --ring: #e8eef5;
   }
 }
 :root[data-tema="oscuro"] {
@@ -149,7 +159,7 @@
   --destructive: #e8eef5;
   --border: rgb(255 255 255 / 10%);
   --input: #666666;
-  --ring: #3b6baa;
+  --ring: #e8eef5;
 }
 
 /* Menos de 720 px: 16 px a cada lado en el celular vertical (hasta 400 px de ancho) y de ahí sube en línea recta
@@ -182,7 +192,8 @@
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
   }
-  /* Tailwind v4 dejó los botones con la flecha del mouse: la guía de Tailwind recomienda volver a la "manito". */
+  /* Tailwind v4 dejó los botones con la flecha del mouse: la guía de shadcn/ui para Tailwind v4 recomienda esta regla
+     para volver a la "manito". Es global: alcanza también al Button de shadcn/ui (solo el cursor). */
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -212,11 +223,18 @@
   mark {
     @apply rounded-[2px] bg-primary px-px text-primary-foreground;
   }
-  /* Texto seleccionado: colores de la marca en vez del azul del navegador. */
+  /* Texto seleccionado: colores de la marca en vez del azul del navegador. Es una regla GLOBAL: también pinta la
+     selección dentro de los componentes de shadcn/ui (ej. el texto elegido en el buscador, un Input), que no traen
+     colores de selección propios. Es parte del tema de marca (README 8.1 y 8.2). */
   ::selection {
     background-color: var(--primary);
     color: var(--primary-foreground);
   }
+  /* Quien pidió "reducir el movimiento" en su sistema (Windows: Configuración → Accesibilidad → Efectos visuales →
+     Efectos de animación): sin transiciones ni fundidos (WCAG 2.3.3). Es una regla GLOBAL (con !important, para
+     ganarles a las clases de los componentes): alcanza también a los de shadcn/ui (Button, Input, TableRow, Tooltip…)
+     y SOLO actúa con esa preferencia; para los demás quedan las transiciones de shadcn/ui. Excepción de
+     accesibilidad, como la de forced-colors (README 8.2; por confirmar con Gustavo). */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

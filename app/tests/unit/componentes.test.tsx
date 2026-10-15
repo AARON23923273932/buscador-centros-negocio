@@ -152,6 +152,10 @@ describe('Filtros', () => {
     const codigo = screen.getByLabelText('Código') as HTMLInputElement;
     expect(codigo.disabled).toBe(true);
     expect(codigo.title).toBe('No se encontró esta columna en el Excel');
+    // El Input de shadcn/ui desactivado no recibe el mouse (disabled:pointer-events-none): el motivo va también en la
+    // caja del campo, que sí lo recibe, para que aparezca al pasar el mouse. Los campos que se pueden usar no lo llevan.
+    expect(codigo.parentElement?.title).toBe('No se encontró esta columna en el Excel');
+    expect((screen.getByLabelText('Descripción') as HTMLInputElement).parentElement?.hasAttribute('title')).toBe(false);
   });
 
   it('Enter en una caja "contiene" filtra ya; el botón "Filtros" abre el panel en el celular', () => {

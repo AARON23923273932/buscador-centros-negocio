@@ -253,6 +253,13 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     const saltar = page.getByRole('button', { name: 'Saltar a la paginación' });
     await expect(saltar).toBeFocused();
     await expect(saltar).toBeVisible();
+    // Al aparecer tiene las medidas de un Button de shadcn/ui (como "Exportar a Excel"): "not-sr-only" lo dejaba sin
+    // alto ni espacio interior y el texto tocaba el borde.
+    const medidas = (el: Element) => {
+      const e = getComputedStyle(el);
+      return { alto: e.height, izquierda: e.paddingLeft, derecha: e.paddingRight };
+    };
+    expect(await saltar.evaluate(medidas)).toEqual(await page.getByRole('button', { name: 'Exportar a Excel' }).evaluate(medidas));
     await page.keyboard.press('Enter');
     await expect(page.getByRole('button', { name: 'Página siguiente' })).toBeFocused();
   });
@@ -541,6 +548,20 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(page.getByLabel('Cliente', { exact: true })).toBeDisabled();
     await expect(page.getByLabel('Código', { exact: true })).toBeEnabled();
     await expect(page.locator('#tabla-resultados tbody')).toContainText('Algo');
+
+    // El motivo aparece al pasar el mouse por el filtro desactivado. El Input y el NativeSelect de shadcn/ui
+    // desactivados no reciben el mouse (disabled:pointer-events-none): el mouse cae en la caja del campo, que lleva el
+    // mismo "title". El control conserva el suyo (lo leen los lectores de pantalla).
+    for (const selector of ['#f-cliente', '#f-descripcion']) {
+      const bajoElMouse = await page.locator(selector).evaluate((control) => {
+        const caja = control.getBoundingClientRect();
+        const debajo = document.elementFromPoint(caja.left + caja.width / 2, caja.top + caja.height / 2)!;
+        return { ayuda: debajo.closest('[title]')?.getAttribute('title') ?? null, propio: control.getAttribute('title') };
+      });
+      expect(bajoElMouse, selector).toEqual({ ayuda: 'No se encontró esta columna en el Excel', propio: 'No se encontró esta columna en el Excel' });
+    }
+    // Un filtro que sí se puede usar no lleva ese "title".
+    expect(await page.locator('#f-codigo').evaluate((control) => control.closest('[title]')?.getAttribute('title') ?? null)).toBeNull();
   });
 
   test('centro escrito una sola vez (filas de abajo vacías): sus órdenes quedan juntas en "Por centro"', async ({ page }) => {
@@ -594,21 +615,25 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(porOrden).toBeFocused();
     await expect(porOrden).toHaveAttribute('aria-checked', 'true');
 
-    await page.keyboard.press('ArrowRight');
+    // Las flechas se pulsan como una persona (la tecla queda abajo unos 50 ms): el RadioGroup de Radix mueve el foco
+    // en un setTimeout y elige la opción solo si la flecha SIGUE pulsada en ese momento. Sin "delay", Playwright
+    // suelta la tecla al instante y, con la computadora ocupada, a veces la soltaba antes (prueba inestable).
+    const flecha = (tecla: string) => page.keyboard.press(tecla, { delay: 50 });
+    await flecha('ArrowRight');
     await expect(page).toHaveURL(/\/centros$/);
     await expect(porCentro).toBeFocused();
     await expect(porCentro).toHaveAttribute('aria-checked', 'true');
     await expect(porOrden).toHaveAttribute('aria-checked', 'false');
     await expect(page.locator('#contador')).toContainText('centro');
 
-    await page.keyboard.press('ArrowLeft');
+    await flecha('ArrowLeft');
     await expect(page).toHaveURL(/\/ordenes$/);
     await expect(porOrden).toBeFocused();
     await expect(porOrden).toHaveAttribute('aria-checked', 'true');
     await expect(porCentro).toHaveAttribute('aria-checked', 'false');
 
     // Abajo/arriba también (y vuelve a empezar al llegar al final); Tab sale del grupo y Shift+Tab vuelve a la elegida.
-    await page.keyboard.press('ArrowDown');
+    await flecha('ArrowDown');
     await expect(page).toHaveURL(/\/centros$/);
     await page.keyboard.press('Tab');
     await expect(porCentro).not.toBeFocused();

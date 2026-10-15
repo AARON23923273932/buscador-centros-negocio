@@ -3,10 +3,15 @@
 //      va en una columna de 1120 px como máximo, con un margen lateral del 6 % del ancho (entre 20 y 96 px).
 //   2. Contornos suaves y foco visible con el teclado. Desde el último pedido del 15/10/2026 ("que use los estilos
 //      naturales de shadcn … sin cambios, solo agregando el estilo de marca") son los de shadcn/ui tal cual: bordes de
-//      1 px y, con el teclado (:focus-visible), el borde pasa al color del anillo (--ring, Medium Blue) más un anillo
-//      de 3 px de ese color al 50 % (focus-visible:border-ring ring-3 ring-ring/50). El color --ring contrasta al menos
-//      3:1 con el fondo en claro y en oscuro. En los botones el anillo aparece solo con el teclado; en las cajas de texto
-//      y desplegables, como en shadcn/ui, también al hacer clic (el navegador las marca :focus-visible).
+//      1 px y, con el teclado (:focus-visible), el borde pasa al color del anillo (--ring: Medium Blue en claro, Light
+//      Blue en oscuro) más un anillo de 3 px de ese color al 50 % (focus-visible:border-ring ring-3 ring-ring/50).
+//      Se mide tal como se dibuja (con su transparencia) sobre la página, las tarjetas y las filas alternas: el BORDE
+//      contrasta al menos 3:1 en claro y en oscuro (WCAG 1.4.11); el anillo al 50 %, también en oscuro; en claro es
+//      decorativo (2:1: ningún azul de la paleta llega a 3:1 al 50 % sobre blanco). En los botones el anillo aparece
+//      solo con el teclado; en las cajas de texto y desplegables, como en shadcn/ui, también al hacer clic (el
+//      navegador las marca :focus-visible).
+//   4. Tamaño de letra: el de los componentes de shadcn/ui (14 px en tablas, botones y, en escritorio, cajas) y el del
+//      navegador en el resto (16 px).
 //   3. Íconos alineados con su texto (mismo tamaño, desfase vertical de 1 px o menos).
 import { expect, test, type Page } from '@playwright/test';
 import { abrir } from './ayuda.ts';
@@ -18,8 +23,8 @@ test.beforeEach(async ({ context }) => {
   await prepararColores(context);
 });
 
-/** Anillo de foco de shadcn/ui: --ring (Medium Blue, en claro y en oscuro) al 50 %, 3 px alrededor. */
-const ANILLO = al(PALETA.mediumBlue, 0.5);
+/** Color del foco (--ring): Medium Blue en claro; Light Blue en oscuro (Medium Blue casi no se veía sobre el negro). */
+const RING = { claro: PALETA.mediumBlue, oscuro: PALETA.lightBlue } as const;
 
 /** Diferencia en px entre el centro vertical de un ícono y el centro del texto a su lado. */
 async function desfase(page: Page, selectorIcono: string, selectorTexto: string): Promise<{ tamano: number[]; desfase: number }> {
@@ -63,24 +68,29 @@ const estiloFoco = (page: Page) =>
     return { visible: el.matches(':focus-visible'), borde: window.normalizarColor(e.borderTopColor), anillo: anillo?.color ?? 'ninguno' };
   });
 
-/** Estado de foco esperado con el teclado: borde --ring y anillo de shadcn/ui. */
-const CON_TECLADO = { visible: true, borde: PALETA.mediumBlue, anillo: ANILLO };
+/** Estado de foco esperado con el teclado: borde --ring y anillo de shadcn/ui (--ring al 50 %, 3 px alrededor). */
+const conTeclado = (ring: string) => ({ visible: true, borde: ring, anillo: al(ring, 0.5) });
+const CON_TECLADO = conTeclado(RING.claro);
+const CON_TECLADO_OSCURO = conTeclado(RING.oscuro);
 
-/** Contraste (WCAG) del color del anillo (--ring) sobre el fondo de la página y sobre las tarjetas. */
-const contrastesAnillo = (page: Page) =>
+/**
+ * Contraste (WCAG) del foco del control que tiene el foco, TAL COMO SE DIBUJA: su borde (1 px, sólido) y el anillo de
+ * 3 px (box-shadow, con su transparencia: ring-ring/50), cada uno mezclado sobre los fondos donde puede quedar un
+ * control: la página (--background), una tarjeta (--card) y una fila alterna (--muted). Devuelve el menor de cada uno.
+ * (Antes se medía la variable --ring opaca, y el anillo al 50 % pasaba la prueba aunque no llegara a 3:1.)
+ */
+const contrastesFoco = (page: Page) =>
   page.evaluate(() => {
-    const rgba = (texto: string) => {
-      const prueba = document.createElement('div');
-      prueba.style.color = texto;
-      document.body.append(prueba);
-      const valores = getComputedStyle(prueba).color.match(/[\d.]+/g)!.map(Number);
-      prueba.remove();
-      return [valores[0]!, valores[1]!, valores[2]!, valores[3] ?? 1];
+    const e = getComputedStyle(document.activeElement!);
+    /** "rgb(r, g, b) / alfa" (de normalizarColor) → canales y alfa. */
+    const partes = (normalizado: string) => {
+      const [rgb, alfa] = normalizado.split(' / ');
+      return { canales: (rgb!.match(/\d+/g) ?? []).map(Number), alfa: alfa === undefined ? 1 : Number(alfa) };
     };
     const variable = (nombre: string) => {
       const valor = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
       if (!valor) throw new Error(`Falta la variable de CSS ${nombre}`); // (si no, se compararía con el color heredado)
-      return rgba(valor);
+      return partes(window.normalizarColor(valor)).canales;
     };
     const luz = ([r, g, b]: number[]) => {
       const lineal = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
@@ -90,11 +100,15 @@ const contrastesAnillo = (page: Page) =>
       const [x, y] = [luz(a), luz(b)].sort((m, n) => n - m);
       return (x! + 0.05) / (y! + 0.05);
     };
-    const anillo = variable('--ring');
-    const sobre = (fondo: number[]) => fondo.slice(0, 3).map((c, i) => anillo[3]! * anillo[i]! + (1 - anillo[3]!) * c);
-    const fondo = variable('--background');
-    const tarjeta = variable('--card');
-    return { fondo: contraste(sobre(fondo), fondo), tarjeta: contraste(sobre(tarjeta), tarjeta) };
+    type Color = { canales: number[]; alfa: number };
+    const sobre = ({ canales, alfa }: Color, fondo: number[]) => canales.map((v, i) => alfa * v + (1 - alfa) * fondo[i]!);
+    const anillo = window.sombrasDe(e.boxShadow).find((s) => s.medidas === '0px 0px 0px 3px');
+    if (!anillo) throw new Error('El control con el foco no tiene el anillo de 3 px');
+    const borde = partes(window.normalizarColor(e.borderTopColor));
+    const halo = partes(anillo.color);
+    const fondos = ['--background', '--card', '--muted'].map(variable);
+    const menor = (color: Color) => Math.min(...fondos.map((fondo) => contraste(sobre(color, fondo), fondo)));
+    return { borde: menor(borde), anillo: menor(halo), alfaAnillo: halo.alfa };
   });
 
 test.describe('Diseño (pedido del supervisor)', () => {
@@ -181,10 +195,13 @@ test.describe('Diseño (pedido del supervisor)', () => {
     const exportar = page.getByRole('button', { name: 'Exportar a Excel' });
     await expect(exportar).toBeFocused();
     expect(await estiloFoco(page)).toEqual(CON_TECLADO);
-    // El color del anillo se distingue: al menos 3:1 con el fondo de la página y con el de las tarjetas.
-    const contraste = await contrastesAnillo(page);
-    expect(contraste.fondo).toBeGreaterThanOrEqual(3);
-    expect(contraste.tarjeta).toBeGreaterThanOrEqual(3);
+    // Tal como se dibuja, sobre la página, las tarjetas y las filas alternas: el BORDE de foco (Medium Blue sólido) se
+    // distingue al menos 3:1 (5,0:1 sobre Light Gray). El anillo de 3 px va al 50 % y en claro es decorativo (2,0:1;
+    // ningún azul de la paleta llega a 3:1 al 50 % sobre blanco: por confirmar con Gustavo, README 8.1).
+    const contraste = await contrastesFoco(page);
+    expect(contraste.alfaAnillo).toBe(0.5);
+    expect(contraste.borde).toBeGreaterThanOrEqual(3);
+    expect(contraste.anillo).toBeGreaterThanOrEqual(2);
     // Alto contraste de Windows (forced-colors): ahí no se dibujan sombras; un contorno de 2 px toma el lugar del anillo
     // (regla de estilos.css que solo se aplica en ese modo).
     expect(await exportar.evaluate((b) => getComputedStyle(b).outlineStyle)).toBe('none'); // modo normal: el de shadcn/ui
@@ -215,18 +232,28 @@ test.describe('Diseño (pedido del supervisor)', () => {
     await actualizar.click();
     expect(await estiloFoco(page)).toMatchObject({ visible: false, anillo: 'ninguno' });
 
-    // Con el teclado: borde y anillo Medium Blue (--ring también en oscuro: 3,9:1 sobre el negro).
+    // Con el teclado: borde y anillo Light Blue (--ring del tema oscuro). Con Medium Blue (antes) el anillo al 50 %
+    // daba 1,7:1 sobre el negro y 1,4:1 sobre las filas alternas Primary Blue: casi no se veía.
     await page.getByLabel('Filas por página').focus();
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Exportar a Excel' })).toBeFocused();
-    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
-    const contraste = await contrastesAnillo(page);
-    expect(contraste.fondo).toBeGreaterThanOrEqual(3);
-    expect(contraste.tarjeta).toBeGreaterThanOrEqual(3);
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO);
+    // Tal como se dibujan, sobre Black y sobre Primary Blue: borde 18,0:1 y 9,5:1; anillo al 50 %: 4,7:1 y 3,6:1.
+    let contraste = await contrastesFoco(page);
+    expect(contraste.alfaAnillo).toBe(0.5);
+    expect(contraste.borde).toBeGreaterThanOrEqual(3);
+    expect(contraste.anillo).toBeGreaterThanOrEqual(3);
 
-    // El botón "copiar" de cada fila: lo mismo con el teclado.
-    await llegarConTeclado(page, '#tabla-resultados .btn-copiar');
-    expect(await estiloFoco(page)).toEqual(CON_TECLADO);
+    // El botón "copiar" de cada fila (también en las filas alternas Primary Blue): lo mismo con el teclado.
+    await llegarConTeclado(page, '#tabla-resultados > tbody > tr:nth-child(2) .btn-copiar');
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO);
+    contraste = await contrastesFoco(page);
+    expect(contraste.borde).toBeGreaterThanOrEqual(3);
+    expect(contraste.anillo).toBeGreaterThanOrEqual(3);
+    // Cajas de texto (borde Gray sin foco): el foco las pone Light Blue (4,9:1 con ese Gray), no Medium Blue (1,1:1:
+    // casi no cambiaba).
+    await llegarConTeclado(page, '#f-codigo');
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO);
 
     // Enlace del código: contorno de 2 px del mismo color que el anillo.
     await page.getByRole('link', { name: 'CN-0001' }).first().focus();
@@ -236,7 +263,7 @@ test.describe('Diseño (pedido del supervisor)', () => {
       const e = getComputedStyle(document.activeElement!);
       return { ancho: e.outlineWidth, estilo: e.outlineStyle, color: window.normalizarColor(e.outlineColor) };
     });
-    expect(enlace).toEqual({ ancho: '2px', estilo: 'solid', color: PALETA.mediumBlue });
+    expect(enlace).toEqual({ ancho: '2px', estilo: 'solid', color: RING.oscuro });
   });
 
   test('2. el foco se ve en TODOS los controles: "copiar" de cada fila, botón principal y títulos que ordenan', async ({ page }) => {
@@ -292,13 +319,14 @@ test.describe('Diseño (pedido del supervisor)', () => {
     }
     // Cajas de texto y desplegables: Chromium los marca :focus-visible también con el clic (dice dónde se escribe) y
     // el componente de shadcn/ui muestra su anillo (antes la app lo quitaba con logica/modalidad.ts y una regla propia).
+    // Se mira justo después del clic: en los desplegables, con la lista abierta, ANTES de cerrarla con Escape (una
+    // tecla, que por sí sola también encendería :focus-visible y la prueba ya no comprobaría el clic).
     for (const selector of ['#buscador', '#f-codigo', '#f-cliente', '#tam-pagina']) {
+      await page.locator('h1').click(); // el foco sale del control anterior
       await page.locator(selector).click();
-      if (selector === '#f-cliente' || selector === '#tam-pagina') await page.keyboard.press('Escape'); // cierra la lista
       await expect(page.locator(selector)).toBeFocused();
-      const foco = await estiloFoco(page);
-      expect(foco.anillo !== 'ninguno', selector).toBe(foco.visible);
-      if (selector === '#buscador' || selector === '#f-codigo') expect(foco, selector).toEqual(CON_TECLADO);
+      expect(await estiloFoco(page), selector).toEqual(CON_TECLADO);
+      if (selector === '#f-cliente' || selector === '#tam-pagina') await page.keyboard.press('Escape'); // cierra la lista
     }
     // Con Tab, el anillo siempre.
     await page.keyboard.press('Tab');
@@ -400,5 +428,23 @@ test.describe('Diseño (pedido del supervisor)', () => {
     const m = await desfase(page, '#btn-mostrar-filtros svg', '#btn-mostrar-filtros');
     expect(m.tamano).toEqual([16, 16]);
     expect(m.desfase).toBeLessThanOrEqual(1);
+  });
+
+  test('4. tamaño de letra: el de shadcn/ui en tablas, botones y cajas (14 px) y el del navegador en el resto (16 px)', async ({ page }) => {
+    // Cambió con los componentes "naturales" (README 8.1, por confirmar con Gustavo): antes la app ponía 16 px en el
+    // escritorio y 15 px en el celular, también en las tablas. Ahora la Table, el Button y el NativeSelect de shadcn/ui
+    // traen text-sm (14 px), el Input text-base md:text-sm (14 px desde 768 px de ancho; 16 px en el celular, así el
+    // iPhone no agranda la página al escribir) y el resto queda con la letra del navegador (16 px).
+    const tamanos = () =>
+      page.evaluate(() => {
+        const t = (selector: string) => getComputedStyle(document.querySelector(selector)!).fontSize;
+        return { pagina: t('body'), tabla: t('#tabla-resultados td'), boton: t('#btn-exportar'), caja: t('#buscador'), desplegable: t('#f-cliente') };
+      });
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await abrir(page, '/ordenes');
+    expect(await tamanos()).toEqual({ pagina: '16px', tabla: '14px', boton: '14px', caja: '14px', desplegable: '14px' });
+    await page.setViewportSize({ width: 375, height: 812 });
+    await abrir(page, '/ordenes');
+    expect(await tamanos()).toEqual({ pagina: '16px', tabla: '14px', boton: '14px', caja: '16px', desplegable: '14px' });
   });
 });

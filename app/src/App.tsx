@@ -138,9 +138,11 @@ export function App() {
     }
   }
 
-  // Un solo TooltipProvider (ayudas flotantes de shadcn/ui) para toda la app.
+  // Un solo TooltipProvider (ayudas flotantes de shadcn/ui) para toda la app. delayDuration (prop pública de Radix):
+  // con el mouse, la ayuda espera 300 ms antes de aparecer, como antes (shadcn/ui trae 0 ms); con el teclado aparece
+  // al instante.
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={300}>
       <a
         className={SALTAR}
         href={conBuscador ? '#buscador' : '#principal'}

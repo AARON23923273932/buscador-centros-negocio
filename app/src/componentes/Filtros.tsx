@@ -38,6 +38,14 @@ export function Filtros(props: Props) {
   const { estado, controles, opciones, activos } = props;
   const [abierto, setAbierto] = useState(false);
 
+  /**
+   * Por qué un filtro está desactivado ("No se encontró esta columna en el Excel"…), para el "title" de su caja.
+   * El Input y el NativeSelect de shadcn/ui desactivados no reciben el mouse (disabled:pointer-events-none): el mouse
+   * cae en la caja del campo, así que el motivo va también ahí para que aparezca al pasar el mouse (como antes). El
+   * control conserva su propio "title": es el que leen los lectores de pantalla.
+   */
+  const motivoCampo = (clave: ClaveControl) => (controles[clave].disponible ? undefined : controles[clave].motivo || undefined);
+
   /** Desplegable: "Todos" + los valores del Excel (+ el elegido, si no está en la lista: ej. vino en un enlace). */
   const desplegable = (clave: ClaveDesplegable, id: string) => {
     const valor = estado[clave];
@@ -104,37 +112,37 @@ export function Filtros(props: Props) {
         )}
       >
         <legend className="px-1.5 text-sm font-semibold">Filtros</legend>
-        <div className={CAMPO}>
+        <div className={CAMPO} title={motivoCampo('cliente')}>
           <label htmlFor="f-cliente" className={ETIQUETA}>
             Cliente
           </label>
           {desplegable('cliente', 'f-cliente')}
         </div>
-        <div className={CAMPO}>
+        <div className={CAMPO} title={motivoCampo('codigo')}>
           <label htmlFor="f-codigo" className={ETIQUETA}>
             Código
           </label>
           {texto('codigo', 'f-codigo')}
         </div>
-        <div className={CAMPO}>
+        <div className={CAMPO} title={motivoCampo('descripcion')}>
           <label htmlFor="f-descripcion" className={ETIQUETA}>
             Descripción
           </label>
           {texto('descripcion', 'f-descripcion')}
         </div>
-        <div className={CAMPO}>
+        <div className={CAMPO} title={motivoCampo('orden')}>
           <label htmlFor="f-orden" className={ETIQUETA}>
             Orden de compra / servicio
           </label>
           {texto('orden', 'f-orden')}
         </div>
-        <div className={CAMPO} id="campo-tipo" hidden={!props.mostrarTipo}>
+        <div className={CAMPO} id="campo-tipo" hidden={!props.mostrarTipo} title={motivoCampo('tipo')}>
           <label htmlFor="f-tipo" className={ETIQUETA}>
             Tipo de orden
           </label>
           {desplegable('tipo', 'f-tipo')}
         </div>
-        <div className={CAMPO} id="campo-estado" hidden={!props.mostrarEstado}>
+        <div className={CAMPO} id="campo-estado" hidden={!props.mostrarEstado} title={motivoCampo('estado')}>
           <label htmlFor="f-estado" className={ETIQUETA}>
             Estado
           </label>

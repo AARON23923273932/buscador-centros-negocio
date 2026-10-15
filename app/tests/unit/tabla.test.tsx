@@ -110,6 +110,7 @@ describe('TablaCentros', () => {
     );
     expect(cerrado).toContain('aria-expanded="false"');
     expect(cerrado).not.toContain('fila-detalle');
+    expect(cerrado).not.toContain('data-state="selected"');
     expect(cerrado).not.toContain('<img');
 
     const abierto = renderToStaticMarkup(
@@ -125,6 +126,10 @@ describe('TablaCentros', () => {
     );
     expect(abierto).toContain('aria-expanded="true"');
     expect(abierto).toContain('fila-detalle');
+    // Centro abierto: su fila y la de sus órdenes con el estado "seleccionada" de la TableRow de shadcn/ui
+    // (data-[state=selected]:bg-muted) en vez de una clase de color propia.
+    expect((abierto.match(/data-state="selected"/g) || []).length).toBe(2);
+    expect(abierto).not.toMatch(/[\s"]bg-muted\/50[\s"]/); // (sin la clase suelta; la TableRow trae hover:bg-muted/50)
     expect((abierto.match(/data-fila=/g) || []).length).toBe(2);
     expect(abierto).not.toContain('<img');
   });

@@ -270,21 +270,27 @@ test.describe('Guía de estilo oficial de AIC (sobre shadcn/ui sin cambios)', ()
   });
 
   test('"Por centro": el centro abierto no se confunde con un encabezado (claro y oscuro)', async ({ page }) => {
-    // Centro abierto: la TableRow de shadcn/ui pinta la fila con un botón abierto (has-aria-expanded:bg-muted/50) y la
-    // fila con sus órdenes lleva el mismo fondo. Claro: Light Gray al 50 %; oscuro: Primary Blue al 50 %.
+    // Centro abierto: su fila y la de sus órdenes llevan el estado "seleccionada" de la TableRow de shadcn/ui
+    // (data-state="selected" → data-[state=selected]:bg-muted, del componente; no es una clase de color propia).
+    // Claro: Light Gray; oscuro: Primary Blue (el --muted de cada tema). Antes (has-aria-expanded:bg-muted/50) una fila
+    // alterna se ACLARABA al abrirla y en claro el centro abierto casi no se distinguía de las filas blancas.
     for (const [tema, abierta] of [
-      ['light', al(PALETA.lightGray, 0.5)],
-      ['dark', al(PALETA.primaryBlue, 0.5)],
+      ['light', PALETA.lightGray],
+      ['dark', PALETA.primaryBlue],
     ] as const) {
       await page.emulateMedia({ colorScheme: tema });
       await abrir(page, '/centros');
       const centro = page.locator('.fila-centro').nth(1); // fila par (con el fondo de fila alterna antes de abrirla)
+      const alterna = await fondoFila(page, '.fila-centro:nth-child(4)'); // otra fila alterna, cerrada (mismo color)
+      expect(alterna, tema).toBe(abierta);
       await centro.locator('.btn-expandir').click();
       await expect(page.locator('.fila-detalle')).toBeVisible();
       await page.locator('h1').hover(); // el mouse lejos de la tabla
       const encabezado = (await estilo(page, '#tabla-resultados > thead th')).fondo;
-      await expect.poll(() => fondoFila(page, '.fila-centro.abierta'), { message: tema }).toBe(abierta);
+      await expect.poll(() => fondoFila(page, '.fila-centro.abierta'), { message: tema }).toBe(abierta); // no se aclara
       expect(await fondoFila(page, '.fila-detalle')).toBe(abierta); // la fila con sus órdenes sigue a la del centro
+      await expect(page.locator('.fila-centro.abierta')).toHaveAttribute('data-state', 'selected');
+      await expect(page.locator('.fila-detalle')).toHaveAttribute('data-state', 'selected');
       expect(abierta).not.toBe(encabezado);
       const encabezadoAnidado = (await estilo(page, '.fila-detalle .tabla-anidada thead th')).fondo;
       expect(encabezadoAnidado).toBe(encabezado);
@@ -292,6 +298,10 @@ test.describe('Guía de estilo oficial de AIC (sobre shadcn/ui sin cambios)', ()
       // Con el mouse encima, el centro abierto no cambia.
       await centro.locator('td').nth(2).hover();
       await expect.poll(() => fondoFila(page, '.fila-centro.abierta'), { message: tema }).toBe(abierta);
+      // Un centro que no es fila alterna (sin fondo cerrado) toma el mismo fondo al abrirlo.
+      await page.locator('.fila-centro').first().locator('.btn-expandir').click();
+      await page.locator('h1').hover();
+      await expect.poll(() => fondoFila(page, '.fila-centro.abierta'), { message: `${tema}, primer centro` }).toBe(abierta);
     }
   });
 
@@ -316,10 +326,30 @@ test.describe('Guía de estilo oficial de AIC (sobre shadcn/ui sin cambios)', ()
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
+    // Ayuda flotante con el mouse: espera 300 ms antes de aparecer, como antes (TooltipProvider delayDuration={300} en
+    // App.tsx; shadcn/ui trae 0 ms). Se mide dentro de la página, del primer movimiento del mouse sobre el botón a la
+    // aparición de la ayuda: con la computadora ocupada solo puede tardar más, nunca menos.
+    await page.evaluate(() => {
+      const boton = document.querySelector('#btn-tema')!;
+      const tiempos = { mouse: 0, ayuda: 0 };
+      Object.assign(window, { tiemposAyuda: tiempos });
+      boton.addEventListener('pointermove', () => (tiempos.mouse ||= performance.now()));
+      new MutationObserver((_, observador) => {
+        if (document.querySelector('[data-slot="tooltip-content"]')) {
+          tiempos.ayuda = performance.now();
+          observador.disconnect();
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    });
     // Ayuda flotante con el mouse: la animación de entrada de shadcn/ui (fade-in-0 + zoom-in-95) empieza transparente.
     await page.locator('#btn-tema').hover();
     const ayuda = page.locator('[data-slot="tooltip-content"]');
     await expect(ayuda).toBeVisible();
+    const espera = await page.evaluate(() => {
+      const { mouse, ayuda } = (window as unknown as { tiemposAyuda: { mouse: number; ayuda: number } }).tiemposAyuda;
+      return ayuda - mouse;
+    });
+    expect(espera).toBeGreaterThanOrEqual(290);
     const entrada = await ayuda.evaluate((el) => {
       const e = getComputedStyle(el);
       return {
@@ -347,6 +377,8 @@ test.describe('Guía de estilo oficial de AIC (sobre shadcn/ui sin cambios)', ()
   });
 
   test('texto seleccionado con colores de la paleta (no el azul del navegador)', async ({ page }) => {
+    // ::selection de estilos.css es una regla global: también pinta la selección dentro del Input de shadcn/ui (el
+    // buscador), que no trae colores de selección propios (README 8.2).
     for (const [tema, fondo, texto] of [
       ['light', PALETA.primaryBlue, PALETA.white],
       ['dark', PALETA.lightBlue, PALETA.primaryBlue],
@@ -367,6 +399,30 @@ test.describe('Guía de estilo oficial de AIC (sobre shadcn/ui sin cambios)', ()
         .poll(() => page.locator('#tabla-resultados td').first().evaluate((el) => getComputedStyle(el, '::selection').backgroundColor), { message: tema })
         .toBe(fondo);
     }
+  });
+
+  test('quien pide menos movimiento en su sistema: sin transiciones ni fundidos (también en los de shadcn/ui); los demás, los de shadcn/ui', async ({ page }) => {
+    // Regla global de accesibilidad de estilos.css (WCAG 2.3.3; README 8.2): solo actúa con prefers-reduced-motion.
+    const duraciones = async () => {
+      await page.locator('#btn-tema').hover(); // abre la ayuda flotante (Tooltip de shadcn/ui; con el mouse lleva fundido)
+      await expect(page.locator('[data-slot="tooltip-content"]')).toBeVisible();
+      return page.evaluate(() => {
+        const t = (selector: string, propiedad: 'transitionDuration' | 'animationDuration') =>
+          parseFloat(getComputedStyle(document.querySelector(selector)!)[propiedad]);
+        return {
+          boton: t('#btn-exportar', 'transitionDuration'), // Button
+          caja: t('#buscador', 'transitionDuration'), // Input
+          fila: t('#tabla-resultados tbody tr', 'transitionDuration'), // TableRow
+          ayuda: t('[data-slot="tooltip-content"]', 'animationDuration'), // Tooltip (fundido)
+        };
+      });
+    };
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'no-preference' });
+    await abrir(page, '/ordenes');
+    expect(await duraciones()).toEqual({ boton: 0.15, caja: 0.15, fila: 0.15, ayuda: 0.15 }); // los de shadcn/ui
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await abrir(page, '/ordenes');
+    for (const [nombre, segundos] of Object.entries(await duraciones())) expect(segundos, nombre).toBeLessThan(0.001);
   });
 
   test('☀️/🌙: la ayuda flotante no repite el nombre como descripción; "copiar" no lleva ayuda flotante', async ({ page }) => {
@@ -408,6 +464,11 @@ test.describe('Guía de estilo oficial de AIC (sobre shadcn/ui sin cambios)', ()
  *    REAL del fondo y del texto: las transparencias (y la opacidad de los contenedores) se mezclan con lo de abajo.
  * No cuenta lo que no se ve (oculto, transparente o solo para lectores de pantalla), los controles desactivados
  * (WCAG no les pide contraste) ni el logo de Microsoft (sus colores son la marca de Microsoft).
+ * Las opciones de los desplegables (<option>) no ocupan lugar en la página (las dibuja el sistema al abrir la lista),
+ * así que se revisan aparte: el NativeSelectOption de shadcn/ui las pinta con los colores del SISTEMA (bg-[Canvas]
+ * text-[CanvasText]). En claro son White y Black; en oscuro, el Canvas de Chromium es casi negro (rgb(18, 18, 18)),
+ * que no está en la paleta. Es la única excepción y es explícita: se aceptan Canvas y CanvasText tal como los resuelve
+ * el navegador (README 8.1); cualquier otro color ajeno a la marca en una opción se informa.
  */
 function revisarColores(page: Page) {
   return page.evaluate(
@@ -480,6 +541,26 @@ function revisarColores(page: Page) {
         return o;
       };
 
+      // Opciones de los desplegables que se ven (ver arriba): paleta o colores del sistema (Canvas / CanvasText).
+      const sistema = document.createElement('div');
+      sistema.style.cssText = 'background-color: Canvas; color: CanvasText';
+      document.body.append(sistema);
+      const delSistema = new Set([color(getComputedStyle(sistema).backgroundColor), color(getComputedStyle(sistema).color)]);
+      sistema.remove();
+      for (const opcion of document.querySelectorAll('select option')) {
+        if (!seVe(opcion.closest('select')!)) continue;
+        const e = getComputedStyle(opcion);
+        for (const [propiedad, valor] of [
+          ['color', e.color],
+          ['background-color', e.backgroundColor],
+        ] as const) {
+          const n = color(valor);
+          if (n !== 'transparente' && !permitidos.has(partes(n).rgb) && !delSistema.has(n)) {
+            fueraDePaleta.add(`${nombre(opcion.closest('select')!)} option ${propiedad}: ${valor} → ${n}`);
+          }
+        }
+      }
+
       for (const el of document.body.querySelectorAll('*')) {
         if (!seVe(el) || el.closest('#btn-login svg')) continue;
         const e = getComputedStyle(el);
@@ -525,6 +606,8 @@ test('el revisor de colores informa los colores ajenos a la marca y el contraste
       '<div id="sonda-tailwind" style="height: 4px; border: 2px solid oklch(0.623 0.214 259.815)"></div>', // blue-500 de Tailwind
       '<div id="sonda-rojo" style="height: 4px; background-color: oklch(0.577 0.245 27.325)"></div>', // --destructive de shadcn/ui
       '<div id="sonda-anillo" style="height: 4px; box-shadow: 0 0 0 3px rgb(255 0 0 / 0.5)"></div>',
+      // Una opción de desplegable con un color ajeno (las opciones no ocupan lugar en la página: se revisan aparte).
+      '<select id="sonda-opcion" aria-label="sonda"><option style="background-color: oklch(0.577 0.245 27.325)">rojo</option></select>',
       // De la marca (se aceptan): una transparencia de la paleta y una sombra neutra.
       '<p id="sonda-transparencia" style="background-color: color-mix(in oklab, #1e3a6e 80%, transparent); color: #fff">Primary Blue al 80 %</p>',
       '<p id="sonda-sombra" style="box-shadow: 0 1px 2px rgb(0 0 0 / 0.05)">sombra neutra</p>',
@@ -535,7 +618,7 @@ test('el revisor de colores informa los colores ajenos a la marca y el contraste
   });
   const { fueraDePaleta, bajoContraste } = await revisarColores(page);
   const sondas = (lista: string[]) => [...new Set(lista.map((x) => /#(sonda-[\w-]+)/.exec(x)?.[1] ?? `(otro) ${x}`))].sort();
-  expect(sondas(fueraDePaleta)).toEqual(['sonda-anillo', 'sonda-navegador', 'sonda-rojo', 'sonda-tailwind']);
+  expect(sondas(fueraDePaleta)).toEqual(['sonda-anillo', 'sonda-navegador', 'sonda-opcion', 'sonda-rojo', 'sonda-tailwind']);
   expect(sondas(bajoContraste)).toEqual(['sonda-contraste']);
 });
 

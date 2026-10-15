@@ -32,10 +32,13 @@ interface Props {
 
 /**
  * Filas: alternas por CENTRO (no por fila de la tabla), así abrir un centro no cambia el color de los de abajo.
- * Centro abierto: la TableRow de shadcn/ui ya pinta la fila que tiene un botón con aria-expanded="true"
- * (has-aria-expanded:bg-muted/50); la fila con sus órdenes lleva ese mismo fondo para que se vean juntas.
+ * Centro abierto: su fila y la de sus órdenes se marcan con el estado "seleccionada" de la TableRow de shadcn/ui
+ * (data-state="selected" → data-[state=selected]:bg-muted, del propio componente; no se agrega ninguna clase de
+ * color) y no llevan la clase de fila alterna. Así las dos se ven juntas y con el mismo fondo (--muted: Light Gray;
+ * en oscuro, Primary Blue), el mouse encima no las cambia y una fila alterna no se aclara al abrirla (sin esto,
+ * has-aria-expanded:bg-muted/50 y hover:bg-muted/50 de la TableRow le ganaban a bg-muted).
  */
-const FILA_DETALLE = 'bg-muted/50';
+const SELECCIONADA = 'selected';
 
 export const TablaCentros = memo(function TablaCentros({
   grupos,
@@ -84,7 +87,8 @@ export const TablaCentros = memo(function TablaCentros({
           return (
             <Fragment key={g.clave}>
               <TableRow
-                className={cn('fila-centro cursor-pointer', i % 2 === 1 && CLASE_FILA_ALTERNA, abierto && 'abierta')}
+                className={cn('fila-centro cursor-pointer', i % 2 === 1 && !abierto && CLASE_FILA_ALTERNA, abierto && 'abierta')}
+                data-state={abierto ? SELECCIONADA : undefined}
                 data-grupo={g.clave}
                 onClick={(ev) => alHacerClic(ev, g.clave)}
               >
@@ -123,7 +127,7 @@ export const TablaCentros = memo(function TablaCentros({
                 </TableCell>
               </TableRow>
               {abierto && (
-                <TableRow className={cn('fila-detalle', FILA_DETALLE)} id={idDetalle}>
+                <TableRow className="fila-detalle" data-state={SELECCIONADA} id={idDetalle}>
                   <TableCell colSpan={5} className="pt-0 pr-3 pb-3 pl-11 whitespace-normal max-escritorio:pl-3">
                     {/* Las órdenes del centro: otra Table en una Card de shadcn/ui (py-0 gap-0: sin su espacio interior). */}
                     <Card className="gap-0 py-0">
