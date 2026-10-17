@@ -1,6 +1,3 @@
-// Buscador global: una caja grande (Input de shadcn/ui); filtra 200 ms después de la última tecla (Enter = ya).
-// La lupa (izquierda) y la "×" para borrar (derecha) van centradas en la altura de la caja.
-// A los componentes de shadcn/ui solo se les agregan clases de medidas y ubicación (alto, espacio para los íconos).
 import type { RefObject } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,15 +8,12 @@ import { IconoCerrar, IconoLupa } from './Iconos.tsx';
 interface Props {
   valor: string;
   alEscribir: (valor: string) => void;
-  /** Enter: buscar ya. */
   alEnviar: () => void;
-  /** Botón "×": borrar la búsqueda. */
   alBorrar: () => void;
   campoRef: RefObject<HTMLInputElement | null>;
 }
 
 export function Buscador({ valor, alEscribir, alEnviar, alBorrar, campoRef }: Props) {
-  // En celulares el texto de ayuda del buscador es más corto para que se lea completo.
   const esCelular = useMediaQuery('(max-width: 719px)');
   return (
     <form

@@ -1,56 +1,16 @@
-/* =============================================================================
-   estilos.css — Apariencia de la app: Tailwind CSS v4 + componentes shadcn/ui (src/components/ui).
-
-   Pedido de Gustavo (15/10/2026): "que use los estilos naturales de shadcn, componentes como los botones,
-   inputs, etc. que use de shadcn, sin cambios, solo agregando el estilo de marca".
-     - Los archivos de src/components/ui quedan EXACTAMENTE como los genera "npx shadcn add" (no se editan):
-       sombras, bordes redondeados, transiciones, anillos de foco y opacidades son los de shadcn/ui.
-     - La marca de AIC (guía de estilo oficial) entra SOLO por aquí: las VARIABLES del tema de shadcn/ui
-       (--primary, --border, --ring…, en claro y en oscuro) y la letra Calibri. Cambiar un color aquí lo cambia
-       en todos los componentes.
-       Paleta: Primary Blue #1E3A6E · Dark Blue #2C5282 · Medium Blue #3B6BAA · Light Blue #E8EEF5 ·
-               Light Gray #F5F5F5 · Black #000000 · White #FFFFFF · Gray #666666 · Border Gray #CCCCCC
-       Las transparencias que agregan los componentes (ej. hover:bg-primary/80, ring-ring/50) y sus sombras
-       neutras (negro con poca opacidad) son de esos mismos colores. Tabla de variables con el contraste
-       medido (WCAG 2.1 AA): README, sección 8.1.
-     - Reglas GLOBALES de este archivo que también alcanzan a los componentes (README 8.2): la "manito" en los
-       botones (receta de shadcn/ui para Tailwind v4), el texto seleccionado con la marca (::selection) y dos de
-       accesibilidad que solo actúan si la persona las pidió en su sistema: menos movimiento
-       (prefers-reduced-motion) y alto contraste (forced-colors).
-   Modo oscuro: shadcn/ui trae su variante "dark:"; aquí se conecta al botón ☀️/🌙 (data-tema) y sus variables
-   se arman con la misma paleta (por confirmar con Gustavo).
-   ============================================================================= */
-
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Variante "dark:" de Tailwind (la usan los componentes de shadcn/ui) = el modo oscuro de la app: el del sistema
-   (salvo que la persona eligiera claro con el botón ☀️/🌙) o el elegido con el botón (<html data-tema="oscuro">,
-   ver src/hooks/useTema.ts). shadcn/ui usa la clase "dark"; esta app usa data-tema. */
-@custom-variant dark {
-  @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-tema="claro"]), :root:not([data-tema="claro"]) *) {
-      @slot;
-    }
-  }
-  &:where(:root[data-tema="oscuro"], :root[data-tema="oscuro"] *) {
-    @slot;
-  }
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Letra de la guía: Calibri. Carlito es su equivalente libre (mismas medidas) y Segoe UI la de Windows si
-     faltara; no se descargan letras de internet (la política de seguridad solo permite archivos propios).
-     La app no trae la letra adentro: en Android, iPhone y Mac sin Office se ve la del sistema (README, 8.1). */
   --font-sans: Calibri, Carlito, "Segoe UI", sans-serif;
   --font-heading: var(--font-sans);
   --font-mono: var(--font-sans);
 
-  /* Celular: menos de 720 px. "escritorio:" = 720 px o más; "max-escritorio:" = celular. */
   --breakpoint-escritorio: 45rem;
 
-  /* Variables del tema de shadcn/ui → colores de Tailwind (bg-primary, text-muted-foreground…). */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -69,6 +29,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-marca-naranja: var(--marca-naranja);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -79,99 +40,61 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* ---------- Modo claro (el de la guía) ---------- */
 :root {
   color-scheme: light;
-  /* Esquinas: el radio por defecto de shadcn/ui (más redondeado que antes: la "suavidad" que pidió Gustavo). */
-  --radius: 0.625rem;
-  --background: #ffffff; /* White */
-  --foreground: #000000; /* Black: texto de la guía */
+  --radius: 0.75rem;
+  --background: #f5f5f5;
+  --foreground: #1a2333;
   --card: #ffffff;
-  --card-foreground: #000000;
+  --card-foreground: #1a2333;
   --popover: #ffffff;
-  --popover-foreground: #000000;
-  --primary: #1e3a6e; /* Primary Blue: botón principal, opción elegida, enlaces, títulos, encabezado de tablas */
+  --popover-foreground: #1a2333;
+  --primary: #1e3a6e;
   --primary-foreground: #ffffff;
-  --secondary: #e8eef5; /* Light Blue: insignias ("N° de órdenes") e iniciales del usuario */
+  --secondary: #e8eef5;
   --secondary-foreground: #1e3a6e;
-  --muted: #f5f5f5; /* Light Gray: filas alternas de las tablas, fondo al pasar el mouse */
-  --muted-foreground: #666666; /* Gray: textos secundarios (5,7:1 sobre White) */
+  --muted: #f3f6fa;
+  --muted-foreground: #5b6577;
   --accent: #e8eef5;
   --accent-foreground: #1e3a6e;
-  --destructive: #1e3a6e; /* errores: la paleta no tiene rojo (la guía no permite colores fuera de ella) */
-  --border: #cccccc; /* Border Gray: bordes de tablas, tarjetas y botones */
-  --input: #666666; /* Gray: borde de cajas y desplegables (5,7:1: WCAG pide 3:1 para ver dónde está la caja) */
-  /* Medium Blue: foco con el teclado. El BORDE (1 px, sólido) es el que cumple WCAG: 5,4:1 sobre White y 5,0:1 sobre
-     Light Gray. El anillo de 3 px de shadcn/ui va al 50 % (ring-ring/50): 2,1:1 sobre White, es decorativo (ningún
-     azul de la paleta llega a 3:1 al 50 % sobre blanco; por confirmar con Gustavo). */
+  --destructive: #1e3a6e;
+  --border: #e3e8ef;
+  --input: #7c8798;
   --ring: #3b6baa;
+  --marca-naranja: #ff9000;
 
-  /* Columna de contenido (pedido del supervisor, 15/10/2026: "un poco más" de margen a los lados): ancho
-     máximo de 1120 px y margen lateral que crece con la pantalla (6 % del ancho, entre 20 y 96 px). */
   --ancho-contenido: 1120px;
   --margen-lateral: clamp(20px, 6vw, 96px);
 }
 
-/* ---------- Modo oscuro (la guía no lo define; por confirmar con Gustavo) ----------
-   Mismo bloque dos veces: modo del sistema (si la persona no eligió claro) y modo elegido con el botón.
-   --ring = Light Blue (no Medium Blue): sobre Black y sobre las filas alternas Primary Blue, Medium Blue casi no se
-   veía (borde 3,9:1 y 2,1:1; anillo al 50 %: 1,7:1 y 1,4:1). Con Light Blue: borde 18,0:1 y 9,5:1; anillo al 50 %:
-   4,7:1 y 3,6:1. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tema="claro"]) {
-    color-scheme: dark;
-    --background: #000000;
-    --foreground: #ffffff;
-    --card: #000000;
-    --card-foreground: #ffffff;
-    --popover: #000000;
-    --popover-foreground: #ffffff;
-    --primary: #e8eef5;
-    --primary-foreground: #1e3a6e;
-    --secondary: #e8eef5;
-    --secondary-foreground: #1e3a6e;
-    --muted: #1e3a6e;
-    --muted-foreground: #cccccc;
-    --accent: #1e3a6e;
-    --accent-foreground: #ffffff;
-    --destructive: #e8eef5;
-    --border: rgb(255 255 255 / 10%);
-    --input: #666666;
-    --ring: #e8eef5;
-  }
-}
-:root[data-tema="oscuro"] {
+.dark {
   color-scheme: dark;
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #000000;
-  --card-foreground: #ffffff;
-  --popover: #000000;
-  --popover-foreground: #ffffff;
-  --primary: #e8eef5;
-  --primary-foreground: #1e3a6e;
-  --secondary: #e8eef5;
-  --secondary-foreground: #1e3a6e;
-  --muted: #1e3a6e;
-  --muted-foreground: #cccccc;
-  --accent: #1e3a6e;
-  --accent-foreground: #ffffff;
-  --destructive: #e8eef5;
-  --border: rgb(255 255 255 / 10%);
-  --input: #666666;
-  --ring: #e8eef5;
+  --background: #0f1729;
+  --foreground: #e6ebf2;
+  --card: #152038;
+  --card-foreground: #e6ebf2;
+  --popover: #152038;
+  --popover-foreground: #e6ebf2;
+  --primary: #9db8e0;
+  --primary-foreground: #0f1729;
+  --secondary: #1e3a6e;
+  --secondary-foreground: #e8eef5;
+  --muted: #1b2742;
+  --muted-foreground: #a3b0c4;
+  --accent: #1b2742;
+  --accent-foreground: #e6ebf2;
+  --destructive: #9db8e0;
+  --border: rgb(230 235 242 / 10%);
+  --input: #6b7894;
+  --ring: #b8ccea;
 }
 
-/* Menos de 720 px: 16 px a cada lado en el celular vertical (hasta 400 px de ancho) y de ahí sube en línea recta
-   hasta empalmar con el 6 % de 720 px (43,2 px): sin salto al pasar a 720 px y nunca menos que antes (4 % del
-   ancho). Ej.: 375 px → 16 · 480 → 22,8 · 600 → 33 · 700 → 41,5 · 719 → 43,1. */
 @media (max-width: 44.9375rem) {
   :root {
     --margen-lateral: max(16px, 8.5vw - 18px);
   }
 }
 
-/* Columna de contenido centrada: cabecera y pantalla principal (solo medidas, ningún color). */
 @utility columna {
   width: 100%;
   max-width: calc(var(--ancho-contenido) + 2 * var(--margen-lateral));
@@ -180,7 +103,6 @@
 }
 
 @layer base {
-  /* Lo que agrega "shadcn init" (estilo de shadcn/ui). */
   * {
     @apply border-border outline-ring/50;
   }
@@ -192,26 +114,19 @@
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
   }
-  /* Tailwind v4 dejó los botones con la flecha del mouse: la guía de shadcn/ui para Tailwind v4 recomienda esta regla
-     para volver a la "manito". Es global: alcanza también al Button de shadcn/ui (solo el cursor). */
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
-  /* Títulos propios de la app (h1, h2, h3): Primary Blue en negrita, como en la guía. */
   h1,
   h2,
   h3 {
     @apply leading-tight font-bold text-primary;
   }
-  /* Foco con el teclado en lo que NO es un componente de shadcn/ui (enlaces, la caja con scroll de la tabla,
-     "Página X de Y", los títulos que ordenan): contorno de 2 px en el color del anillo. Los componentes de
-     shadcn/ui no lo usan: traen su propio anillo (outline-none + ring-3) y sus clases ganan a esta regla. */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
-  /* "Saltar al contenido" y los títulos que reciben el foco (lo anuncia el lector de pantalla): sin marco. */
   #principal:focus,
   h2[tabindex="-1"]:focus {
     outline: none;
@@ -219,22 +134,13 @@
   code {
     @apply rounded-sm border bg-muted px-1 text-[0.95em] text-foreground;
   }
-  /* Coincidencias del buscador (componentes/Resaltado.tsx). */
   mark {
     @apply rounded-[2px] bg-primary px-px text-primary-foreground;
   }
-  /* Texto seleccionado: colores de la marca en vez del azul del navegador. Es una regla GLOBAL: también pinta la
-     selección dentro de los componentes de shadcn/ui (ej. el texto elegido en el buscador, un Input), que no traen
-     colores de selección propios. Es parte del tema de marca (README 8.1 y 8.2). */
   ::selection {
     background-color: var(--primary);
     color: var(--primary-foreground);
   }
-  /* Quien pidió "reducir el movimiento" en su sistema (Windows: Configuración → Accesibilidad → Efectos visuales →
-     Efectos de animación): sin transiciones ni fundidos (WCAG 2.3.3). Es una regla GLOBAL (con !important, para
-     ganarles a las clases de los componentes): alcanza también a los de shadcn/ui (Button, Input, TableRow, Tooltip…)
-     y SOLO actúa con esa preferencia; para los demás quedan las transiciones de shadcn/ui. Excepción de
-     accesibilidad, como la de forced-colors (README 8.2; por confirmar con Gustavo). */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -247,9 +153,6 @@
 }
 
 @layer components {
-  /* Código del centro (texto) y su enlace al detalle (/centros/:codigo). Estas dos clases las usan también las
-     pruebas y VistaLista.tsx (para devolver el foco al enlace). Enlace con el aspecto del Button variant="link"
-     de shadcn/ui (text-primary, subrayado a 4 px), siempre subrayado: en una tabla se distingue del texto. */
   .codigo {
     font-variant-numeric: tabular-nums;
   }
@@ -258,9 +161,6 @@
   }
 }
 
-/* Alto contraste de Windows (forced-colors): ahí el navegador no dibuja sombras y el anillo de shadcn/ui
-   (ring-3 = box-shadow) desaparecería. Solo en ese modo se dibuja un contorno del color del sistema. Fuera de las
-   capas de Tailwind para que gane; no cambia nada de lo que se ve en el modo normal. */
 @media (forced-colors: active) {
   :focus-visible {
     outline: 2px solid CanvasText;

@@ -1,11 +1,4 @@
 // @vitest-environment jsdom
-// Rendimiento de la pantalla principal (con el Excel real, miles de filas, sobre todo en el celular):
-// escribir en el buscador o en un filtro, cambiar de página, el aviso flotante o el botón ☀️/🌙
-// NO deben volver a dibujar toda la tabla ni volver a buscar en todas las filas.
-//
-// Cómo se mide: las funciones de logica/filtros.ts se "espían" (se cuentan sus llamadas, pero hacen lo
-// mismo de siempre). Cada celda de la tabla llama a segmentosResaltado() al dibujarse (Resaltado.tsx),
-// así que "0 llamadas" = la tabla no se volvió a dibujar.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -36,7 +29,6 @@ const reiniciarEspias = () => Object.values(ESPIAS).forEach((f) => vi.mocked(f).
 const EJEMPLO = readFileSync(resolve(import.meta.dirname, '../../public/datos/centros-ejemplo.xlsx'));
 const CONFIG: Config = { ...structuredClone(CONFIG_POR_DEFECTO), autoActualizarMinutos: 0 };
 
-/** fetch de mentira: config.json (modo demo) y el Excel de ejemplo. */
 function simularRed() {
   vi.stubGlobal(
     'fetch',
@@ -73,16 +65,13 @@ describe('PantallaApp (rutas /ordenes y /centros): escribir no vuelve a dibujar 
     const buscador = screen.getByLabelText('Buscar') as HTMLInputElement;
     for (const parcial of ['m', 'ma', 'man', 'mant', 'mante']) fireEvent.change(buscador, { target: { value: parcial } });
     fireEvent.change(screen.getByLabelText('Descripción'), { target: { value: 'cab' } });
-    // Lo escrito ya se ve (y aparece el botón ×)…
     expect(buscador.value).toBe('mante');
     expect(screen.getByRole('button', { name: 'Borrar búsqueda' }).hidden).toBe(false);
-    // …pero la tabla no se volvió a dibujar, no se buscó en las filas ni se recalcularon los desplegables.
     expect(llamadas('segmentosResaltado')).toBe(0);
     expect(llamadas('filtrarFilas')).toBe(0);
     expect(llamadas('sePuedeFiltrar')).toBe(0);
     expect(llamadas('valoresUnicos')).toBe(0);
 
-    // Comprobación de que los espías funcionan: al aplicarse el filtro, la tabla sí se dibuja de nuevo.
     fireEvent.change(buscador, { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Descripción'), { target: { value: '' } });
     fireEvent.change(buscador, { target: { value: 'cn0005' } });
@@ -102,7 +91,7 @@ describe('PantallaApp (rutas /ordenes y /centros): escribir no vuelve a dibujar 
     await waitFor(() => expect(contador()).toBe('Mostrando 51–80 de 80 resultados (de 80 en total)'));
     expect(llamadas('filtrarFilas')).toBe(0);
     expect(llamadas('ordenarFilas')).toBe(0);
-    expect(llamadas('segmentosResaltado')).toBeGreaterThan(0); // la página nueva sí se dibuja
+    expect(llamadas('segmentosResaltado')).toBeGreaterThan(0);
 
     reiniciarEspias();
     fireEvent.change(screen.getByLabelText('Filas por página'), { target: { value: '25' } });
@@ -112,7 +101,6 @@ describe('PantallaApp (rutas /ordenes y /centros): escribir no vuelve a dibujar 
   });
 
   it('abrir otro centro (vista "Por centro") no vuelve a dibujar las órdenes de los centros ya abiertos', async () => {
-    // La vista "Por centro" es la ruta /centros.
     abrirRutas({ config: CONFIG, sesion: null, avisar: () => {} }, '/centros');
     await waitFor(() => expect(contador()).toMatch(/centros/));
     const botones = () => screen.getAllByRole('button', { name: /^Ver órdenes de / });
@@ -121,10 +109,9 @@ describe('PantallaApp (rutas /ordenes y /centros): escribir no vuelve a dibujar 
     expect(filasAbiertas).toBeGreaterThan(0);
     reiniciarEspias();
 
-    fireEvent.click(botones()[0]); // abre el segundo centro (el primero ya dice "Ocultar")
+    fireEvent.click(botones()[0]);
     const filasNuevas = document.querySelectorAll('.fila-detalle tbody tr').length - filasAbiertas;
     const columnas = document.querySelectorAll('.tabla-anidada thead th').length / 2;
-    // Solo se dibujan las celdas de la fila del centro y las de las órdenes del centro que se abrió.
     const celdasCentros = document.querySelectorAll('.fila-centro').length * 3;
     expect(llamadas('segmentosResaltado')).toBeLessThanOrEqual(celdasCentros + filasNuevas * columnas);
   });
@@ -140,12 +127,13 @@ describe('App: el aviso flotante y el botón de tema no vuelven a dibujar la tab
     await waitFor(() => expect(contador()).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
     reiniciarEspias();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cambiar a modo oscuro' }));
-    expect(document.documentElement.getAttribute('data-tema-efectivo')).toBe('oscuro');
+    fireEvent.click(screen.getByRole('button', { name: 'Tema del sistema. Cambiar a tema claro' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tema claro. Cambiar a tema oscuro' }));
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
 
     fireEvent.click(screen.getAllByRole('button', { name: /^Copiar código / })[0]);
     await waitFor(() => expect(document.getElementById('aviso-flotante')?.textContent).toMatch(/^Código .+ copiado$/));
-    await act(async () => {}); // termina de procesar el aviso
+    await act(async () => {});
 
     expect(llamadas('segmentosResaltado')).toBe(0);
     expect(llamadas('filtrarFilas')).toBe(0);

@@ -1,5 +1,3 @@
-// Varias órdenes en una misma celda (así viene el Excel real): separarlas para mostrar una por línea,
-// contarlas en "N° de órdenes" y exportarlas una por línea dentro de la misma celda (logica/ordenes.ts).
 import { describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx/xlsx.mjs';
 import { ajustarTextoDeVariasLineas, archivoExportacion, construirLibroExportacion, FORMATO_VARIAS_LINEAS } from '../../src/logica/exportar.ts';
@@ -7,7 +5,6 @@ import { agruparPorCentro, filtrarFilas, prepararFila, segmentosResaltado } from
 import { clavesDeOrdenes, segmentosPorLinea, separarOrdenes, tieneVariasOrdenes } from '../../src/logica/ordenes.ts';
 import { filaDePrueba } from './ayuda.ts';
 
-/** Celdas reales del Excel de producción (columna "OC/OS"). */
 const REAL_7 = 'OC 3519155 OC 3519252 OC N° 3519348 OC N° 3519553 OC N° 3519521 OC N° 8702 OC N° 3519670';
 const REAL_MEZCLA = 'OC 533 OC N° 3519522 OC N° 3519523';
 
@@ -49,8 +46,7 @@ describe('separarOrdenes', () => {
     expect(separarOrdenes('O.C. 123 O.C. 456 o.s. N° 7 O. C. 8')).toEqual(['O.C. 123', 'O.C. 456', 'o.s. N° 7', 'O. C. 8']);
     expect(separarOrdenes('OC/OS 123')).toEqual(['OC/OS 123']);
     expect(separarOrdenes('OC/OS 123 OC 456')).toEqual(['OC/OS 123', 'OC 456']);
-    expect(separarOrdenes('OC 1/OS 2')).toEqual(['OC 1/', 'OS 2']); // dos órdenes (cada una con su número)
-    // Siguen sin cortarse: puntos dentro de otra palabra ("PRO.C 5") y "O C" sin punto.
+    expect(separarOrdenes('OC 1/OS 2')).toEqual(['OC 1/', 'OS 2']);
     expect(separarOrdenes('PRO.C 5 O C 6')).toEqual(['PRO.C 5 O C 6']);
   });
 
@@ -67,7 +63,7 @@ describe('separarOrdenes', () => {
   it('"OC"/"OS" solo como palabra completa y seguido de un número', () => {
     expect(separarOrdenes('ROC 12 BLOC 5')).toEqual(['ROC 12 BLOC 5']);
     expect(separarOrdenes('OS de mantenimiento')).toEqual(['OS de mantenimiento']);
-    expect(separarOrdenes('OC1OC2')).toEqual(['OC1OC2']); // la segunda va pegada a un número: no es palabra aparte
+    expect(separarOrdenes('OC1OC2')).toEqual(['OC1OC2']);
     expect(separarOrdenes('Pedido OCASO 12')).toEqual(['Pedido OCASO 12']);
   });
 
@@ -86,8 +82,8 @@ describe('contar órdenes ("N° de órdenes")', () => {
     expect(clavesDeOrdenes('OC N° 3519348')).toEqual(clavesDeOrdenes('oc-3519348'));
     expect(clavesDeOrdenes('OC 3519348')).toEqual(clavesDeOrdenes('OC Nº 3519348'));
     expect(clavesDeOrdenes('OC 1')).not.toEqual(clavesDeOrdenes('OS 1'));
-    expect(clavesDeOrdenes('Ver: OC 1')).toEqual(['oc1']); // "Ver:" no es una orden
-    expect(clavesDeOrdenes('0004500100')).toEqual(['0004500100']); // sin "OC"/"OS": la celda entera, como antes
+    expect(clavesDeOrdenes('Ver: OC 1')).toEqual(['oc1']);
+    expect(clavesDeOrdenes('0004500100')).toEqual(['0004500100']);
     expect(clavesDeOrdenes('')).toEqual([]);
   });
 
@@ -97,16 +93,16 @@ describe('contar órdenes ("N° de órdenes")', () => {
       expect(clavesDeOrdenes(forma), forma).toEqual(clave);
     }
     expect(new Set(clavesDeOrdenes('OC 123 (parcial) OC 123')).size).toBe(1);
-    expect(clavesDeOrdenes('OC-0000098263-2025')).toEqual(['oc00000982632025']); // guiones del número: fuera
-    expect(clavesDeOrdenes('OC 4500123A')).not.toEqual(clavesDeOrdenes('OC 4500123B')); // letras pegadas: cuentan
+    expect(clavesDeOrdenes('OC-0000098263-2025')).toEqual(['oc00000982632025']);
+    expect(clavesDeOrdenes('OC 4500123A')).not.toEqual(clavesDeOrdenes('OC 4500123B'));
     expect(clavesDeOrdenes('OC/OS 123')).toEqual(['ocos123']);
   });
 
   it('agruparPorCentro cuenta las órdenes separadas, sin repetir entre filas', () => {
     const filas = [
       filaDePrueba(2, { codigoCentro: 'CN-1', ordenCompra: REAL_MEZCLA }),
-      filaDePrueba(3, { codigoCentro: 'CN-1', ordenCompra: 'OC N° 3519522' }), // repetida (escrita igual)
-      filaDePrueba(4, { codigoCentro: 'CN-1', ordenCompra: 'OC 533' }), // repetida
+      filaDePrueba(3, { codigoCentro: 'CN-1', ordenCompra: 'OC N° 3519522' }),
+      filaDePrueba(4, { codigoCentro: 'CN-1', ordenCompra: 'OC 533' }),
       filaDePrueba(5, { codigoCentro: 'CN-2', ordenCompra: REAL_7 }),
       filaDePrueba(6, { codigoCentro: 'CN-3', ordenCompra: '' }),
     ].map(prepararFila);
@@ -121,7 +117,7 @@ describe('contar órdenes ("N° de órdenes")', () => {
     const filas = [filaDePrueba(2, { codigoCentro: 'CN-1', ordenCompra: REAL_7 })].map(prepararFila);
     expect(filtrarFilas(filas, { q: '3519348' })).toHaveLength(1);
     expect(filtrarFilas(filas, { orden: 'OC N° 8702' })).toHaveLength(1);
-    expect(filtrarFilas(filas, { q: '3519155 OC 3519252' })).toHaveLength(1); // cruza de una orden a otra
+    expect(filtrarFilas(filas, { q: '3519155 OC 3519252' })).toHaveLength(1);
   });
 });
 
@@ -161,10 +157,9 @@ describe('exportar: una orden por línea dentro de la misma celda, con "Ajustar 
   it('la celda lleva las órdenes separadas por saltos de línea (misma fila, mismo texto)', () => {
     const hoja = construirLibroExportacion(COLUMNAS, FILAS).Sheets['Órdenes']!;
     expect(hoja.B2).toMatchObject({ t: 's', v: 'OC 533\nOC N° 3519522\nOC N° 3519523', z: FORMATO_VARIAS_LINEAS });
-    expect(hoja.B3).toMatchObject({ t: 's', v: 'OC-0000098263-2025' }); // una sola orden: tal cual
+    expect(hoja.B3).toMatchObject({ t: 's', v: 'OC-0000098263-2025' });
     expect(hoja.B3?.z).toBeUndefined();
-    expect(hoja.C2?.v).toBe('OC 1 OC 2 en otra columna'); // solo se separa la columna de órdenes
-    // El ancho de la columna es el de la orden más larga, no el de todo el texto.
+    expect(hoja.C2?.v).toBe('OC 1 OC 2 en otra columna');
     expect(hoja['!cols']?.[1]?.wch).toBe('OC-0000098263-2025'.length + 2);
   });
 
@@ -179,11 +174,9 @@ describe('exportar: una orden por línea dentro de la misma celda, con "Ajustar 
     expect(xfs[conAjuste]).toContain('numFmtId="49"');
     expect(xfs[conAjuste]).toContain('vertical="top"');
     expect(xfs.filter((xf) => xf.includes('wrapText'))).toHaveLength(1);
-    // B2 (varias órdenes) usa ese estilo; B3 (una sola) no.
     const hoja = leer('xl/worksheets/sheet1.xml');
     expect(hoja).toMatch(new RegExp(`<c r="B2" s="${conAjuste}"`));
     expect(hoja).not.toMatch(new RegExp(`<c r="B3" s="${conAjuste}"`));
-    // Excel lo vuelve a leer igual: mismo texto con los saltos de línea.
     const libro = XLSX.read(bytes, { type: 'array' });
     expect(libro.Sheets['Órdenes']!.B2!.v).toBe('OC 533\nOC N° 3519522\nOC N° 3519523');
   });

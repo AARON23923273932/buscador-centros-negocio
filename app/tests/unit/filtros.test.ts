@@ -94,7 +94,6 @@ describe('filtrarFilas — buscador global', () => {
     expect(ids({ q: '00045001' })).toEqual([3, 5]);
   });
   it('una palabra no "cruza" de una celda a otra', () => {
-    // El final de la descripción + el inicio del cliente (celda siguiente) no deben formar una palabra.
     expect(ids({ q: 'preventivocliente' })).toEqual([]);
   });
 });
@@ -118,7 +117,7 @@ describe('filtrarFilas — filtros por campo', () => {
   it('estado: coincidencia exacta con una de las opciones (sin importar tildes ni mayúsculas)', () => {
     expect(ids({ estado: 'Abierta' })).toEqual([3, 5]);
     expect(ids({ estado: 'en ejecucion' })).toEqual([4]);
-    expect(ids({ estado: 'Abier' })).toEqual([]); // no es "contiene": se elige de la lista
+    expect(ids({ estado: 'Abier' })).toEqual([]);
     expect(ids({ estado: 'Abierta', tipo: 'Compra', cliente: 'Cliente Demo A' })).toEqual([3]);
   });
   it('se combinan con el buscador', () => {
@@ -143,7 +142,7 @@ describe('compararValores y ordenarFilas', () => {
   it('ordena asc/desc dejando vacíos al final y sin modificar el original', () => {
     const asc = ordenarFilas(FILAS, 3, 'asc').map((f) => f.id);
     const desc = ordenarFilas(FILAS, 3, 'desc').map((f) => f.id);
-    expect(asc[asc.length - 1]).toBe(6); // orden vacía al final
+    expect(asc[asc.length - 1]).toBe(6);
     expect(desc[desc.length - 1]).toBe(6);
     expect(asc.slice(0, 3)).toEqual([3, 5, 4]);
     expect(desc.slice(0, 3)).toEqual([4, 5, 3]);
@@ -161,7 +160,7 @@ describe('agruparPorCentro', () => {
     expect(grupos[0].ordenes).toBe(2);
     expect(grupos[0].filas).toHaveLength(2);
     expect(grupos[0].clientes).toEqual(['Cliente Demo A']);
-    expect(grupos[2].ordenes).toBe(0); // centro recién creado sin orden
+    expect(grupos[2].ordenes).toBe(0);
   });
   it('ordena grupos por número de órdenes', () => {
     const grupos = ordenarGrupos(agruparPorCentro(FILAS), 'ordenes', 'desc');
@@ -199,16 +198,12 @@ describe('paginar', () => {
 describe('valoresUnicos', () => {
   it('sin repetidos y en orden alfabético', () => {
     expect(valoresUnicos(FILAS, 'cliente')).toEqual(['Cliente Demo A', 'Cliente Demo B', 'Inmobiliaria Demo Ñandú']);
-    // "Abierta" y "ABIERTA" son la misma opción del desplegable Estado.
     expect(valoresUnicos(FILAS, 'estado')).toEqual(['Abierta', 'En ejecución']);
   });
   it('un valor escrito de varias formas muestra la más repetida (o la que empieza con mayúscula)', () => {
     const conEstados = (...estados: string[]) => estados.map((estado, i) => prepararFila(filaDePrueba(i + 2, { estado })));
-    // Empate: gana la que empieza con mayúscula, aunque "abierta" aparezca primero.
     expect(valoresUnicos(conEstados('abierta', 'Abierta', 'ANULADA'), 'estado')).toEqual(['Abierta', 'ANULADA']);
-    // La más repetida gana aunque esté en minúsculas.
     expect(valoresUnicos(conEstados('Cerrada', 'cerrada', 'cerrada'), 'estado')).toEqual(['cerrada']);
-    // Empate total: la primera que aparece.
     expect(valoresUnicos(conEstados('CERRADA', 'Cerrada'), 'estado')).toEqual(['CERRADA']);
   });
 });
@@ -225,7 +220,6 @@ describe('sePuedeFiltrar', () => {
     expect(CAMPOS_OPCIONALES).toEqual(['tipoOrden', 'estado']);
     expect(sePuedeFiltrar('estado', mapa, vacias)).toBe(false);
     expect(sePuedeFiltrar('tipoOrden', mapa, vacias)).toBe(false);
-    // Los demás filtros se quedan aunque la columna esté vacía (son obligatorios: ya hay un aviso si faltan).
     expect(sePuedeFiltrar('cliente', mapa, vacias)).toBe(true);
   });
 });

@@ -1,11 +1,4 @@
 // @vitest-environment jsdom
-// Modo estricto de React (<StrictMode>, como en src/main.tsx): en desarrollo React ejecuta los efectos DOS
-// veces a propósito, para encontrar errores. La app tiene dos defensas para que eso no cause problemas:
-//   - useArranque (ref "iniciado"): MSAL procesa UNA sola vez la vuelta de Microsoft (handleRedirectPromise);
-//   - useExcel (memoria.cargando): el Excel se descarga UNA sola vez.
-// Las pruebas en navegador (Playwright) usan la versión compilada, donde StrictMode no actúa: por eso
-// esta prueba monta la app completa como src/main.tsx (<StrictMode> + <Enrutador>), en modo microsoft + Graph
-// con MSAL simulado.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -53,7 +46,6 @@ const CONFIG = {
   autoActualizarMinutos: 0,
 };
 
-/** fetch de mentira que cuenta cada pedido: config.json, Graph (metadatos) y la descarga del Excel. */
 function simularRed() {
   const pedidos = { config: 0, graph: 0, descarga: 0, otros: [] as string[] };
   vi.stubGlobal(
@@ -107,11 +99,11 @@ describe('<StrictMode>: los efectos dobles de React no repiten el inicio de sesi
       </StrictMode>,
     );
     await waitFor(() => expect(document.getElementById('contador')?.textContent).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
-    expect(screen.getByText('persona@aic.pe')).toBeTruthy(); // entró con la cuenta de la empresa
+    expect(screen.getByText('persona@aic.pe')).toBeTruthy();
 
-    expect(msal.crear).toHaveBeenCalledTimes(1); // MSAL se prepara una vez
-    expect(msal.pca.handleRedirectPromise).toHaveBeenCalledTimes(1); // la vuelta de Microsoft se procesa una vez
-    expect(msal.pca.acquireTokenSilent).toHaveBeenCalledTimes(1); // un solo token para leer el Excel
+    expect(msal.crear).toHaveBeenCalledTimes(1);
+    expect(msal.pca.handleRedirectPromise).toHaveBeenCalledTimes(1);
+    expect(msal.pca.acquireTokenSilent).toHaveBeenCalledTimes(1);
     expect(pedidos).toEqual({ config: 1, graph: 1, descarga: 1, otros: [] });
   });
 });

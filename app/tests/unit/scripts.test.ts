@@ -1,5 +1,3 @@
-// Pruebas de los scripts de la carpeta scripts/: publicación sin archivos temporales de Office
-// y modo demo en la computadora sin tocar public/config.json.
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -12,7 +10,6 @@ const CONFIG_REAL = resolve(import.meta.dirname, '../../public/config.json');
 
 const carpetas: string[] = [];
 
-/** Respuesta de mentira del servidor de Vite. */
 interface RespuestaFalsa {
   cabeceras: Record<string, string>;
   cuerpo: string;
@@ -28,7 +25,6 @@ afterEach(() => {
   for (const c of carpetas.splice(0)) rmSync(c, { recursive: true, force: true });
 });
 
-/** dist/ de mentira con el Excel de ejemplo y el archivo de bloqueo que deja Excel al tenerlo abierto. */
 function distConTemporales() {
   const dist = carpetaTemporal();
   mkdirSync(join(dist, 'datos'));
@@ -76,9 +72,7 @@ describe('modo demo en la computadora (npm run dev:demo)', () => {
     expect(demo.datos.rutaLocal).toBe('datos/centros-ejemplo.xlsx');
     expect(demo.columnas).toEqual(real.columnas);
     expect(demo.columnasOcultas).toEqual(real.columnasOcultas);
-    // Es una configuración válida (la app no mostraría "Falta configurar la aplicación").
     expect(validarConfig(mezclarConfig(CONFIG_POR_DEFECTO, demo))).toEqual([]);
-    // El original no cambia.
     expect(real.modo).toBe('microsoft');
     expect(real.datos.fuente).toBe('graph');
   });
@@ -87,9 +81,7 @@ describe('modo demo en la computadora (npm run dev:demo)', () => {
     const plugin = pluginConfigDemo(CONFIG_REAL);
     type Middleware = (pedido: { url: string }, respuesta: RespuestaFalsa, siguiente: () => void) => void;
     let responder: Middleware = () => {};
-    // "use" devuelve la pila de middlewares (como en Vite): el gancho no debe devolverla.
     const servidor = { middlewares: { use: (fn: Middleware) => ((responder = fn), () => {}) } };
-    // Para Vite un gancho puede ser una función o { handler }; los de este plugin son funciones.
     const llamar = (gancho: unknown) => (gancho as (s: typeof servidor) => unknown)(servidor);
     expect(llamar(plugin.configureServer)).toBeUndefined();
     expect(llamar(plugin.configurePreviewServer)).toBeUndefined();

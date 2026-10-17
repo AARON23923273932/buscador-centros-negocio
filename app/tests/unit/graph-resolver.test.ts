@@ -1,6 +1,3 @@
-// Pruebas de cómo la app encuentra el Excel real a partir de su enlace (src/logica/graph.ts), con un Graph SIMULADO:
-// ninguna petición sale a internet. Cubren el enlace de "Copiar vínculo" y la dirección del navegador
-// de Excel Online (…/_layouts/15/Doc.aspx?sourcedoc={GUID}&file=Nombre.xlsx), que es la que dio el usuario.
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import {
   analizarUrlNavegador,
@@ -18,7 +15,6 @@ const json = (cuerpo: unknown, status = 200) =>
   new Response(JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
 
 const GUID_EXCEL = 'e20faa1a-1e42-416b-ba9f-a6fcf00e07c8';
-// El enlace real que dio el usuario (dirección del navegador de Excel Online, sitio raíz).
 const URL_DOC =
   'https://jaicoscorp.sharepoint.com/:x:/r/_layouts/15/Doc.aspx?sourcedoc=%7BE20FAA1A-1E42-416B-BA9F-A6FCF00E07C8%7D' +
   '&file=centros-negocio-aic.xlsx&action=default&mobileredirect=true&wdwpf=doclib-c';
@@ -28,12 +24,6 @@ const DRIVES_RAIZ = '/sites/jaicoscorp.sharepoint.com/drives?$select=id,name,dri
 const SHARES_DOC = `/shares/${codificarUrlCompartida(URL_DOC)}/driveItem`;
 const BUSCAR_NOMBRE = (driveId: string) => `/drives/${driveId}/root/search(q='centros-negocio-aic.xlsx')`;
 
-/**
- * "Graph falso": responde según la ruta EXACTA pedida (lo que va después de /v1.0).
- * Una ruta que no está en la lista responde 404, como Graph cuando no encuentra algo.
- * Fuera de Graph (el enlace temporal de descarga) responde con 3 bytes.
- */
-/** Respuesta del Graph falso para una ruta: un JSON, una Response armada o una función que la devuelve. */
 type RespuestaFalsa = unknown;
 type FetchFalso = Mock<(url: string, opciones?: OpcionesPedido) => Promise<Response>> & { rutas: () => string[] };
 
@@ -51,7 +41,6 @@ function graphFalso(rutas: Record<string, RespuestaFalsa>): FetchFalso {
   });
 }
 
-/** sessionStorage de mentira. */
 function almacenFalso() {
   const datos = new Map<string, string>();
   return {
@@ -62,7 +51,6 @@ function almacenFalso() {
   };
 }
 
-/** Respuesta completa de Graph para un archivo (la que trae el enlace temporal de descarga). */
 const itemCompleto = (id: string, driveId: string) => ({
   id,
   name: 'centros-negocio-aic.xlsx',
@@ -73,7 +61,6 @@ const itemCompleto = (id: string, driveId: string) => ({
   '@microsoft.graph.downloadUrl': `https://jaicoscorp.sharepoint.com/descarga/${id}`,
 });
 
-/** Silencia (y deja revisar) los avisos de consola que la app escribe al buscar. */
 const silenciarAvisos = () => vi.spyOn(console, 'warn').mockImplementation(() => {});
 
 afterEach(() => {
@@ -123,7 +110,6 @@ describe('obtenerMetadatos — cómo se encuentra el Excel', () => {
     expect(meta).toMatchObject({ origen: 'enlace', driveId: 'b!docs', itemId: '01ITEM', urlDescarga: expect.any(String) });
     expect(fetchFalso).toHaveBeenCalledTimes(1);
     expect(fetchFalso.mock.calls[0][1]?.headers?.Prefer).toBe('redeemSharingLinkIfNecessary');
-    // Un enlace de compartir no se cambia por driveId/itemId (podría dar acceso solo a través del enlace).
     expect(almacen.datos.size).toBe(0);
   });
 
@@ -133,7 +119,6 @@ describe('obtenerMetadatos — cómo se encuentra el Excel', () => {
     const fetchFalso = graphFalso({
       [SHARES_DOC]: json({ error: { code: 'invalidRequest' } }, 400),
       [DRIVES_RAIZ]: { value: [{ id: 'b!docs', name: 'Documentos' }, { id: 'b!otros', name: 'Activos del sitio' }] },
-      // Por nombre aparece una copia (otro GUID) en "Documentos" y el original en "Activos del sitio".
       [BUSCAR_NOMBRE('b!docs')]: {
         value: [
           { id: '01COPIA', name: 'centros-negocio-aic.xlsx', file: {} },
@@ -156,7 +141,7 @@ describe('obtenerMetadatos — cómo se encuentra el Excel', () => {
     expect(fetchFalso.rutas()).toEqual([
       SHARES_DOC,
       DRIVES_RAIZ,
-      `/drives/b!docs/items/${GUID_EXCEL}${SELECT_IDS}`, // directo por el GUID: 404 en las dos bibliotecas
+      `/drives/b!docs/items/${GUID_EXCEL}${SELECT_IDS}`,
       `/drives/b!otros/items/${GUID_EXCEL}${SELECT_IDS}`,
       BUSCAR_NOMBRE('b!docs'),
       BUSCAR_NOMBRE('b!otros'),
@@ -164,10 +149,8 @@ describe('obtenerMetadatos — cómo se encuentra el Excel', () => {
       `/drives/b!otros/items/01REAL${SELECT_IDS}`,
       '/drives/b!otros/items/01REAL',
     ]);
-    // Todas las consultas llevan el token; solo /shares lleva el encabezado "Prefer".
     for (const [, opciones] of fetchFalso.mock.calls) expect(opciones?.headers?.Authorization).toBe('Bearer T');
     expect(fetchFalso.mock.calls.filter(([, o]) => o?.headers?.Prefer)).toHaveLength(1);
-    // Queda guardado para esta pestaña.
     expect([...almacen.datos.keys()]).toEqual([`buscador-cn.excel-resuelto:${URL_DOC}`]);
     expect(JSON.parse([...almacen.datos.values()][0])).toEqual({ driveId: 'b!otros', itemId: '01REAL' });
     expect(avisos).toHaveBeenCalled();
@@ -205,7 +188,6 @@ describe('obtenerMetadatos — cómo se encuentra el Excel', () => {
     expect(meta.itemId).toBe('01OPS');
     expect(fetchFalso.rutas()[1]).toBe(drivesSitio);
     expect(fetchFalso.rutas()).not.toContain(DRIVES_RAIZ);
-    // Nunca se pide GET /sites/{sitio} solo: según la documentación de Graph exige el permiso Sites.Read.All.
     expect(fetchFalso.rutas().some((r) => /^\/sites\/[^/]+$/.test(r.split('?')[0]))).toBe(false);
   });
 
@@ -218,7 +200,7 @@ describe('obtenerMetadatos — cómo se encuentra el Excel', () => {
         value: [
           { id: '01A', name: 'centros-negocio-aic.xlsx', file: {} },
           { id: '01B', name: 'centros-negocio-aic.xlsx', file: {} },
-          { id: '01CARPETA', name: 'centros-negocio-aic.xlsx', folder: {} }, // las carpetas no cuentan
+          { id: '01CARPETA', name: 'centros-negocio-aic.xlsx', folder: {} },
         ],
       },
       [`/drives/b!docs/items/01A${SELECT_IDS}`]: { id: '01A', sharepointIds: { listItemUniqueId: '11111111-0000-0000-0000-000000000000' } },
@@ -283,13 +265,11 @@ describe('obtenerMetadatos — cómo se encuentra el Excel', () => {
     const primera = await obtenerMetadatos({ urlCompartida: URL_DOC }, 'T', fetchFalso, { almacen });
     expect(primera.origen).toBe('busqueda');
 
-    // Actualización automática: una sola consulta, directo al archivo.
     fetchFalso.mockClear();
     const segunda = await obtenerMetadatos({ urlCompartida: URL_DOC }, 'T', fetchFalso, { almacen });
     expect(segunda).toMatchObject({ origen: 'memoria', itemId: '01VIEJO' });
     expect(fetchFalso.rutas()).toEqual(['/drives/b!docs/items/01VIEJO']);
 
-    // El bot volvió a crear el archivo (nuevo id): 404 -> se olvida lo guardado y se busca otra vez.
     idActual = '01NUEVO';
     fetchFalso.mockClear();
     const tercera = await obtenerMetadatos({ urlCompartida: URL_DOC }, 'T', fetchFalso, { almacen });
@@ -354,7 +334,6 @@ describe('obtenerMetadatos — cómo se encuentra el Excel', () => {
     const r = await descargarDesdeGraph({ urlCompartida: URL_DOC }, async () => 'T', fetchFalso, { almacen: null });
     expect(r).toMatchObject({ driveId: 'b!docs', itemId: '01REAL', origen: 'busqueda' });
     expect(new Uint8Array(r.contenido)).toEqual(new Uint8Array([1, 2, 3]));
-    // La descarga usa el enlace temporal, sin el token.
     expect(fetchFalso.mock.calls.at(-1)).toEqual(['https://jaicoscorp.sharepoint.com/descarga/01REAL', {}]);
   });
 });
@@ -376,7 +355,6 @@ describe('obtenerMetadatos — casos difíciles de la búsqueda', () => {
     });
     const meta = await obtenerMetadatos({ urlCompartida: URL_DOC }, 'T', fetchFalso, { almacen: null });
     expect(meta).toMatchObject({ origen: 'busqueda', itemId: '01REAL' });
-    // La página siguiente se pide tal cual (dirección completa, sin anteponer otra vez GRAPH_BASE) y con el token.
     const llamada = fetchFalso.mock.calls.find(([url]) => url === pagina2);
     expect(llamada?.[1]?.headers?.Authorization).toBe('Bearer T');
   });
@@ -397,7 +375,6 @@ describe('obtenerMetadatos — casos difíciles de la búsqueda', () => {
 
   it(`lee como máximo ${MAX_PAGINAS} páginas y nunca envía el token fuera de graph.microsoft.com`, async () => {
     silenciarAvisos();
-    // Cada página de la búsqueda apunta a la siguiente, sin fin; la de bibliotecas apunta a otro sitio.
     const rutas: Record<string, RespuestaFalsa> = {
       [SHARES_DOC]: json({}, 404),
       [DRIVES_RAIZ]: { value: [{ id: 'b!docs' }], '@odata.nextLink': 'https://otro-sitio.example.com/robar-token' },
@@ -440,7 +417,6 @@ describe('obtenerMetadatos — casos difíciles de la búsqueda', () => {
       tipo: 'otro',
       status: 500,
     });
-    // Igual buscó en la otra biblioteca.
     expect(fetchFalso.rutas()).toContain(BUSCAR_NOMBRE('b!docs'));
   });
 

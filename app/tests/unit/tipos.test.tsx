@@ -1,7 +1,5 @@
 // Pruebas de TIPOS: cada "@ts-expect-error" dice que TypeScript DEBE rechazar la línea de abajo.
-// Si alguien afloja un tipo (ej. vuelve a aceptar cualquier texto como dirección de orden), la línea
 // deja de dar error y "npm run typecheck" falla ("Unused '@ts-expect-error' directive").
-// Vitest también las ejecuta: muestran que, aunque llegara un valor raro, la app no se rompe.
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Resaltado } from '../../src/componentes/Resaltado.tsx';

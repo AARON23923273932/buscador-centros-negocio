@@ -1,11 +1,3 @@
-// Barra sobre la tabla: "Por orden / Por centro de negocio", el contador, filas por página y "Exportar a Excel".
-//
-// "Por orden / Por centro" es un grupo de opciones con forma de botones pegados (OpcionesBoton.tsx: RadioGroup,
-// ButtonGroup y Button de shadcn/ui): para los lectores de pantalla es un grupo de opciones (role="radiogroup",
-// cada una role="radio" con aria-checked) y se usa con el teclado igual que los botones de opción del navegador:
-// Tab llega a la opción elegida y las flechas pasan a la otra Y la eligen (cambia la vista al instante); Espacio
-// también elige. Si "Por centro" está desactivado (el Excel no tiene columna de centro), las flechas lo saltan.
-// A los componentes de shadcn/ui solo se les agregan clases de medidas y ubicación (colores: el tema, estilos.css).
 import { Button } from '@/components/ui/button';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import type { Vista } from '../logica/tipos.ts';

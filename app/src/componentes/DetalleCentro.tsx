@@ -1,19 +1,9 @@
-// =============================================================================
-// DetalleCentro — Ruta /centros/:codigo: un centro de negocio con TODAS sus órdenes.
-//
-//   código (de la dirección) + Excel (de PantallaApp) ──► buscarCentro() ──► ficha + tabla de sus filas
-//
-// Se llega con el enlace del código en las listas (o con un enlace compartido). La dirección conserva la
-// query de la lista (?q=…&cliente=…): "Volver a la lista" regresa a la lista con los mismos filtros.
-// Los filtros de la lista NO se aplican aquí: se ven todas las órdenes del centro.
-// =============================================================================
-
 import { useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { CircleAlertIcon, TriangleAlertIcon } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableHeader } from '@/components/ui/table';
 import { buscarCentro, estadosDeCentro } from '../logica/centro.ts';
@@ -23,16 +13,12 @@ import { CajaTabla, ContenidoCelda, EncabezadosFijos, FilasDatos, MensajeTabla }
 import { IconoVolver, IndicadorCarga } from './Iconos.tsx';
 import { useContextoApp } from './PantallaApp.tsx';
 
-/** En el detalle no se resalta nada (no es una búsqueda). Función fija: memo() de FilasDatos sirve. */
 const sinTerminos = (): readonly string[] => [];
 
-/** "Volver a la lista": a la lista desde la que se abrió (o a /centros), con la misma búsqueda y filtros. */
 function VolverALista() {
   const ubicacion = useLocation();
   const navegar = useNavigate();
   const destino = { pathname: rutaVolver(ubicacion.state), search: ubicacion.search };
-  // Si se llegó desde la lista con el enlace del código, "Volver" es como el botón atrás del navegador:
-  // regresa a esa misma entrada del historial (y el navegador recupera hasta dónde se había bajado).
   const vieneDeLaLista = typeof (ubicacion.state as EstadoNavegacion | null)?.desde === 'string';
   const alHacerClic = (ev: MouseEvent<HTMLAnchorElement>) => {
     const posicion = (history.state as { idx?: unknown } | null)?.idx;
@@ -43,20 +29,15 @@ function VolverALista() {
     }
   };
   return (
-    // Enlace con el aspecto de un botón (Button de shadcn/ui con asChild: el <a> recibe sus clases).
-    <Button asChild variant="outline">
-      <Link id="btn-volver" to={destino} onClick={alHacerClic}>
-        <IconoVolver />
-        Volver a la lista
-      </Link>
-    </Button>
+    <Link id="btn-volver" to={destino} onClick={alHacerClic} className={buttonVariants({ variant: 'outline' })}>
+      <IconoVolver />
+      Volver a la lista
+    </Link>
   );
 }
 
 export function DetalleCentro() {
   const { excel, copiar, anotarCentroAbierto } = useContextoApp();
-  // El código sale de la dirección tal cual (decodificada una vez): useParams() convertiría un "%2F" escrito en
-  // el código en "/" (ver codigoDeRuta). useParams() queda de respaldo.
   const { pathname } = useLocation();
   const { codigo: codigoParametro = '' } = useParams();
   const codigo = codigoDeRuta(pathname) ?? codigoParametro;
@@ -65,8 +46,6 @@ export function DetalleCentro() {
   const estados = useMemo(() => (grupo ? estadosDeCentro(grupo) : []), [grupo]);
   const conEstado = !!datos && 'estado' in datos.mapa;
 
-  // Al abrir el detalle: arriba de la página y el foco en el título (lo anuncia el lector de pantalla).
-  // Se anota el centro: al volver a la lista, el foco irá a su enlace (ver VistaLista).
   const titulo = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -74,7 +53,6 @@ export function DetalleCentro() {
     anotarCentroAbierto({ codigo, indice: -1 });
   }, [codigo, anotarCentroAbierto]);
 
-  /** Un dato de la ficha del centro (título + valor). */
   const DATO = 'min-w-0';
   const DATO_ANCHO = 'min-w-0 col-span-2 max-escritorio:col-span-1';
   const TITULO_DATO = 'mb-0.5 text-[0.8rem] font-semibold text-muted-foreground';
@@ -135,7 +113,6 @@ export function DetalleCentro() {
                 </div>
               )}
               <div className={DATO}>
-                {/* Cuenta cada orden aunque varias vengan juntas en una celda (ver logica/ordenes.ts). */}
                 <dt className={TITULO_DATO}>N° de órdenes</dt>
                 <dd className={VALOR_DATO}>
                   <Badge variant="secondary" id="numero-ordenes" className="insignia min-w-6">

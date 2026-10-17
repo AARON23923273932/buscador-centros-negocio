@@ -10,7 +10,6 @@ describe('estado en la URL', () => {
   it('el estado inicial usa la misma lista de filtros que "Limpiar filtros" (FILTROS_VACIOS)', () => {
     expect(estadoInicial(50)).toMatchObject(FILTROS_VACIOS);
   });
-  // La vista ya no va en la query (es la ruta /ordenes o /centros): la ida y vuelta es con la vista normal.
   it('ida y vuelta conserva búsqueda, filtros, orden y página', () => {
     const estado: EstadoBusqueda = {
       ...estadoInicial(50),
@@ -28,7 +27,7 @@ describe('estado en la URL', () => {
     };
     const url = escribirEstadoEnUrl(estado, 50);
     expect(url.startsWith('?')).toBe(true);
-    expect(url).not.toMatch(/[?&](code|state|error)=/); // nombres reservados por el login
+    expect(url).not.toMatch(/[?&](code|state|error)=/);
     expect(url).toContain('estado=En+ejecuci%C3%B3n');
     expect(leerEstadoDeUrl(url, 50)).toEqual(estado);
   });

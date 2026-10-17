@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ConfigMicrosoft } from '../../src/logica/config.ts';
 import type { PcaMinima } from '../../src/logica/auth.ts';
 
-// Se reemplaza MSAL por una versión falsa: así se prueba la lógica sin ir a Microsoft.
 vi.mock('@azure/msal-browser', () => {
   class InteractionRequiredAuthError extends Error {
     constructor(mensaje?: string) {
@@ -13,7 +12,6 @@ vi.mock('@azure/msal-browser', () => {
   return { InteractionRequiredAuthError, createStandardPublicClientApplication: vi.fn() };
 });
 
-// (Con el tipo de la versión falsa: su constructor recibe solo el mensaje.)
 const { InteractionRequiredAuthError } = (await import('@azure/msal-browser')) as unknown as {
   InteractionRequiredAuthError: new (mensaje: string) => Error;
 };
@@ -30,11 +28,9 @@ const MS: ConfigMicrosoft = {
   redirectUri: '',
   postLogoutRedirectUri: '',
 };
-// App publicada en una subcarpeta (/app/, con base: '/app/' en vite.config.ts), abierta en una ruta anidada.
 const UBICACION = { href: 'https://buscador.ejemplo.test/app/centros/A2338PY01?q=x' };
 const BASE = '/app/';
 
-/** Cuenta de mentira (lo mínimo que la app lee de una cuenta de MSAL). */
 const cuenta = (correo: string) => ({
   username: correo,
   name: 'Persona Demo',
@@ -69,7 +65,6 @@ function pcaFalso({
 }
 type PcaFalso = ReturnType<typeof pcaFalso>;
 
-/** El PCA de mentira solo tiene lo que la app usa (para TypeScript se presenta como el real). */
 const comoPca = (pca: PcaFalso) => pca as unknown as PcaMinima;
 
 function almacenFalso() {
@@ -96,9 +91,6 @@ describe('iniciarMicrosoft', () => {
     expect(config.cache.cacheLocation).toBe('localStorage');
   });
 
-  // Con React Router la app tiene rutas anidadas: la página puente NO depende de la ruta desde donde se inicia
-  // sesión (no sería /centros/redirect.html, que no está registrada en Entra ID). La ruta a la que se vuelve
-  // la recuerda MSAL por su cuenta (la dirección completa al pulsar el botón).
   it('desde una ruta anidada (/centros/A2338PY01?q=x) la página puente sigue siendo <raíz de la app>/redirect.html', async () => {
     const { crearPca } = await iniciar(pcaFalso(), { ubicacion: { href: 'https://aic-centros-negocio.example/centros/A2338PY01?q=x' }, base: '/' });
     const config = crearPca.mock.calls[0][0] as { auth: { redirectUri: string; postLogoutRedirectUri: string } };
@@ -106,15 +98,12 @@ describe('iniciarMicrosoft', () => {
     expect(config.auth.postLogoutRedirectUri).toBe('https://aic-centros-negocio.example/');
   });
 
-
   it('sin cuenta: pide iniciar sesión con selección de cuenta y SOLO el permiso básico (User.Read)', async () => {
     const pca = pcaFalso();
     const { sesion } = await iniciar(pca);
     expect(sesion.estado).toBe('sin-sesion');
     await sesion.iniciarSesion();
-    // Files.Read.All no se pide al entrar: si un administrador todavía no lo aprobó, la persona igual puede entrar.
     expect(pca.loginRedirect).toHaveBeenCalledWith({ scopes: ['User.Read'], prompt: 'select_account' });
-    // "Volver a iniciar sesión" tras un error de consentimiento: pide todos los permisos de una vez.
     await sesion.iniciarSesion({ todosLosPermisos: true });
     expect(pca.loginRedirect).toHaveBeenLastCalledWith({ scopes: MS.scopes, prompt: 'select_account' });
   });
@@ -122,7 +111,7 @@ describe('iniciarMicrosoft', () => {
   it('permisosDeInicio: solo los básicos de la lista de config.json', () => {
     expect(permisosDeInicio(['User.Read', 'Files.Read.All'])).toEqual(['User.Read']);
     expect(permisosDeInicio(['user.read', 'Sites.Read.All', 'openid'])).toEqual(['user.read', 'openid']);
-    expect(permisosDeInicio(['Files.Read.All'])).toEqual([]); // MSAL agrega igual openid/profile
+    expect(permisosDeInicio(['Files.Read.All'])).toEqual([]);
     expect(permisosDeInicio(undefined)).toEqual([]);
   });
 
@@ -164,16 +153,13 @@ describe('iniciarMicrosoft', () => {
     pca.acquireTokenSilent.mockRejectedValue(new InteractionRequiredAuthError('login_required'));
     const { sesion } = await iniciar(pca);
 
-    // 1) auto-actualización (no interactiva): no redirige, avisa.
     await expect(sesion.obtenerToken({ interactivo: false })).rejects.toMatchObject({ tipo: 'sesion' });
     expect(pca.acquireTokenRedirect).not.toHaveBeenCalled();
 
-    // 2) acción del usuario: redirige a Microsoft (la promesa queda pendiente porque la página se va).
     const pendiente = sesion.obtenerToken({ interactivo: true });
     await vi.waitFor(() => expect(pca.acquireTokenRedirect).toHaveBeenCalledTimes(1));
     void pendiente;
 
-    // 3) si vuelve a fallar enseguida, no redirige otra vez.
     await expect(sesion.obtenerToken({ interactivo: true })).rejects.toMatchObject({ tipo: 'sesion' });
     expect(pca.acquireTokenRedirect).toHaveBeenCalledTimes(1);
   });
@@ -186,7 +172,6 @@ describe('iniciarMicrosoft', () => {
     });
     pca.acquireTokenSilent.mockRejectedValue(error);
     const { sesion } = await iniciar(pca);
-    // Auto-actualización: no redirige y explica que lo tiene que aprobar un administrador.
     const e = (await sesion.obtenerToken({ interactivo: false }).catch((x: unknown) => x)) as Error;
     expect(e).toMatchObject({ tipo: 'consentimiento' });
     expect(e.message).toMatch(/Conceder consentimiento de administrador/);
@@ -201,7 +186,6 @@ describe('iniciarMicrosoft', () => {
   });
 
   it('ya había entrado (solo User.Read) y falta aprobar Files.Read.All: la sesión sigue y se explica qué falta', async () => {
-    // Microsoft lo devuelve con "AADSTS90093" (una directiva no deja que el usuario apruebe permisos).
     const c = cuenta('ana@aic.pe');
     const error = Object.assign(new Error('AADSTS90093: An administrator has set a policy that prevents you'), {
       errorCode: 'access_denied',
@@ -213,14 +197,14 @@ describe('iniciarMicrosoft', () => {
       }),
     );
     const almacen = almacenFalso();
-    almacen.setItem('buscador-cn.reintento-token', String(Date.now())); // ya se redirigió hace un momento
+    almacen.setItem('buscador-cn.reintento-token', String(Date.now()));
     const sesion = await iniciarMicrosoft(MS, { ubicacion: UBICACION, crearPca: async () => comoPca(pca), almacen });
     expect(sesion.estado).toBe('permitido');
     expect(sesion.errorLogin).toMatch(/un administrador apruebe el permiso de lectura de archivos.*\(AADSTS90093\)/s);
     const e = await sesion.obtenerToken({ interactivo: true }).catch((x: unknown) => x);
     expect(e).toMatchObject({ tipo: 'consentimiento' });
     expect(pca.acquireTokenSilent).toHaveBeenCalledWith({ scopes: MS.scopes, account: c });
-    expect(pca.acquireTokenRedirect).not.toHaveBeenCalled(); // no rebota otra vez a Microsoft enseguida
+    expect(pca.acquireTokenRedirect).not.toHaveBeenCalled();
   });
 
   it('error al volver de Microsoft: se explica en español', async () => {

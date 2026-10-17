@@ -1,15 +1,10 @@
-// Cabecera: nombre de la app, quién inició sesión (o "Modo demostración") y el botón de tema.
-// Guía de AIC: título en Primary Blue y negrita con una línea inferior gruesa del mismo color (como el
-// "Heading 1" de la guía); colores del tema (estilos.css). Badge y Button de shadcn/ui sin clases de color.
-// Si se cambia algo aquí, cambiarlo también en index.html (lo revisa tests/unit/pagina-inicial.test.tsx).
+import { ModeToggle } from '@/components/mode-toggle';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { EstadoTema } from '../hooks/useTema.ts';
+import { Separator } from '@/components/ui/separator';
 import { iniciales } from '../logica/formato.ts';
-import { BotonTema } from './BotonTema.tsx';
-import { IconoLogo } from './Iconos.tsx';
+import { LogoAic } from './Iconos.tsx';
 
-/** Persona que inició sesión con Microsoft. */
 export interface Usuario {
   nombre: string;
   correo: string;
@@ -19,20 +14,19 @@ export interface Usuario {
 interface Props {
   titulo: string;
   subtitulo: string;
-  /** null = nadie (modo demo, o todavía no inició sesión). */
   usuario: Usuario | null;
   demo: boolean;
-  tema: EstadoTema;
 }
 
-export function Cabecera({ titulo, subtitulo, usuario, demo, tema }: Props) {
+export function Cabecera({ titulo, subtitulo, usuario, demo }: Props) {
   return (
-    <header className="cabecera border-b-2 border-primary bg-card print:hidden">
+    <header className="cabecera relative bg-card shadow-xs print:hidden">
       <div className="columna flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 max-escritorio:py-2.5">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="logo grid size-10 flex-none place-items-center rounded-lg bg-primary text-primary-foreground" aria-hidden="true">
-            <IconoLogo />
-          </span>
+        <div className="flex min-w-0 items-center gap-4 max-escritorio:gap-3">
+          <a href="https://www.aic.pe/" target="_blank" rel="noopener noreferrer" className="logo flex-none rounded-md" aria-label="AIC (abre www.aic.pe en otra pestaña)">
+            <LogoAic className="h-11 max-escritorio:h-9" />
+          </a>
+          <Separator orientation="vertical" className="my-1 max-escritorio:hidden" />
           <div className="min-w-0">
             <h1 id="titulo-app" className="m-0 text-xl">
               {titulo}
@@ -68,9 +62,10 @@ export function Cabecera({ titulo, subtitulo, usuario, demo, tema }: Props) {
               </Button>
             </div>
           </div>
-          <BotonTema tema={tema} />
+          <ModeToggle />
         </div>
       </div>
+      <div aria-hidden="true" className="h-[3px] bg-linear-to-r from-primary from-40% to-marca-naranja" />
     </header>
   );
 }

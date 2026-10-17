@@ -1,5 +1,3 @@
-// Tabla "Por centro de negocio": una fila por centro que se abre para ver sus órdenes (Table de shadcn/ui).
-// memo(): no se vuelve a dibujar si sus props no cambian (ej. mientras se escribe en el buscador).
 import { Fragment, memo, type MouseEvent } from 'react';
 import { cn } from 'cn';
 import { Badge } from '@/components/ui/badge';
@@ -14,13 +12,10 @@ import { IconoFlecha } from './Iconos.tsx';
 import { Resaltado } from './Resaltado.tsx';
 
 interface Props {
-  /** Centros de la página actual. */
   grupos: readonly Grupo[];
   columnas: readonly Columna[];
-  /** Palabras del buscador (se resaltan en la columna de clientes). */
   terminos: readonly string[];
   terminosDe: (columna: Pick<Columna, 'campo'>) => readonly string[];
-  /** Centros abiertos (por su clave). */
   expandidos: ReadonlySet<string>;
   ordenarPor: string;
   direccion: Direccion;
@@ -30,14 +25,6 @@ interface Props {
   alCopiar?: AlCopiar;
 }
 
-/**
- * Filas: alternas por CENTRO (no por fila de la tabla), así abrir un centro no cambia el color de los de abajo.
- * Centro abierto: su fila y la de sus órdenes se marcan con el estado "seleccionada" de la TableRow de shadcn/ui
- * (data-state="selected" → data-[state=selected]:bg-muted, del propio componente; no se agrega ninguna clase de
- * color) y no llevan la clase de fila alterna. Así las dos se ven juntas y con el mismo fondo (--muted: Light Gray;
- * en oscuro, Primary Blue), el mouse encima no las cambia y una fila alterna no se aclara al abrirla (sin esto,
- * has-aria-expanded:bg-muted/50 y hover:bg-muted/50 de la TableRow le ganaban a bg-muted).
- */
 const SELECCIONADA = 'selected';
 
 export const TablaCentros = memo(function TablaCentros({
@@ -57,7 +44,6 @@ export const TablaCentros = memo(function TablaCentros({
   const colDescripcion: Pick<Columna, 'campo'> = columnas.find((c) => c.campo === 'descripcionCentro') || { campo: 'descripcionCentro' };
   const orden = { ordenarPor, direccion, alOrdenar };
 
-  /** Clic en la fila del centro (en la flecha o en cualquier parte que no sea otro botón): abre/cierra. */
   const alHacerClic = (ev: MouseEvent<HTMLTableRowElement>, clave: string) => {
     const objetivo = ev.target;
     if (!(objetivo instanceof Element)) return;
@@ -93,9 +79,6 @@ export const TablaCentros = memo(function TablaCentros({
                 onClick={(ev) => alHacerClic(ev, g.clave)}
               >
                 <TableCell className="w-11">
-                  {/* Flecha (Button outline de shadcn/ui, tamaño icon-xs: 24 px): centrada con el código de su fila, sin
-                      hacerla más alta: se apoya arriba de la línea (align-top) y sobresale 2 px arriba y abajo de la
-                      línea de texto, de 20 px. */}
                   <Button
                     type="button"
                     variant="outline"
@@ -129,7 +112,6 @@ export const TablaCentros = memo(function TablaCentros({
               {abierto && (
                 <TableRow className="fila-detalle" data-state={SELECCIONADA} id={idDetalle}>
                   <TableCell colSpan={5} className="pt-0 pr-3 pb-3 pl-11 whitespace-normal max-escritorio:pl-3">
-                    {/* Las órdenes del centro: otra Table en una Card de shadcn/ui (py-0 gap-0: sin su espacio interior). */}
                     <Card className="gap-0 py-0">
                       <Table className="tabla-anidada">
                         <caption className="sr-only">Órdenes del centro {nombre}</caption>

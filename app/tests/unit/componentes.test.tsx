@@ -1,23 +1,20 @@
 // @vitest-environment jsdom
-// Pruebas de componentes y hooks de React en una página simulada (jsdom): teclado, foco, espera
-// de 200 ms del buscador, botón de tema y la pantalla principal completa con el Excel de ejemplo.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AvisoError, AvisoFlotante } from '../../src/componentes/Avisos.tsx';
-import { BotonTema } from '../../src/componentes/BotonTema.tsx';
 import { Filtros } from '../../src/componentes/Filtros.tsx';
 import { Paginacion } from '../../src/componentes/Paginacion.tsx';
-import { TooltipProvider } from '../../src/components/ui/tooltip.tsx';
+import { ModeToggle } from '../../src/components/mode-toggle.tsx';
+import { ThemeProvider } from '../../src/components/theme-provider.tsx';
 import { useAvisoFlotante } from '../../src/hooks/useAvisoFlotante.ts';
 import { useBusqueda } from '../../src/hooks/useBusqueda.ts';
-import { useTema } from '../../src/hooks/useTema.ts';
 import { CONFIG_POR_DEFECTO, type Config } from '../../src/logica/config.ts';
 import { leerLibro } from '../../src/logica/datos.ts';
 import { estadoInicial } from '../../src/logica/estado-url.ts';
 import { paginar } from '../../src/logica/filtros.ts';
-import { CLAVE_TEMA } from '../../src/logica/tema.ts';
 import { estadoControles } from '../../src/logica/vista.ts';
 import { crearExcelDesdeMatriz } from './ayuda.ts';
 import { abrirRutas, ConEnrutador } from './ayuda-rutas.tsx';
@@ -69,7 +66,6 @@ describe('useBusqueda (cajas de texto con espera)', () => {
     expect(result.current.estado.direccion).toBe('desc');
     act(() => result.current.cambiarVista('centro'));
     expect(result.current.estado).toMatchObject({ vista: 'centro', ordenarPor: '', direccion: 'asc' });
-    // La vista es la ruta: "Por centro" lleva a /centros (los filtros siguen en la query).
     expect(location.pathname).toBe('/centros');
   });
 
@@ -152,8 +148,6 @@ describe('Filtros', () => {
     const codigo = screen.getByLabelText('Código') as HTMLInputElement;
     expect(codigo.disabled).toBe(true);
     expect(codigo.title).toBe('No se encontró esta columna en el Excel');
-    // El Input de shadcn/ui desactivado no recibe el mouse (disabled:pointer-events-none): el motivo va también en la
-    // caja del campo, que sí lo recibe, para que aparezca al pasar el mouse. Los campos que se pueden usar no lo llevan.
     expect(codigo.parentElement?.title).toBe('No se encontró esta columna en el Excel');
     expect((screen.getByLabelText('Descripción') as HTMLInputElement).parentElement?.hasAttribute('title')).toBe(false);
   });
@@ -183,8 +177,6 @@ describe('Avisos (AvisoError y AvisoFlotante)', () => {
     expect(reintentar).toHaveBeenCalledOnce();
   });
 
-  // Los lectores de pantalla leen role="alert"/"status" cuando su contenido CAMBIA en la página. React no
-  // toca la página si el texto es el mismo: por eso cada aviso nuevo debe poner un nodo de texto nuevo.
   it('el mismo error repetido (otro id) vuelve a poner el texto en la página; los botones no se recrean', () => {
     const acciones = [{ texto: 'Reintentar', accion: () => {} }];
     const { rerender } = render(<AvisoError error={{ mensaje: 'Sin conexión.', acciones, id: 1 }} />);
@@ -222,57 +214,40 @@ describe('Avisos (AvisoError y AvisoFlotante)', () => {
   });
 });
 
-describe('Botón de tema (useTema + BotonTema)', () => {
+describe('Botón de tema (ThemeProvider de shadcn/ui + ModeToggle)', () => {
   beforeEach(() => {
     localStorage.clear();
-    document.documentElement.removeAttribute('data-tema');
-    document.documentElement.removeAttribute('data-tema-efectivo');
+    document.documentElement.classList.remove('light', 'dark');
   });
 
-  function ConBoton() {
-    return <BotonTema tema={useTema()} />;
-  }
-  // La app tiene un solo TooltipProvider (en App.tsx): aquí se pone alrededor del botón.
-  const conProveedor = { wrapper: TooltipProvider };
+  const conProveedor = { wrapper: ({ children }: { children: ReactNode }) => <ThemeProvider>{children}</ThemeProvider> };
+  const raiz = document.documentElement;
 
-  it('sin elección sigue al sistema; al pulsar cambia, lo marca en <html> y lo recuerda', () => {
-    render(<ConBoton />, conProveedor);
-    const raiz = document.documentElement;
-    expect(raiz.getAttribute('data-tema-efectivo')).toBe('claro'); // jsdom no tiene modo oscuro
-    expect(raiz.hasAttribute('data-tema')).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'Cambiar a modo oscuro' }));
-    expect(raiz.getAttribute('data-tema')).toBe('oscuro');
-    expect(raiz.getAttribute('data-tema-efectivo')).toBe('oscuro');
-    expect(localStorage.getItem(CLAVE_TEMA)).toBe('oscuro');
-    // El nombre pasa a ser el del modo al que se cambiaría ahora (lo que lee el lector de pantalla y dice la ayuda).
-    expect(screen.getByRole('button', { name: 'Cambiar a modo claro' }).id).toBe('btn-tema');
-    expect(screen.queryByRole('button', { name: 'Cambiar a modo oscuro' })).toBeNull();
-  });
+  it('cada clic pasa al siguiente: sistema → claro → oscuro → sistema; pone la clase en <html> y lo recuerda', () => {
+    render(<ModeToggle />, conProveedor);
+    expect(raiz.classList.contains('light')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Tema del sistema. Cambiar a tema claro' }).id).toBe('btn-tema');
 
-  it('el nombre del botón también se ve como ayuda flotante (Tooltip) al llegar con el teclado, y se actualiza', async () => {
-    // Radix mide la ayuda flotante con ResizeObserver, que jsdom no tiene.
-    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
-    render(<ConBoton />, conProveedor);
-    const boton = screen.getByRole('button', { name: 'Cambiar a modo oscuro' });
-    expect(boton.title).toBe(''); // sin "title": no aparecen dos ayudas a la vez
-    fireEvent.focus(boton);
-    expect((await screen.findByRole('tooltip')).textContent).toBe('Cambiar a modo oscuro');
-    // La ayuda repite el nombre: el botón no la usa como descripción (si no, el lector de pantalla lo diría dos veces).
-    expect(boton.hasAttribute('aria-describedby')).toBe(false);
-    // Al cambiar de modo, la ayuda dice el nombre nuevo.
-    fireEvent.click(boton);
-    expect(boton.getAttribute('aria-label')).toBe('Cambiar a modo claro');
-    fireEvent.blur(boton);
-    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
-    fireEvent.focus(boton);
-    expect((await screen.findByRole('tooltip')).textContent).toBe('Cambiar a modo claro');
-    expect(boton.hasAttribute('aria-describedby')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Tema del sistema. Cambiar a tema claro' }));
+    expect(localStorage.getItem('vite-ui-theme')).toBe('light');
+    expect(raiz.classList.contains('light')).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tema claro. Cambiar a tema oscuro' }));
+    expect(localStorage.getItem('vite-ui-theme')).toBe('dark');
+    expect(raiz.classList.contains('dark')).toBe(true);
+    expect(raiz.classList.contains('light')).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tema oscuro. Cambiar a tema del sistema' }));
+    expect(localStorage.getItem('vite-ui-theme')).toBe('system');
+    expect(raiz.classList.contains('light')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Tema del sistema. Cambiar a tema claro' })).toBeTruthy();
   });
 
   it('respeta la elección guardada', () => {
-    localStorage.setItem(CLAVE_TEMA, 'oscuro');
-    render(<ConBoton />, conProveedor);
-    expect(document.documentElement.getAttribute('data-tema-efectivo')).toBe('oscuro');
+    localStorage.setItem('vite-ui-theme', 'dark');
+    render(<ModeToggle />, conProveedor);
+    expect(raiz.classList.contains('dark')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Tema oscuro. Cambiar a tema del sistema' })).toBeTruthy();
   });
 });
 
@@ -297,9 +272,9 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
     await waitFor(() => expect(contador.textContent).toBe('Mostrando 1–50 de 80 resultados (de 80 en total)'));
     expect(document.getElementById('aviso-demo')?.hidden).toBe(false);
     expect(document.getElementById('texto-actualizado')?.textContent).toMatch(/^Datos actualizados a las \d{2}:\d{2} · Excel modificado el 08\/10\/2026/);
-    expect(document.querySelectorAll('#tabla-resultados thead th')).toHaveLength(7); // sin Monto ni Moneda
+    expect(document.querySelectorAll('#tabla-resultados thead th')).toHaveLength(7);
     expect(screen.getByRole('button', { name: 'Exportar a Excel' })).toHaveProperty('disabled', false);
-    expect(location.search).toBe(''); // estado normal = URL limpia
+    expect(location.search).toBe('');
 
     fireEvent.change(screen.getByLabelText('Buscar'), { target: { value: 'cn0005' } });
     expect(screen.getByRole('button', { name: 'Borrar búsqueda' }).hidden).toBe(false);
@@ -339,7 +314,7 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
     fireEvent.click(reintentar);
     await waitFor(() => expect(pedir).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(document.getElementById('contenedor-tabla')?.getAttribute('aria-busy')).toBe('false'));
-    expect(aviso.querySelector('span')).not.toBe(texto); // texto nuevo en la página = el lector lo vuelve a leer
+    expect(aviso.querySelector('span')).not.toBe(texto);
     expect(aviso.querySelector('span')?.textContent).toBe(texto?.textContent);
     expect(document.activeElement).toBe(reintentar);
   });
@@ -391,11 +366,11 @@ describe('PantallaApp con el Excel de ejemplo (modo demo, sin navegador real)', 
     await waitFor(() => expect(document.getElementById('contador')?.textContent).toMatch(/^Mostrando/));
     expect(pedir).toHaveBeenCalledTimes(1);
 
-    document.dispatchEvent(new Event('visibilitychange')); // recién leído: no hace nada
+    document.dispatchEvent(new Event('visibilitychange'));
     expect(pedir).toHaveBeenCalledTimes(1);
 
     const ahora = Date.now();
-    vi.spyOn(Date, 'now').mockReturnValue(ahora + 11 * 60 * 1000); // 11 minutos después
+    vi.spyOn(Date, 'now').mockReturnValue(ahora + 11 * 60 * 1000);
     document.dispatchEvent(new Event('visibilitychange'));
     await waitFor(() => expect(pedir).toHaveBeenCalledTimes(2));
   });

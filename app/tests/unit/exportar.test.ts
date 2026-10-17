@@ -30,10 +30,8 @@ describe('exportar', () => {
       { indice: 1, titulo: 'Monto' },
     ];
     const filas = [
-      // Así quedan después de leerLibro: fecha (número de serie + formato) y monto que venía como texto.
       { id: 2, celdas: [{ t: '15/03/2026', v: 46096, z: 'dd/mm/yyyy' }, { t: '73,748.89', v: 73748.89, z: '#,##0.00' }] },
     ];
-    // Se escribe y se vuelve a leer el .xlsx, como lo abriría Excel.
     const bytes = XLSX.write(construirLibroExportacion(columnas, filas), { type: 'array', bookType: 'xlsx' });
     const hoja = XLSX.read(bytes, { type: 'array', cellNF: true }).Sheets['Órdenes'];
     expect(hoja.A2).toMatchObject({ t: 'n', v: 46096, z: 'dd/mm/yyyy', w: '15/03/2026' });

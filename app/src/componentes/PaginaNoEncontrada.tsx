@@ -1,12 +1,9 @@
-// "Página no encontrada": cualquier dirección que no es una ruta de la app (ver RutasApp.tsx).
-// Como las demás rutas, solo se ve después de iniciar sesión. No descarga el Excel.
 import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { RUTA_ORDENES } from '../logica/rutas.ts';
 
-/** La ruta tal como la escribió la persona (sin los %20, %C3%B3…). */
 function rutaLegible(ruta: string): string {
   try {
     return decodeURIComponent(ruta);
@@ -19,7 +16,6 @@ export function PaginaNoEncontrada() {
   const { pathname } = useLocation();
   const titulo = useRef<HTMLHeadingElement>(null);
 
-  // El foco va al título (lo lee el lector de pantalla), como en las demás pantallas de mensaje.
   useEffect(() => {
     titulo.current?.focus();
   }, []);
@@ -39,12 +35,9 @@ export function PaginaNoEncontrada() {
           </p>
         </CardContent>
         <CardFooter className="justify-center">
-          {/* Enlace con el aspecto del botón principal (Button de shadcn/ui con asChild: el <a> recibe sus clases). */}
-          <Button asChild>
-            <Link id="enlace-ir-al-buscador" to={RUTA_ORDENES}>
-              Ir al buscador
-            </Link>
-          </Button>
+          <Link id="enlace-ir-al-buscador" to={RUTA_ORDENES} className={buttonVariants()}>
+            Ir al buscador
+          </Link>
         </CardFooter>
       </Card>
     </section>

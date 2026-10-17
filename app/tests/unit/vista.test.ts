@@ -1,5 +1,3 @@
-// Qué se ve en la pantalla principal (logica/vista.ts): filtros disponibles, corrección del estado
-// según las columnas del Excel y el cálculo de la tabla (sin navegador).
 import { assert, describe, expect, it } from 'vitest';
 import { CONFIG_POR_DEFECTO } from '../../src/logica/config.ts';
 import { leerLibro } from '../../src/logica/datos.ts';
@@ -72,7 +70,6 @@ describe('ajustarEstadoAColumnas (al leer el Excel)', () => {
       estado: 'Abierta',
       cliente: 'Cliente Demo B',
     });
-    // Un valor que no existe en el Excel se deja tal cual (la tabla queda vacía, como con el enlace original).
     expect(ajustarEstadoAColumnas(estado({ estado: 'Anulada' }), COMPLETO).estado).toBe('Anulada');
   });
   it('sin columnas de centro, la vista "Por centro" vuelve a "Por orden"', () => {
@@ -109,7 +106,7 @@ describe('calcularVista', () => {
   it('los resultados (filtrados y ordenados) se calculan una vez y sirven para todas las páginas', () => {
     const resultados = calcularResultados(COMPLETO, estado({ ordenarPor: 'ordenCompra' }), 3);
     const pagina2 = paginarResultados(resultados, 2, 2);
-    expect(pagina2.filas).toBe(resultados.filas); // misma lista: no se volvió a filtrar ni a ordenar
+    expect(pagina2.filas).toBe(resultados.filas);
     expect(pagina2).toEqual(calcularVista(COMPLETO, estado({ ordenarPor: 'ordenCompra', pagina: 2, tamano: 2 }), 3));
     assert(pagina2.tipo === 'orden');
     expect(pagina2.pagina.items.map((f) => f.campos.ordenCompra)).toEqual(['OC-4', 'OS-2']);

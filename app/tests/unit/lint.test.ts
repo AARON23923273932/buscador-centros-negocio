@@ -1,5 +1,3 @@
-// La revisión automática del código (npm run lint, con oxlint) está activa y detecta los errores de hooks
-// de React que TypeScript no ve. Si alguien desactiva las reglas o rompe .oxlintrc.json, esta prueba falla.
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,7 +10,6 @@ const CARPETA = mkdtempSync(join(tmpdir(), 'lint-'));
 
 afterAll(() => rmSync(CARPETA, { recursive: true, force: true }));
 
-/** Ejecuta oxlint con la configuración del proyecto (.oxlintrc.json). */
 function revisar(...argumentos: string[]) {
   const r = spawnSync(process.execPath, [OXLINT, '-c', join(APP, '.oxlintrc.json'), ...argumentos], { cwd: APP, encoding: 'utf8' });
   return { codigo: r.status, salida: `${r.stdout}${r.stderr}` };

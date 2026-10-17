@@ -1,18 +1,3 @@
-// =============================================================================
-// PantallaApp — Lo que comparten todas las rutas de la aplicación (es el "layout" de React Router):
-// el Excel (useExcel), lo que eligió la persona (useBusqueda), los centros abiertos, la barra
-// "Datos actualizados… [Actualizar]", los avisos y "Columnas detectadas" (se abre con un botón). En el medio (<Outlet />)
-// va la ruta: la lista (/ordenes, /centros → VistaLista.tsx) o el detalle de un centro
-// (/centros/:codigo → DetalleCentro.tsx). Ver las rutas en RutasApp.tsx.
-//
-// Como esta pantalla no cambia al pasar de una ruta a otra, el Excel se descarga UNA vez y la búsqueda,
-// los filtros y los centros abiertos se conservan al ir al detalle y volver.
-//
-// Rendimiento: está en memo() (el aviso flotante y el botón ☀️/🌙, que son estado de App, no la redibujan)
-// y lo que reciben las rutas (useContextoApp) solo cambia cuando cambia algo de lo de arriba.
-// Lo comprueba tests/unit/rendimiento.test.tsx.
-// =============================================================================
-
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { Outlet, useOutletContext } from 'react-router';
 import { ChevronRightIcon, InfoIcon } from 'lucide-react';
@@ -35,45 +20,28 @@ import { IconoActualizar } from './Iconos.tsx';
 
 interface Props {
   config: Config;
-  /** null en modo demo. */
   sesion: Sesion | null;
   avisar: Avisar;
 }
 
-/** Lo que PantallaApp les pasa a las rutas (lista y detalle). */
 export interface ContextoApp {
   config: Config;
-  /** Filas por página por defecto (config.filasPorPagina, si es una de las permitidas). */
   porDefecto: number;
   excel: Excel;
   busqueda: Busqueda;
-  /** Centros abiertos en la vista "Por centro" (se conservan al actualizar los datos y al volver del detalle). */
   expandidos: ReadonlySet<string>;
   alternarCentro: (clave: string) => void;
-  /**
-   * El centro cuyo detalle se abrió: la lista anota el enlace que se usó (código + posición entre los enlaces
-   * de la tabla) y el detalle anota su código (posición -1, si se abrió con un enlace directo). Al volver, la
-   * lista lo retoma (una sola vez) y le devuelve el foco a ese enlace, o al buscador si ya no está en la página.
-   * Así quien usa el teclado sigue donde estaba.
-   */
   anotarCentroAbierto: (abierto: CentroAbierto) => void;
-  /** El enlace anotado (y lo borra), o null si no se abrió ningún detalle desde la lista. */
   retomarCentroAbierto: () => CentroAbierto | null;
   copiar: AlCopiar;
   avisar: Avisar;
 }
 
-/** Qué enlace de la lista abrió el detalle (ver ContextoApp.anotarCentroAbierto). */
 export interface CentroAbierto {
   codigo: string;
-  /**
-   * Posición del enlace entre los enlaces de código de la tabla (el mismo código puede estar en varias filas);
-   * -1 = no se sabe (lo anotó el detalle).
-   */
   indice: number;
 }
 
-/** Para las rutas que van dentro de PantallaApp (VistaLista, DetalleCentro). */
 export function useContextoApp(): ContextoApp {
   return useOutletContext<ContextoApp>();
 }
@@ -84,7 +52,6 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
   const [expandidos, setExpandidos] = useState<ReadonlySet<string>>(() => new Set());
   const centroAbierto = useRef<CentroAbierto | null>(null);
   const anotarCentroAbierto = useCallback((abierto: CentroAbierto) => {
-    // El detalle (posición -1) no reemplaza el enlace exacto que anotó la lista para ese mismo centro.
     if (abierto.indice < 0 && centroAbierto.current && mismoCodigo(centroAbierto.current.codigo, abierto.codigo)) return;
     centroAbierto.current = abierto;
   }, []);
@@ -117,9 +84,7 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
     [config, porDefecto, excel, busqueda, expandidos, alternarCentro, anotarCentroAbierto, retomarCentroAbierto, copiar, avisar],
   );
 
-  // ---- Textos ----
   let actualizado = 'Cargando datos del Excel…';
-  // ('error' o 'reintentando': la última lectura falló; mientras se reintenta, el texto no cambia.)
   if (!datos && excel.sinDatos !== 'cargando') actualizado = 'No se pudieron cargar los datos.';
   else if (excel.ultimaConsulta) actualizado = textoActualizado(excel.ultimaConsulta, excel.archivo?.modificado, config.autoActualizarMinutos);
 
@@ -136,7 +101,6 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
         <p id="texto-actualizado" className="m-0 text-sm text-muted-foreground" aria-live="polite">
           {actualizado}
         </p>
-        {/* aria-disabled (y no "disabled") para que el botón no pierda el foco del teclado mientras carga. */}
         <Button type="button" id="btn-actualizar" variant="outline" aria-disabled={cargando} onClick={() => void excel.cargar('manual')}>
           <IconoActualizar girando={cargando} />
           <span id="texto-btn-actualizar">{cargando ? 'Actualizando…' : 'Actualizar'}</span>
@@ -146,16 +110,12 @@ export const PantallaApp = memo(function PantallaApp({ config, sesion, avisar }:
       <AvisoError error={excel.error} />
       <AvisoColumnas datos={datos} />
 
-      {/* La ruta: lista (/ordenes, /centros) o detalle de un centro (/centros/:codigo). */}
       <Outlet context={contexto} />
 
-      {/* Se abre y se cierra con un botón (Collapsible de shadcn/ui: aria-expanded y aria-controls). */}
       <Collapsible className="mt-4 mb-2 text-sm print:hidden">
-        <CollapsibleTrigger asChild>
-          <Button type="button" variant="ghost" size="sm" className="group/columnas -ml-2.5">
-            <ChevronRightIcon aria-hidden="true" className="size-4 transition-transform group-data-[state=open]/columnas:rotate-90" />
-            Columnas detectadas en el Excel
-          </Button>
+        <CollapsibleTrigger render={<Button type="button" variant="ghost" size="sm" className="group/columnas -ml-2.5" />}>
+          <ChevronRightIcon aria-hidden="true" className="size-4 transition-transform group-data-panel-open/columnas:rotate-90" />
+          Columnas detectadas en el Excel
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div id="info-columnas" className="pt-1 [&_p]:my-2 [&_p]:[overflow-wrap:anywhere]">

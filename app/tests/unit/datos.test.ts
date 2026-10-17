@@ -66,12 +66,12 @@ describe('numeroDesdeTexto y fechaDesdeTexto', () => {
     expect(fechaDesdeTexto('2026-03-15T14:30:00Z')).toBe(202603151430);
   });
   it('no confunde códigos con forma de fecha', () => {
-    expect(fechaDesdeTexto('2026-10-00123')).toBeNull(); // sin el "$" final se leía como 2026-10-00
-    expect(fechaDesdeTexto('2026-13-45')).toBeNull(); // mes 13
-    expect(fechaDesdeTexto('10-01-0002')).toBeNull(); // año 0002
-    expect(fechaDesdeTexto('31/02/2026')).toBeNull(); // febrero no tiene 31
-    expect(fechaDesdeTexto('10-01-26')).toBeNull(); // año de 2 dígitos solo con "/"
-    expect(fechaDesdeTexto('15/03-2026')).toBeNull(); // separadores distintos
+    expect(fechaDesdeTexto('2026-10-00123')).toBeNull();
+    expect(fechaDesdeTexto('2026-13-45')).toBeNull();
+    expect(fechaDesdeTexto('10-01-0002')).toBeNull();
+    expect(fechaDesdeTexto('31/02/2026')).toBeNull();
+    expect(fechaDesdeTexto('10-01-26')).toBeNull();
+    expect(fechaDesdeTexto('15/03-2026')).toBeNull();
   });
 });
 
@@ -81,7 +81,6 @@ describe('convertirCelda', () => {
     expect(c).toEqual({ t: '0004500123', o: 4500123, v: '0004500123' });
   });
   it('convierte fechas guardadas como número de serie', () => {
-    // 46096 = 15/03/2026
     const c = convertirCelda({ t: 'n', v: 46096, z: 'm/d/yy', w: '3/15/26' });
     expect(c.t).toBe('15/03/2026');
     expect(c.o).toBe(202603150000);
@@ -98,7 +97,6 @@ describe('convertirCelda', () => {
   it('textos que parecen números se ordenan y se exportan como números', () => {
     expect(convertirCelda({ t: 's', v: ' 1,250.50 ' })).toEqual({ t: '1,250.50', o: 1250.5, v: 1250.5, z: '#,##0.00' });
     expect(convertirCelda({ t: 's', v: 'S/ 2,000' })).toMatchObject({ o: 2000, v: 2000, z: '"S/ "#,##0' });
-    // Con ceros a la izquierda, o en una columna de códigos, siguen siendo texto al exportar.
     expect(convertirCelda({ t: 's', v: '0004500123' })).toEqual({ t: '0004500123', o: 4500123, v: '0004500123' });
     expect(convertirCelda({ t: 's', v: '4500123' }, { esIdentificador: true })).toEqual({
       t: '4500123',
@@ -113,7 +111,6 @@ describe('convertirCelda', () => {
       v: 46096,
       z: 'dd/mm/yyyy',
     });
-    // Fecha escrita como texto.
     expect(convertirCelda({ t: 's', v: '15/03/2026' })).toEqual({ t: '15/03/2026', o: 202603150000, v: 46096, z: 'dd/mm/yyyy' });
   });
   it('en columnas de códigos, un texto con forma de fecha sigue siendo texto', () => {
@@ -121,9 +118,7 @@ describe('convertirCelda', () => {
     expect(c).toEqual({ t: '15-03-2026', o: '15-03-2026', v: '15-03-2026' });
   });
   it('la hora se muestra solo si el formato de Excel la muestra', () => {
-    // Solo hora: Excel muestra "18:00", no "00/01/1900 18:00".
     expect(convertirCelda({ t: 'n', v: 0.75, z: 'hh:mm', w: '18:00' })).toMatchObject({ t: '18:00', v: 0.75, z: 'hh:mm' });
-    // Formato de solo fecha aunque el valor tenga hora.
     expect(convertirCelda({ t: 'n', v: 46097.5, z: 'dd/mm/yyyy' }).t).toBe('16/03/2026');
     expect(convertirCelda({ t: 'n', v: 46097.5, z: 'dd/mm/yyyy hh:mm' })).toMatchObject({
       t: '16/03/2026 12:00',
@@ -131,10 +126,9 @@ describe('convertirCelda', () => {
     });
   });
   it('libros con fechas desde 1904 (Excel de Mac)', () => {
-    // En el sistema 1904, el 15/03/2026 se guarda como 46096 - 1462.
     const c = convertirCelda({ t: 'n', v: 46096 - 1462, z: 'dd/mm/yyyy' }, { date1904: true });
     expect(c.t).toBe('15/03/2026');
-    expect(c.v).toBe(46096); // se exporta en el sistema normal (1900)
+    expect(c.v).toBe(46096);
   });
   it('números largos con formato General se muestran completos (no 4.50012E+11)', () => {
     expect(convertirCelda({ t: 'n', v: 450012345678, w: '4.50012E+11' }).t).toBe('450012345678');
@@ -194,7 +188,6 @@ describe('mapearColumnas', () => {
       cliente: 3,
       ordenCompra: 4,
     });
-    // Si no hay otra columna de código, es mejor avisar que falta que usar la del cliente.
     expect(mapearColumnas(['Código Cliente', 'Cliente'], alias)).toEqual({ cliente: 1 });
     expect(mapearColumnas(['Descripción de la orden'], alias)).toEqual({});
   });
@@ -265,16 +258,13 @@ describe('leerLibro — Excel "desordenado"', () => {
       D3: { t: 'n', v: 4500123, z: '0000000000' },
       E3: { t: 'n', v: 46096, z: 'dd/mm/yyyy' },
       F3: { t: 'n', v: 1250.5, z: '#,##0.00' },
-      // fila 4: combinada con la 3 en A y B
       C4: 'Cliente Demo A',
       D4: 'OS-0001',
       F4: '2,000.00',
-      // fila 5 vacía
       A6: 'CN-0002',
       B6: 'Mantenimiento eléctrico',
       C6: 'Cliente Demo B',
       D6: '0004500999',
-      // fila 7: el bot repitió los títulos
       A7: 'Código',
       B7: 'Descripción',
       C7: 'Cliente',
@@ -338,11 +328,10 @@ describe('leerLibro — centro escrito una sola vez (celdas vacías SIN combinar
     expect(grupos.map((g) => [g.codigo, g.ordenes, g.filas.map((f) => f.id)])).toEqual([
       ['CN-0001', 3, [2, 3, 4]],
       ['CN-0002', 2, [5, 6]],
-      ['', 0, [7]], // fila sin orden: no se completa (podría ser una nota o un total)
+      ['', 0, [7]],
     ]);
     expect(filtrarFilas(r.filas, { codigo: 'CN-0001' }).map((f) => f.id)).toEqual([2, 3, 4]);
     expect(filtrarFilas(r.filas, { cliente: 'Cliente Demo B' }).map((f) => f.id)).toEqual([5, 6]);
-    // También se ve en la tabla.
     expect(r.filas[1].celdas[0].t).toBe('CN-0001');
   });
   it('se puede desactivar con rellenarHaciaAbajo: []', () => {
@@ -433,7 +422,6 @@ describe('leerLibro — más casos raros del Excel', () => {
       ['CN-1', 'x', 5],
       ['CN-2', 'y', 6],
     ]);
-    // Así guarda las fórmulas una librería que no calcula (ej. openpyxl): sin <v> (sin resultado).
     const contenido = cambiarXmlHoja(base, (xml) =>
       xml
         .replace(/<c r="B3"[^>]*>.*?<\/c>/, '<c r="B3" t="str"><f>"Proyecto "&amp;"demo"</f></c>')
@@ -531,7 +519,7 @@ describe('mapearColumnas — estado', () => {
 });
 
 describe('columnas ocultas (config "columnasOcultas")', () => {
-  const OCULTAS = CONFIG_POR_DEFECTO.columnasOcultas; // ["moneda", "monto"]
+  const OCULTAS = CONFIG_POR_DEFECTO.columnasOcultas;
   const palabras = OCULTAS.map(normalizarEncabezado);
 
   it('reconoce la palabra completa en el título (sin tildes, mayúsculas ni signos)', () => {
@@ -547,7 +535,7 @@ describe('columnas ocultas (config "columnasOcultas")', () => {
     ['Código', 'Descripción', 'Cliente', 'N° Orden', 'Monto total', 'Moneda', 'Monto (S/)', 'Estado', 'Observación'],
     ['CN-1', 'Demo uno', 'Cliente Demo A', 'OC-1', 1250.5, 'PEN', 'S/ 1,250.50', 'Abierta', 'nota'],
     ['CN-2', 'Demo dos', 'Cliente Demo B', 'OS-2', 300, 'USD', '', 'Cerrada', ''],
-    [null, null, null, null, 999, 'USD', null, null, null], // solo datos en columnas ocultas
+    [null, null, null, null, 999, 'USD', null, null, null],
   ];
   const r = leerLibro(crearExcelDesdeMatriz(matriz), { ...OPCIONES, columnasOcultas: OCULTAS });
 
@@ -558,11 +546,9 @@ describe('columnas ocultas (config "columnasOcultas")', () => {
       { letra: 'F', titulo: 'Moneda' },
       { letra: 'G', titulo: 'Monto (S/)' },
     ]);
-    // Cada fila tiene solo las celdas visibles (así no se exportan ni aparecen en la vista por centro).
     for (const f of r.filas) expect(f.celdas).toHaveLength(6);
     expect(filtrarFilas(r.filas, { q: 'usd' })).toEqual([]);
     expect(filtrarFilas(r.filas, { q: '1250' })).toEqual([]);
-    // Una fila que solo tenía monto y moneda no se ve como una fila en blanco.
     expect(r.filas.map((f) => f.id)).toEqual([2, 3]);
     expect(r.filasVacias).toBe(1);
   });
@@ -594,7 +580,7 @@ describe('columnas ocultas (config "columnasOcultas")', () => {
       ]),
       { ...OPCIONES, columnasOcultas: OCULTAS },
     );
-    expect(otra.mapa.ordenCompra).toBe(1); // posición entre las columnas visibles: "Orden de compra (N°)"
+    expect(otra.mapa.ordenCompra).toBe(1);
     expect(otra.columnas.map((c) => c.titulo)).toEqual(['Código', 'Orden de compra (N°)']);
     expect(otra.filas[0].campos.ordenCompra).toBe('OC-1');
   });
@@ -652,7 +638,6 @@ describe('descargarExcel (archivo local)', () => {
       headers: { 'last-modified': 'Fri, 09 Oct 2026 14:10:00 GMT' },
     }));
     const r = await descargarExcel({ datos: { fuente: 'archivo-local', rutaLocal: 'datos/x.xlsx' } }, null, fetchFalso);
-    // Se pide desde la carpeta de la app ("/"), no desde la ruta actual (en /centros/X sería /centros/datos/…).
     expect(fetchFalso).toHaveBeenCalledWith('/datos/x.xlsx', { cache: 'no-store' });
     expect(new Uint8Array(r.contenido)).toEqual(new Uint8Array([1, 2, 3]));
     expect(r.modificado?.toISOString()).toBe('2026-10-09T14:10:00.000Z');
