@@ -10,7 +10,6 @@ describe('mezclarConfig', () => {
     const c = mezclarConfig(CONFIG_POR_DEFECTO, { _ayuda: 'x', titulo: 'Otro', microsoft: { clientId: GUID, _nota: 'y' } });
     expect(c.titulo).toBe('Otro');
     expect(c.microsoft).toMatchObject({ clientId: GUID, dominiosPermitidos: ['aic.pe', 'jaicoscorp.com'] });
-    // Los comentarios (claves con "_") no pasan a la configuración.
     expect((c as unknown as Record<string, unknown>)._ayuda).toBeUndefined();
     expect((c.microsoft as unknown as Record<string, unknown>)._nota).toBeUndefined();
   });
@@ -120,7 +119,6 @@ describe('revisarConfig (la única forma de pasar de "sin revisar" a Config)', (
     const r = revisarConfig(sinValidar);
     expect(r.valida).toBe(true);
     if (r.valida) {
-      // TypeScript ya deja usar los valores con su tipo (string, number…).
       expect(r.config.titulo.toUpperCase()).toBe('OTRO');
       expect(r.config.filasPorPagina + 1).toBe(26);
     }

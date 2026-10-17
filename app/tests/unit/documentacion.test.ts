@@ -1,7 +1,3 @@
-// La documentación (README, guía y plan de pruebas) se usa en la PC del proyecto, con PowerShell.
-//  - En PowerShell, "npm", "npx" y "swa" están bloqueados (son scripts .ps1): los bloques ```powershell
-//    deben usar npm.cmd / npx.cmd / swa.cmd para que se puedan copiar y pegar tal cual.
-//  - El README explica TODOS los comandos de package.json (si se agrega uno, se documenta).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -10,7 +6,6 @@ const RAIZ = resolve(import.meta.dirname, '../../..');
 const DOCUMENTOS = ['README.md', 'GUIA-CONFIGURACION-MICROSOFT.md', 'pruebas/plan-de-pruebas.md'];
 const leer = (ruta: string) => readFileSync(resolve(RAIZ, ruta), 'utf8');
 
-/** Líneas de los bloques de código ```powershell de un documento (con su número de línea). */
 function lineasPowerShell(texto: string): { numero: number; linea: string }[] {
   const resultado: { numero: number; linea: string }[] = [];
   let lenguaje: string | null = null;
@@ -49,8 +44,6 @@ describe('documentación', () => {
     expect(faltan).toEqual([]);
   });
 
-  // shadcn/ui: la receta para agregar componentes usa la versión de la herramienta instalada en el proyecto (la
-  // que generó los componentes actuales); "shadcn@latest" descargaría otra.
   it('la receta de shadcn/ui usa la herramienta instalada ("npx.cmd shadcn add", sin @latest)', () => {
     const malas: string[] = [];
     for (const doc of DOCUMENTOS) {

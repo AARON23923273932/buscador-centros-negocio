@@ -1,22 +1,3 @@
-// =============================================================================
-// VistaLista — Rutas /ordenes y /centros: buscador, filtros, tabla y paginación.
-//
-//   Excel + lo que eligió la persona (ambos vienen de PantallaApp: useContextoApp)
-//        ──► calcularResultados() ──► paginarResultados() ──► tabla, contador y paginación
-//        ──► query de la dirección (useGuardarEnUrl)
-//
-// La vista ("Por orden" / "Por centro") es la ruta: el selector navega entre /ordenes y /centros
-// conservando la búsqueda y los filtros (useBusqueda.cambiarVista).
-//
-// Rendimiento (con miles de filas, sobre todo en el celular):
-//  - Escribir en el buscador o en un filtro "contiene" solo cambia lo que se ve en la caja
-//    (useBusqueda.borradores): la tabla, la paginación y "Columnas detectadas" están envueltas en
-//    memo() y reciben siempre las mismas props, así que NO se vuelven a dibujar hasta que el filtro
-//    se aplica (200 ms después de la última tecla).
-//  - Cambiar de página (o de filas por página) no vuelve a buscar ni a ordenar: solo corta otra página.
-//  Lo comprueba tests/unit/rendimiento.test.tsx.
-// =============================================================================
-
 import { useCallback, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { CircleAlertIcon } from 'lucide-react';
@@ -44,21 +25,17 @@ export function VistaLista() {
   const { estado, setEstado } = busqueda;
   const { datos, cargando } = excel;
 
-  // ¿Hay que ir a otra ruta? (enlace viejo con ?vista=…, o "Por centro" sin columnas de centro en el Excel)
   let redirigir: Destino | null = destinoCompatible(ubicacion.pathname, ubicacion.search);
   if (!redirigir && estado.vista !== vistaDeRuta(ubicacion.pathname)) {
     redirigir = { pathname: rutaDeVista(estado.vista), search: ubicacion.search };
   }
 
-  // Opciones de "Filas por página" (las de siempre + la del enlace, si fuera otra).
   const tamanos = useMemo(() => [...new Set([...TAMANOS_PAGINA, estado.tamano])].sort((a, b) => a - b), [estado.tamano]);
 
   const buscador = useRef<HTMLInputElement>(null);
   const contenedorTabla = useRef<HTMLDivElement>(null);
   const paginacion = useRef<HTMLElement>(null);
 
-  // ---- Lo que se ve (se recalcula solo cuando cambian los datos o lo elegido) ----
-  // 1) Buscar, filtrar, ordenar y agrupar: solo si cambian los datos, la búsqueda, los filtros, la vista o el orden.
   const { q, cliente, codigo, descripcion, orden, tipo, estado: filtroEstado, vista: tipoVista, ordenarPor, direccion } = estado;
   const resultados = useMemo(
     () =>
@@ -71,7 +48,6 @@ export function VistaLista() {
         : null,
     [datos, q, cliente, codigo, descripcion, orden, tipo, filtroEstado, tipoVista, ordenarPor, direccion, excel.totalCentros],
   );
-  // 2) Cortar la página: lo único que cambia al pasar de página o al elegir otras "Filas por página".
   const vista = useMemo(
     () => (resultados ? paginarResultados(resultados, estado.pagina, estado.tamano) : null),
     [resultados, estado.pagina, estado.tamano],
@@ -80,18 +56,12 @@ export function VistaLista() {
   const opciones = useMemo(() => opcionesDesplegables(datos), [datos]);
   const activos = contarFiltrosActivos(estado);
 
-  // Si la página pedida ya no existe (ej. menos resultados), se corrige (también en la URL).
   const paginaReal = vista?.pagina.pagina;
   useEffect(() => {
     if (paginaReal !== undefined && paginaReal !== estado.pagina) setEstado((e) => ({ ...e, pagina: paginaReal }));
   }, [paginaReal, estado.pagina, setEstado]);
-  // La búsqueda queda en la query de la dirección (no mientras se va a otra ruta: no se escribe encima).
   useGuardarEnUrl(!redirigir && datos && paginaReal !== undefined ? { ...estado, pagina: paginaReal } : null, porDefecto, busqueda.marcarEscrita);
 
-  // Al volver del detalle de un centro ("Volver a la lista" o el botón atrás del navegador), el foco regresa al
-  // enlace del código que lo abrió (o, si se abrió con un enlace directo, al primer enlace de ese centro); si ya
-  // no está en la página, al buscador. Sin esto quedaría en <body> y quien usa el teclado tendría que empezar
-  // otra vez desde arriba.
   const hayTabla = !!vista;
   const redirigiendo = !!redirigir;
   useEffect(() => {
@@ -105,7 +75,6 @@ export function VistaLista() {
     (enlace ?? buscador.current)?.focus();
   }, [retomarCentroAbierto, hayTabla, redirigiendo]);
 
-  /** Recuerda qué enlace de código abre el detalle (no con Ctrl, Shift o la rueda: esos abren otra pestaña). */
   const recordarEnlace = (ev: MouseEvent<HTMLDivElement>) => {
     if (ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || !(ev.target instanceof Element)) return;
     const enlace = ev.target.closest('a.enlace-codigo');
@@ -114,10 +83,8 @@ export function VistaLista() {
     anotarCentroAbierto({ codigo: enlace.textContent ?? '', indice: enlaces.indexOf(enlace) });
   };
 
-  // ---- Acciones ----
   const limpiarFiltros = () => {
     busqueda.limpiar();
-    // El botón "Limpiar filtros" queda desactivado: el foco pasa al buscador para no perder el lugar.
     buscador.current?.focus();
     avisar('Filtros limpiados');
   };
@@ -137,7 +104,6 @@ export function VistaLista() {
     [irAPaginaBusqueda],
   );
 
-  // "Saltar a la paginación": con teclado, evita pasar por todos los botones de la tabla.
   const saltarAPaginacion = () => {
     const destino =
       paginacion.current?.querySelector<HTMLElement>('.btn-pagina:not([disabled])') ||
@@ -152,9 +118,6 @@ export function VistaLista() {
 
   const exportar = async () => {
     if (!datos || !vista?.filas.length) return;
-    // La parte que arma el Excel se descarga recién al pulsar el botón. Si mientras la página estaba abierta se
-    // publicó una versión nueva, ese archivo ya no existe en el servidor (Netlify responde la página en su lugar):
-    // se avisa en vez de no hacer nada.
     let modulo: typeof import('../logica/exportar.ts');
     try {
       modulo = await import('../logica/exportar.ts');
@@ -167,7 +130,6 @@ export function VistaLista() {
     avisar(`Se descargó ${nombre} (${vista.filas.length.toLocaleString('es-PE')} filas)`);
   };
 
-  // Atajo: "/" lleva al buscador.
   useEffect(() => {
     const alPulsar = (ev: KeyboardEvent) => {
       if (ev.key !== '/' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
@@ -181,7 +143,6 @@ export function VistaLista() {
     return () => document.removeEventListener('keydown', alPulsar);
   }, []);
 
-  // Misma función mientras no cambien los resultados (si no, memo() de las tablas no serviría).
   const terminosDe = useCallback(
     (columna: Pick<Columna, 'campo'>) => (resultados ? terminosDeColumna(resultados.terminos, resultados.porCampo, columna) : []),
     [resultados],
@@ -271,9 +232,6 @@ export function VistaLista() {
         alExportar={() => void exportar()}
       />
 
-      {/* Solo se ve al llegar con la tecla Tab: evita recorrer todos los botones de la tabla. "not-sr-only" deja el
-          alto y el espacio interior en "auto" y 0: focus:h-9 focus:px-2.5 le devuelven las medidas del Button de
-          shadcn/ui (solo medidas). */}
       <Button
         type="button"
         id="btn-saltar-paginacion"

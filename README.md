@@ -7,7 +7,7 @@
 - **Componentes de shadcn/ui "naturales" + estilo de marca** (último pedido de Gustavo del 15/10/2026, por WhatsApp: *"me gusta más, solo faltaría que use los estilos naturales de shadcn, componentes como los botones, inputs, etc. que use de shadcn, sin cambios, solo agregando el estilo de marca para que agregue más suavidad a las cosas"*) — hecho y probado en la PC (rama `shadcn-natural`; falta que Gustavo lo vea y publicarlo):
   1. Los archivos de `app/src/components/ui/` quedan **exactamente** como los genera `npx.cmd shadcn add` (se regeneraron con `--overwrite`; `--dry-run` dice *"skip (identical)"* en los 13). Sombras, esquinas redondeadas, transiciones, anillos de foco y transparencias son los de shadcn/ui.
   2. La marca de AIC entra **solo** por las variables del tema en `app/src/estilos.css` (claro y oscuro), la letra Calibri y, en las tablas, el encabezado Primary Blue con texto blanco y las filas alternas. Se quitaron los estilos propios que cambiaban a los componentes (`clases.ts`, utilidades `foco-*`, caja de nota, `logica/modalidad.ts`…).
-  3. Lo que antes dependía de cambiar componentes ahora vive en componentes propios: `AyudaFlotante.tsx` (la ayuda de ☀️/🌙 no se lee dos veces) y `OpcionesBoton.tsx` ("Por orden / Por centro" con `RadioGroup` + `ButtonGroup` + `Button` de shadcn/ui: las flechas siguen eligiendo). Detalle en 8.1 y 8.2.
+  3. Lo que antes dependía de cambiar componentes ahora vive en componentes propios: `OpcionesBoton.tsx` ("Por orden / Por centro" con `RadioGroup` + `ButtonGroup` + `Button` de shadcn/ui: las flechas siguen eligiendo). Detalle en 8.1 y 8.2.
   4. **Revisión de lo anterior (15/10/2026):** foco con el teclado más visible en **modo oscuro** (`--ring` Light Blue en vez de Medium Blue, que casi no se veía sobre el negro); el centro abierto de "Por centro" usa el estado "seleccionada" de la Table de shadcn/ui (ya no se aclara); el motivo de un filtro desactivado vuelve a aparecer al pasar el mouse; la ayuda flotante espera 300 ms como antes; "Saltar a la paginación" con las medidas de un botón; las reglas globales que alcanzan a los componentes (menos movimiento, alto contraste, texto seleccionado, "manito") quedan documentadas (8.2); los componentes quedan con finales de línea LF (`.gitattributes`). Lo que cambió a la vista y queda *por confirmar con Gustavo* está en la sección 9.
   - Pruebas automáticas: **358 unitarias** y **96 en navegador**. La prueba de colores pasó al criterio nuevo: colores de la marca **y sus transparencias** (las que traen los componentes) y sombras neutras; sigue fallando con cualquier color ajeno a la marca (el azul del navegador, un color de Tailwind que no sale del tema…), también en las opciones de los desplegables, y con texto que no llegue al contraste AA. El foco se mide tal como se dibuja (con su transparencia).
   - Lo demás no cambia (textos, login, dominios, Excel real, columnas ocultas, filtros, Estado, una orden por línea, "Por centro", detalle, exportar, auto-actualización, rutas, tema y márgenes). Para publicar: `npm.cmd run preparar-publicacion` y arrastrar `publicar/` (no hay librerías nuevas).
@@ -64,7 +64,7 @@ Este proyecto es una **página web** (app web) para **buscar en ese Excel de for
 | **Enlace para compartir** | La vista va en la ruta y la búsqueda y los filtros en la dirección (ej. `…/centros?q=cableado&estado=Abierta`). Se copia el enlace y quien lo abra ve lo mismo. Los enlaces viejos (`…/?q=cableado&vista=centro`) siguen funcionando: llevan a `/centros?q=cableado`. |
 | **Actualizar** | Botón **Actualizar** + actualización automática cada 10 minutos (configurable) **sin perder** la búsqueda ni los filtros. Muestra "Datos actualizados a las HH:MM" y la fecha en que se modificó el Excel. |
 | **Celular y modo oscuro** | Se usa bien en un celular (la tabla tiene su propio desplazamiento lateral) y cambia a colores oscuros si el equipo está en modo oscuro. |
-| **Accesible** | Componentes de shadcn/ui (Radix) con los roles y atributos de accesibilidad estándar. Todo se puede usar con teclado, con foco visible (un anillo que aparece al usar el teclado, no al hacer clic), etiquetas en cada campo y contraste AA comprobado en todas las pantallas (claro y oscuro). "Por orden / Por centro" es un grupo de opciones que se usa como los botones de opción de siempre: Tab llega a la elegida y **las flechas eligen la otra** (la vista cambia al instante); si "Por centro" está desactivado, las flechas no hacen nada. Con la tecla Tab aparece **"Saltar a la paginación"** antes de la tabla, para no recorrer todos sus botones. Al abrir el detalle de un centro (o "Página no encontrada") el foco va a su título, para que el lector de pantalla lo anuncie; al **volver a la lista**, el foco regresa al código del centro que se abrió (o al buscador, si ya no está en la página). |
+| **Accesible** | Componentes de shadcn/ui (Base UI) con los roles y atributos de accesibilidad estándar. Todo se puede usar con teclado, con foco visible (un anillo que aparece al usar el teclado, no al hacer clic), etiquetas en cada campo y contraste AA comprobado en todas las pantallas (claro y oscuro). "Por orden / Por centro" es un grupo de opciones que se usa como los botones de opción de siempre: Tab llega a la elegida y **las flechas eligen la otra** (la vista cambia al instante); si "Por centro" está desactivado, las flechas no hacen nada. Con la tecla Tab aparece **"Saltar a la paginación"** antes de la tabla, para no recorrer todos sus botones. Al abrir el detalle de un centro (o "Página no encontrada") el foco va a su título, para que el lector de pantalla lo anuncie; al **volver a la lista**, el foco regresa al código del centro que se abrió (o al buscador, si ya no está en la página). |
 
 ### Rutas (direcciones de la app) — React Router
 
@@ -186,12 +186,11 @@ sitio-web/
 ├── pruebas/plan-de-pruebas.md         ← pruebas que hace una persona antes de entregar (con casillas)
 ├── publicar/                          ← copia lista para Netlify (la crea npm run preparar-publicacion; no se edita)
 └── app/                               ← la aplicación (React 19 + TypeScript)
-    ├── index.html                     ← la página: <div id="raiz"> con la cabecera y "Cargando…" (lo que se ve mientras
-    │                                     baja el código, igual a lo primero que dibuja React: no hay salto al cargar)
+    ├── index.html                     ← la página: solo <div id="raiz"> vacío y los scripts (todo lo dibuja React)
     ├── redirect.html                  ← página "puente" a la que vuelve Microsoft tras el inicio de sesión (sin React)
     ├── public/                        ← se copia tal cual a dist/
     │   ├── config.json                ← CONFIGURACIÓN (la única copia que se edita; npm run build la copia a dist/)
-    │   ├── tema-inicial.js            ← aplica el modo claro/oscuro elegido antes de pintar (para que no "parpadee")
+    │   ├── tema-inicial.js            ← pone la clase light/dark del ThemeProvider antes de pintar (sin destello)
     │   ├── datos/centros-ejemplo.xlsx ← Excel de ejemplo con datos ficticios (modo demo)
     │   ├── netlify.toml / _headers    ← Netlify: publicar la carpeta tal cual y no guardar config.json en caché
     │   ├── _redirects                 ← Netlify: en las rutas de la app (/centros/A2338PY01…) entregar index.html
@@ -200,19 +199,21 @@ sitio-web/
     │   └── favicon.svg                ← ícono de la pestaña
     ├── src/
     │   ├── main.tsx                   ← punto de entrada: monta <Enrutador><App /></Enrutador> en index.html
-    │   ├── App.tsx                    ← la página completa: cabecera + la pantalla que toque (cargando, mensaje, login
-    │   │                                 y, con la sesión iniciada, las rutas)
+    │   ├── App.tsx                    ← la aplicación: ThemeProvider de shadcn/ui (modo claro/oscuro) + las rutas (RutasApp)
     │   ├── redirect.ts                ← lógica de redirect.html (MSAL v5, sin React)
     │   ├── estilos.css                ← Tailwind CSS + la marca de AIC: variables del tema de shadcn/ui (claro/oscuro),
     │   │                                     letra Calibri, columna de contenido y foco de los elementos propios
     │   ├── components/ui/             ← componentes de shadcn/ui TAL CUAL los genera "npx shadcn add" (no se editan)
     │   ├── lib/utils.ts               ← cn() para juntar clases de Tailwind (lo usa la herramienta de shadcn/ui)
     │   ├── componentes/               ← piezas de la pantalla (.tsx = TypeScript + JSX, el "HTML" de React)
-    │   │   ├── Cabecera.tsx, BotonTema.tsx              ← título, usuario, "Cerrar sesión", botón ☀️/🌙
+    │   │   ├── Cabecera.tsx                             ← logo de AIC, título, usuario, "Cerrar sesión", botón de tema
     │   │   ├── PantallaCarga.tsx, PantallaLogin.tsx     ← "Cargando…" y "Bienvenido" (botón de Microsoft)
     │   │   ├── Mensaje.tsx                              ← "Tu cuenta no tiene acceso", "Falta configurar…", errores
     │   │   ├── Enrutador.tsx                            ← React Router (BrowserRouter) para main.tsx y las pruebas
     │   │   ├── RutasApp.tsx                             ← TABLA DE RUTAS: /, /ordenes, /centros, /centros/:codigo, 404
+    │   │   ├── DisenoApp.tsx                            ← diseño ("layout") de TODAS las rutas: "Saltar al …", cabecera,
+    │   │   │                                               <main> y aviso flotante; en el <main>, la pantalla que toque
+    │   │   │                                               (cargando, mensaje, login) o, con la sesión iniciada, la ruta
     │   │   ├── PantallaApp.tsx                          ← lo común a las rutas ("layout"): Excel, búsqueda, Actualizar,
     │   │   │                                               avisos y "Columnas detectadas"; en el medio, la ruta
     │   │   ├── VistaLista.tsx                           ← /ordenes y /centros: buscador, filtros, tabla y paginación
@@ -225,7 +226,6 @@ sitio-web/
     │   │   │                                               enlace al detalle; las órdenes, una por línea) y resaltado <mark>
     │   │   ├── Paginacion.tsx                           ← « ‹ Página X de Y › » (el foco no se pierde)
     │   │   ├── Avisos.tsx, ColumnasDetectadas.tsx       ← avisos (Alert de shadcn/ui), aviso flotante y "Columnas detectadas"
-    │   │   ├── AyudaFlotante.tsx                        ← Tooltip de shadcn/ui + opción sinDescripcion (no repetir el nombre)
     │   │   ├── OpcionesBoton.tsx                        ← "Por orden / Por centro": RadioGroup + ButtonGroup + Button
     │   │   └── Iconos.tsx                               ← íconos SVG (16–18 px) y la ruedita de "Cargando…"
     │   ├── hooks/                     ← "estado" y efectos reutilizables (funciones use… de React)
@@ -234,7 +234,6 @@ sitio-web/
     │   │   ├── useBusqueda.ts         ← búsqueda, filtros, vista, orden y página (espera de 200 ms al escribir)
     │   │   ├── useEstadoUrl.ts        ← lee y guarda ese estado en la dirección con React Router (enlace para
     │   │   │                             compartir; botón atrás/adelante)
-    │   │   ├── useTema.ts             ← modo claro/oscuro
     │   │   └── useAvisoFlotante.ts, useMediaQuery.ts
     │   └── logica/                    ← reglas SIN pantalla (TypeScript puro; se prueban sin navegador)
     │       ├── tipos.ts               ← "forma" de los datos: Fila, Celda, Columna, ResultadoLectura, Filtros…
@@ -252,7 +251,7 @@ sitio-web/
     │       ├── centro.ts              ← detalle de un centro: buscarlo por su código y sus estados
     │       ├── ordenes.ts             ← varias órdenes en una celda: separarOrdenes() (una por línea) y cómo contarlas
     │       ├── exportar.ts            ← descarga a Excel (órdenes una por línea + "Ajustar texto")
-    │       ├── tema.ts, portapapeles.ts ← reglas del modo claro/oscuro y "copiar código"
+    │       ├── portapapeles.ts          ← "copiar código"
     │       └── listas.ts              ← en(lista, i): leer una posición que se sabe que existe (ver noUncheckedIndexedAccess)
     ├── scripts/
     │   ├── generar-ejemplo.mjs        ← crea el Excel de ejemplo
@@ -262,7 +261,7 @@ sitio-web/
     ├── tests/unit/                    ← pruebas unitarias (Vitest, .ts/.tsx); graph-resolver.test.ts = cómo se encuentra
     │                                     el Excel real; componentes.test.tsx = componentes de React con clics y teclado;
     │                                     rendimiento.test.tsx = escribir no redibuja la tabla; strictmode.test.tsx = la app
-    │                                     dentro de <StrictMode>; pagina-inicial.test.tsx = index.html igual a React;
+    │                                     dentro de <StrictMode>; pagina-inicial.test.tsx = index.html vacío y diseño de React;
     │                                     tipos.test.tsx = tipos que deben dar error; lint.test.ts, codigo-fuente.test.ts
     │                                     y documentacion.test.ts = revisiones del código y de esta documentación;
     │                                     rutas.test.ts + rutas-app.test.tsx = rutas, detalle y botón atrás;
@@ -333,7 +332,7 @@ Decisiones de la migración:
 | **Tipos estrictos de verdad** (`noUncheckedIndexedAccess`, `ConfigSinValidar`, `Direccion`…) | Además de `strict`: `lista[i]` puede no existir y TypeScript obliga a revisarlo; `config.json` llega como `ConfigSinValidar` y solo `revisarConfig()` lo convierte en `Config` (no se puede usar sin revisar); la dirección de orden solo puede ser `"asc"`/`"desc"`. `tests/unit/tipos.test.tsx` comprueba que esos errores sigan apareciendo. |
 | **oxlint** para revisar las reglas de React (`npm run lint`, dentro de `build`) | Las reglas de los hooks (`rules-of-hooks`, `exhaustive-deps`) no las revisa TypeScript y un error ahí hace que la pantalla muestre datos viejos. El estándar es ESLint + typescript-eslint, pero typescript-eslint exige TypeScript < 6.1; oxlint no depende de TypeScript y trae las mismas reglas. |
 | **La tabla no se redibuja al escribir** (`memo`, `useCallback`, resultados aparte de la página) | Lo escrito en el buscador se aplica 200 ms después; mientras tanto solo cambia la caja de texto. Las tablas, la paginación y "Columnas detectadas" están en `memo()` con props estables, y cambiar de página no vuelve a filtrar ni ordenar todas las filas. Importa en el celular con el Excel real (miles de filas). Lo revisa `tests/unit/rendimiento.test.tsx`. |
-| **`index.html` con la cabecera y "Cargando…"** | Es lo que se ve mientras baja el código (con React pesa más que antes): igual a lo primero que dibuja React, así nada salta al cargar y el botón ☀️/🌙 ya muestra el ícono correcto (`tema-inicial.js`). Lo revisan `pagina-inicial.test.tsx` y 3 pruebas en navegador. |
+| **`index.html` solo con `<div id="raiz">`** *(16/10/2026)* | Antes traía una copia en HTML de la cabecera y de "Cargando…" (había que mantenerla igual a React a mano). Ahora todo lo dibuja React: la cabecera, "Saltar al …", el `<main>` y el aviso flotante son el **diseño de las rutas** (`DisenoApp.tsx`, ruta "layout" de React Router en `RutasApp.tsx`). Mientras baja el código la página queda vacía pero con el fondo del modo elegido (`tema-inicial.js`): sin destello blanco. Lo revisan `pagina-inicial.test.tsx` y 2 pruebas en navegador. |
 | **`@azure/msal-browser` v5 directo (sin `@azure/msal-react`)** | El inicio de sesión ya estaba resuelto y probado con msal-browser (`logica/auth.ts`): vuelta por la página puente `redirect.html` (MSAL v5), revisión de dominios `aic.pe`/`jaicoscorp.com` y del tenant **después** del login, `Files.Read.All` pedido recién al leer el Excel y mensajes claros si falta el consentimiento. msal-react obliga a envolver toda la app en su `MsalProvider` (MSAL se cargaría también en modo demo, que hoy no lo descarga) y no agrega nada de eso; la app solo necesita saber "en qué fase está el arranque", y eso lo da el hook `useArranque`. Menos piezas = menos cosas que actualizar. |
 | **Estado con React puro (hooks), sin Redux ni otra librería** | El estado es poco y claro: (1) la **búsqueda** (texto, filtros, vista, orden, página) vive en `useBusqueda` y se copia a la dirección (`useEstadoUrl`), así el enlace se puede compartir; (2) los **datos del Excel** viven en `useExcel` (carga, Actualizar, auto-actualización); (3) el **arranque** (`useArranque`) es una sola variable con la fase (`cargando`, `login`, `denegado`, `app`…) y TypeScript obliga a tratar cada una. Lo que se ve (filas, contador, opciones de los filtros) se **calcula** con funciones puras de `logica/vista.ts`, que se prueban sin navegador. |
 | **Mismos ids, textos y `aria-*`** | Las 39 pruebas en navegador (Playwright) son el "contrato" de comportamiento: pasan **sin cambiar ningún selector** (solo se les agregaron tipos al pasarlas a `.ts`; después se sumaron 3 de la pantalla de carga). `estilos.css` no cambió en la migración (salvo un comentario; el 14/10/2026 sí cambió, por el pedido de diseño). Con React Router (14/10/2026) solo se ajustaron las direcciones esperadas (`?vista=centro` → `/centros`), sin quitar comprobaciones. Con shadcn/ui (15/10/2026) se conservaron ids, roles, etiquetas y textos; solo cambiaron los selectores de piezas que ya no son las mismas etiquetas HTML (ver 8.2), con la misma comprobación. Con los componentes "naturales" (15/10/2026, rama `shadcn-natural`) las pruebas de `app.spec.ts`, `rutas.spec.ts` y `microsoft-simulado.spec.ts` pasan sin cambios; cambiaron solo las de colores y foco (lista en 8.2). Los avisos (`#aviso-flotante`, `#aviso-error`) vuelven a leerse en voz alta aunque el mensaje se repita, como antes. |
@@ -364,53 +363,50 @@ Qué se ve distinto respecto de la versión anterior (la que adaptaba los compon
 - **Cajas de filtros desactivadas:** shadcn/ui no les deja recibir el mouse (`pointer-events: none`); el `title` con el motivo ("No se encontró esta columna en el Excel"…) va **también en la caja del campo** (`Filtros.tsx`), así que sigue apareciendo al pasar el mouse, como antes; los lectores de pantalla lo leen del control.
 - **Opciones de los desplegables en oscuro:** al abrir la lista, el `NativeSelectOption` de shadcn/ui usa los colores del **sistema** (`Canvas` / `CanvasText`): en oscuro, Chromium pinta las opciones casi negras (`rgb(18, 18, 18)`) en vez de Black. Es la única excepción a la paleta (la dibuja el sistema, no la página) y la prueba de colores la acepta de forma explícita *(por confirmar con Gustavo)*.
 
-**Modo oscuro** *(por confirmar con Gustavo)*: shadcn/ui trae su variante `dark:`; aquí se conecta al botón ☀️/🌙 (`<html data-tema>`, `@custom-variant dark` en `estilos.css`) y sus variables se arman con la paleta: fondo Black y texto White; `--primary` Light Blue con texto Primary Blue (botón principal, opción elegida, enlaces, títulos y encabezado de las tablas); filas alternas Primary Blue; bordes blanco al 10 % (como shadcn/ui); cajas de texto con borde Gray; foco (`--ring`) **Light Blue**: con Medium Blue el anillo casi no se veía sobre el negro ni sobre las filas alternas Primary Blue (1,7:1 y 1,4:1).
+**Tema suave** *(16/10/2026, pedido de Gustavo: "el modo oscuro suave, todo suavízalo")*: claro y oscuro usan la paleta de la guía **más tonos derivados del Primary Blue** (la guía no los define; la prueba de colores los acepta como extensión: `TONOS_SUAVES` en `tests/e2e/colores.ts`). Sin negro ni blanco puros en el texto y el fondo; bordes más tenues; esquinas un poco más redondeadas (`--radius` 0,75rem). El modo oscuro es el **nativo de shadcn/ui** (ver 8.3): clase `dark` en `<html>`, variables en `.dark { … }` y `@custom-variant dark (&:is(.dark *))` en `estilos.css`.
 
 Variables del tema, con el contraste medido (WCAG 2.1 AA pide 4,5:1 en texto normal y 3:1 en bordes de controles, íconos y foco):
 
-| Variable | Para qué | Claro | Oscuro |
+| Variable | Para qué | Claro | Oscuro (azul pizarra) |
 |---|---|---|---|
-| `--background` / `--foreground` | Fondo de la página / texto | White / Black (21:1) | Black / White (21:1) |
-| `--card`, `--popover` (y sus `-foreground`) | Tarjetas, avisos, cajas de las tablas | White / Black (21:1) | Black / White (21:1) |
-| `--primary` / `--primary-foreground` | Botón principal, opción elegida, enlaces, títulos, encabezado de tablas, lo encontrado por el buscador, texto seleccionado | Primary Blue / White (11,1:1; con el mouse encima, al 80 %: 6,2:1) | Light Blue / Primary Blue (9,5:1); enlaces Light Blue: 18,0:1 sobre Black, 9,5:1 sobre Primary Blue |
-| `--secondary` / `--secondary-foreground` | Insignias ("N° de órdenes"), iniciales del usuario | Light Blue / Primary Blue (9,5:1) | Light Blue / Primary Blue (9,5:1) |
-| `--muted` | Filas alternas y centro abierto ("seleccionada"); fondo con el mouse encima (al 50 %); tecla `/` | Light Gray (texto Black 19,3:1; al 50 %: 20,1:1) | Primary Blue (texto White 11,1:1; al 50 %: 16,8:1) |
-| `--muted-foreground` | Textos secundarios (contador, ayudas, etiquetas) | Gray: 5,7:1 con White, 5,3:1 con Light Gray | Border Gray: 13,1:1 con Black, 6,9:1 con Primary Blue |
-| `--accent` / `--accent-foreground` | (ningún componente actual lo usa) | Light Blue / Primary Blue | Primary Blue / White |
-| `--destructive` | Texto de los errores (Alert `destructive`) | Primary Blue (11,1:1) | Light Blue (18,0:1) |
-| `--border` | Bordes de tablas, avisos y botones `outline` (decorativos) | Border Gray | White al 10 % (el de shadcn/ui) |
-| `--input` | Borde de cajas y desplegables (WCAG pide 3:1 para ver dónde está la caja) | Gray (5,7:1 con White) | Gray (3,7:1 con Black); fondo de cajas y botones `outline`: Gray al 30 % (texto White 16,6:1) |
-| `--ring` | Foco con el teclado: borde de 1 px (sólido) + anillo de 3 px al 50 % (contorno de 2 px en enlaces y elementos propios). Cifras **tal como se dibujan**: el borde es el que cumple 3:1 | Medium Blue. Borde: 5,4:1 con White, 5,0:1 con Light Gray. Anillo al 50 %: 2,1:1 y 2,0:1 (decorativo; ningún azul de la paleta llega a 3:1 al 50 % sobre blanco) | Light Blue. Borde: 18,0:1 con Black, 9,5:1 con Primary Blue (fila alterna). Anillo al 50 %: 4,7:1 y 3,6:1 |
-| `--radius` | Esquinas (el valor por defecto de shadcn/ui) | 0,625rem | 0,625rem |
+| `--background` / `--foreground` | Fondo de la página / texto | Light Gray `#F5F5F5` / tinta `#1A2333` (14,5:1) | `#0F1729` / `#E6EBF2` (14,9:1) |
+| `--card`, `--popover` (y sus `-foreground`) | Tarjetas, avisos, cajas de las tablas | White / tinta (15,8:1) | `#152038` / `#E6EBF2` (13,5:1) |
+| `--primary` / `--primary-foreground` | Botón principal, opción elegida, enlaces, títulos, encabezado de tablas, lo encontrado, texto seleccionado | Primary Blue / White (11,1:1) | `#9DB8E0` / `#0F1729` (8,8:1); enlaces 8,0:1 sobre tarjetas |
+| `--secondary` / `--secondary-foreground` | Insignias, iniciales del usuario | Light Blue / Primary Blue (9,5:1) | Primary Blue / Light Blue (9,5:1) |
+| `--muted` | Filas alternas, centro abierto, fondo con el mouse encima (al 50 %) | `#F3F6FA` (texto 14,5:1) | `#1B2742` (texto 12,4:1) |
+| `--muted-foreground` | Textos secundarios | `#5B6577` (5,9:1 con White, 5,4:1 con filas alternas) | `#A3B0C4` (7,4:1 con tarjetas, 6,8:1 con filas alternas) |
+| `--accent` / `--accent-foreground` | (ningún componente actual lo usa) | Light Blue / Primary Blue | `#1B2742` / `#E6EBF2` |
+| `--destructive` | Texto de los errores | Primary Blue | `#9DB8E0` |
+| `--border` | Bordes decorativos (tablas, avisos, botones `outline`) | `#E3E8EF` | texto al 10 % |
+| `--input` | Borde de cajas y desplegables (3:1) | `#7C8798` (3,6:1 con White) | `#6B7894` (3,7:1 con tarjetas, 3,4:1 con filas alternas) |
+| `--ring` | Foco con el teclado: borde de 1 px + anillo de 3 px al 50 % | Medium Blue (borde 5,4:1) | `#B8CCEA` (anillo al 50 %: ≥ 3,4:1 sobre página, tarjetas y filas alternas) |
+| `--radius` | Esquinas | 0,75rem | 0,75rem |
 
 `tests/e2e/guia-aic.spec.ts` recorre todas las pantallas en claro y en oscuro (lista con búsqueda resaltada, "Por centro" abierto, detalle, mensajes, error del Excel, inicio de sesión, celular con filtros y aviso flotante, foco y ayuda flotante) y falla si aparece un color **ajeno a la marca** —en cualquier notación: `rgb()`, `oklab()`, `oklch()`…— o un texto con contraste menor que AA (con el color **real**: las transparencias se mezclan con lo que hay debajo). Las opciones de los desplegables (que no ocupan lugar en la página) se revisan aparte, aceptando solo la paleta y los colores del sistema `Canvas`/`CanvasText`. Otra prueba comprueba que el revisor sí detecta el azul del navegador, un azul de Tailwind, el rojo de shadcn/ui, un anillo rojo, una opción de desplegable roja y un texto con poco contraste.
 
 ### 8.2 Componentes shadcn/ui sin cambios + Tailwind CSS *(15/10/2026)*
 
-**shadcn/ui** no es una librería que se instala y queda "cerrada": es un catálogo de componentes accesibles (hechos sobre **Radix UI**) que la herramienta `shadcn` **copia** al proyecto (`app/src/components/ui/`). Se pintan con **Tailwind CSS** (clases cortas como `px-2`, `bg-primary`). Se instaló con la guía oficial para Vite (Tailwind v4 con `@tailwindcss/vite`, alias `@/` = `src/`, `components.json`).
+**shadcn/ui** no es una librería que se instala y queda "cerrada": es un catálogo de componentes accesibles (desde el 16/10/2026, hechos sobre **Base UI**; antes, Radix UI) que la herramienta `shadcn` **copia** al proyecto (`app/src/components/ui/`). Se pintan con **Tailwind CSS** (clases cortas como `px-2`, `bg-primary`). Se instaló con la guía oficial para Vite (Tailwind v4 con `@tailwindcss/vite`, alias `@/` = `src/`, `components.json`).
 
-**Desde el pedido de Gustavo del 15/10/2026, esos archivos no se editan:** quedan exactamente como los genera `npx.cmd shadcn add` con la versión instalada (`shadcn` 4.21.5 en `devDependencies`) y el `components.json` actual (estilo `radix-vega`, color base `neutral`, `cn()` del paquete `cn`). La marca va solo en el tema (8.1). Si un componente necesita otra cosa, se resuelve **afuera**: con sus props públicas, con clases de medidas en el lugar de uso o con un componente propio en `src/componentes/` que lo envuelva.
+**Desde el pedido de Gustavo del 15/10/2026, esos archivos no se editan:** quedan exactamente como los genera `npx.cmd shadcn add` con la versión instalada (`shadcn` 4.21.5 en `devDependencies`) y el `components.json` actual (estilo `base-vega`, color base `neutral`, `cn()` del paquete `cn`). La marca va solo en el tema (8.1). Si un componente necesita otra cosa, se resuelve **afuera**: con sus props públicas, con clases de medidas en el lugar de uso o con un componente propio en `src/componentes/` que lo envuelva.
 
 | Componente shadcn/ui | Dónde |
 |---|---|
-| `Button` | Todos los botones (Actualizar, Exportar, Limpiar filtros, Cerrar sesión, paginación, copiar, flecha de "Por centro", ☀️/🌙…) y los enlaces con forma de botón ("Volver a la lista", "Ir al buscador", con `asChild`). |
+| `Button` | Todos los botones (Actualizar, Exportar, Limpiar filtros, Cerrar sesión, paginación, copiar, flecha de "Por centro", tema…) y los enlaces con forma de botón ("Volver a la lista", "Ir al buscador", con `asChild`). |
 | `RadioGroup` + `ButtonGroup` + `Button` | "Por orden / Por centro de negocio" (`src/componentes/OpcionesBoton.tsx`): botones pegados que son un grupo de opciones (`role="radiogroup"`, cada opción `role="radio"` con `aria-checked`) y se usan como los `<input type="radio">`: **las flechas mueven el foco y eligen** (patrón de WAI-ARIA). La elegida va con el estilo principal (`variant="default"`) y la otra con `outline`. `ButtonGroup` es nuevo: reemplaza al `RadioGroupBoton` que se había agregado dentro de `radio-group.tsx`. |
 | `Input` | Buscador y filtros "contiene" (Código, Descripción, Orden). |
-| `NativeSelect` | Cliente, Tipo de orden, Estado y Filas por página. **Se eligió en vez de `Select` (Radix):** es el `<select>` del navegador, el más accesible (en el celular abre la lista del sistema, se elige escribiendo las primeras letras, todos los lectores de pantalla lo conocen) y va bien con listas largas (los clientes del Excel). |
+| `NativeSelect` | Cliente, Tipo de orden, Estado y Filas por página. **Se eligió en vez de `Select`:** es el `<select>` del navegador, el más accesible (en el celular abre la lista del sistema, se elige escribiendo las primeras letras, todos los lectores de pantalla lo conocen) y va bien con listas largas (los clientes del Excel). |
 | `Table` | Las tablas (por orden, por centro, centro abierto, detalle, columnas detectadas), con el encabezado de marca y las filas alternas. |
 | `Card` | Tarjetas (cargando, bienvenida, mensajes, "Página no encontrada", ficha del centro) con sus partes `CardHeader`/`CardContent`/`CardFooter`, y las cajas de las tablas. |
 | `Badge`, `Alert`, `Separator`, `Kbd` | Insignias (Modo demostración, N° de órdenes, filtros activos), avisos (`default` y `destructive`), línea entre avisos y la tecla `/`. |
 | `Collapsible` | "Columnas detectadas en el Excel" (antes `<details>`): botón con `aria-expanded`. |
-| `Tooltip` | Ayuda flotante del botón ☀️/🌙 (`src/componentes/AyudaFlotante.tsx`): a diferencia de `title`, se ve también al llegar con el teclado y se cierra con Escape. El botón **copiar** de cada fila **no** lleva ayuda flotante: con una por fila, cambiar de página con 250 filas tardaba ~1,2 s y sin ella ~0,83 s (3000 filas, CPU 4 veces más lenta, mediana de 12 cambios); su nombre ("Copiar código …") ya lo leen los lectores de pantalla. |
-| **No se usaron** | `Select` (Radix): ver `NativeSelect`. `Pagination`: está hecho con enlaces (`<a>`), que no se pueden desactivar ni cuidan el foco como la paginación actual (botones; al llegar a la última página el foco pasa a "Página X de Y"); se usó `Button` dentro de la misma paginación. `Spinner`: su texto para lectores de pantalla viene en inglés ("Loading"); la ruedita propia va con el texto visible "Cargando…". |
+| **No se usaron** | `Select`: ver `NativeSelect`. `Pagination`: está hecho con enlaces (`<a>`), que no se pueden desactivar ni cuidan el foco como la paginación actual (botones; al llegar a la última página el foco pasa a "Página X de Y"); se usó `Button` dentro de la misma paginación. `Spinner`: su texto para lectores de pantalla viene en inglés ("Loading"); la ruedita propia va con el texto visible "Cargando…". |
 
 **Accesibilidad que antes dependía de cambiar componentes y ahora se resuelve sin tocarlos:**
 
 | Qué | Antes (componente cambiado) | Ahora (sin editar `src/components/ui`) |
 |---|---|---|
-| La ayuda de ☀️/🌙 repite el nombre del botón: que el lector de pantalla no lo lea dos veces | opción `sinDescripcion` agregada en `tooltip.tsx` | `AyudaFlotante.tsx`: `TooltipTrigger asChild` (prop pública) le pasa sus props a un `Slot` propio que se las pasa al botón **menos** `aria-describedby`. |
-| Un solo `TooltipProvider` para toda la app, con 300 ms de espera antes de mostrar la ayuda con el mouse | en `App.tsx`; los 300 ms, cambiados dentro de `tooltip.tsx` | igual, en `App.tsx` (el `Tooltip` de shadcn/ui no trae proveedor propio); los 300 ms con la prop pública `delayDuration={300}` del `TooltipProvider` (shadcn/ui trae 0 ms). Con el teclado aparece al instante. |
-| "Por orden / Por centro": las flechas eligen | `RadioGroupBoton` agregado en `radio-group.tsx` | `OpcionesBoton.tsx`: `RadioGroup` de shadcn/ui + `ButtonGroup` con `role="presentation"` (prop pública) + `RadioGroupPrimitive.Item asChild` de Radix sobre un `Button`. |
+| "Por orden / Por centro": las flechas eligen | `RadioGroupBoton` agregado en `radio-group.tsx` | `OpcionesBoton.tsx`: `RadioGroup` de shadcn/ui + `ButtonGroup` con `role="presentation"` (prop pública) + `Radio.Root` de Base UI con `render={<Button />}` y `nativeButton`. |
 | Encabezado fijo arriba al bajar en la caja con scroll | opción `container={false}` agregada en `table.tsx` | `CajaTabla` (`Celdas.tsx`, una `Card`): clase de medidas `[&>[data-slot=table-container]]:overflow-visible` para que la caja de la `Table` no tenga su propio scroll; el `<th>` lleva `sticky top-0`. |
 | Foco visible en el modo de alto contraste de Windows (ahí no se dibujan sombras y el anillo de shadcn/ui es una sombra) | contorno transparente en utilidades propias | regla de `estilos.css` que **solo** actúa con `forced-colors: active` (contorno de 2 px del color del sistema). No cambia nada en el modo normal: la opción menos invasiva. |
 | Sin animaciones para quien pidió "reducir el movimiento" en su sistema (WCAG 2.3.3) | regla de `estilos.css` (ya estaba) | la misma regla global (`prefers-reduced-motion: reduce`, con `!important`): quita transiciones y fundidos **también** a los componentes de shadcn/ui (Button, Input, TableRow, Tooltip…), **solo** a esas personas; las demás ven los de shadcn/ui. Es la segunda excepción de accesibilidad *(por confirmar con Gustavo; la alternativa es quitarla y que esas personas también vean las animaciones de shadcn/ui)*. |
@@ -437,7 +433,7 @@ Variables del tema, con el contraste medido (WCAG 2.1 AA pide 4,5:1 en texto nor
   - `guia-aic.spec.ts` (revisión): el centro abierto es la fila "seleccionada" de shadcn/ui (`--muted`, sin aclararse con el mouse); la ayuda flotante espera al menos 300 ms con el mouse (medido dentro de la página); nueva prueba de "menos movimiento" (con la preferencia: sin transiciones ni fundidos; sin ella: los 0,15 s de shadcn/ui).
   - `diseno.spec.ts`: el foco esperado es el de shadcn/ui (borde `--ring` + anillo de 3 px al 50 %) en vez del anillo sólido de 2 px; `#contenedor-tabla` es una Card (su contorno de 1 px es un `ring-1`, no un borde); la prueba "al hacer clic en una caja no aparece el anillo" pasó a "el anillo sigue a `:focus-visible`" (botones: solo con el teclado; cajas y desplegables: también con el clic, como shadcn/ui, y se exige el borde y el anillo **justo después del clic**, también en los desplegables); se agregaron el foco de los títulos que ordenan y el modo de alto contraste. El contraste del foco se mide **tal como se dibuja** (el anillo con su 50 %, sobre la página, las tarjetas y las filas alternas): antes se medía la variable `--ring` opaca y el anillo pasaba aunque no llegara a 3:1. Ahora se exige 3:1 al borde en los dos modos y al anillo en oscuro. Nueva prueba del tamaño de letra (14 px en tablas y controles; 16 px en el resto).
   - Unitarias: se quitó `modalidad.test.ts` (probaba `logica/modalidad.ts`, que ya no existe); `tabla.test.tsx` mira el ▲▼ tenue con `opacity-60` (antes, una variable propia) y el centro abierto con `data-state="selected"`; nueva `shadcn-natural.test.ts` (los archivos de `src/components/ui` no tienen las adaptaciones de antes ni texto agregado a mano, tienen finales de línea LF y fuera de ellos no hay controles nativos salvo el título que ordena).
-- **Seguridad (CSP):** Radix pone algunos estilos en línea (posición de la ayuda flotante): la CSP ya permite `style-src 'unsafe-inline'`; los scripts siguen solo `'self'`. Lo comprueban las pruebas en navegador (sin errores de consola, con la CSP activa).
+- **Seguridad (CSP):** Base UI pone algunos estilos en línea (posición de la ayuda flotante): la CSP ya permite `style-src 'unsafe-inline'`; los scripts siguen solo `'self'`. Lo comprueban las pruebas en navegador (sin errores de consola, con la CSP activa).
 - **`npm audit`:** las librerías que se publican no tienen avisos (`npm.cmd audit --omit=dev`). El paquete `shadcn` (en `devDependencies`) trae avisos de dependencias suyas que no llegan a la app.
 - **El paquete `shadcn` no es solo la herramienta para agregar componentes:** `src/estilos.css` importa **`shadcn/tailwind.css`** (de ese paquete), que define las variantes de Tailwind que usan los componentes (`data-open:`, `data-checked:`, `data-horizontal:`…). Se usa **al compilar** (`npm run build`), por eso tiene que quedar instalado: si se quitara de `package.json`, la compilación fallaría. No se publica como código (solo las reglas de CSS que se usan).
 
@@ -445,7 +441,7 @@ Variables del tema, con el contraste medido (WCAG 2.1 AA pide 4,5:1 en texto nor
 
 ```powershell
 cd C:\dev\AIC\automatizaciones\sitio-web\app
-npx.cmd shadcn add alert badge button button-group card collapsible input kbd native-select radio-group separator table tooltip --dry-run
+npx.cmd shadcn add alert badge button button-group card collapsible input kbd native-select radio-group separator table --dry-run
 ```
 
 `--dry-run` compara el contenido sin mirar los finales de línea. Para una comparación **byte a byte** (ej. con `cmp`), los archivos deben estar con LF, como los escribe shadcn: de eso se encarga `.gitattributes` (en la raíz del repositorio: `app/src/components/ui/** text eol=lf`). Sin él, con `core.autocrlf=true` (lo normal en Windows), Git los sacaba con CRLF y `cmp` decía "distintos" aunque el contenido fuera el mismo. Otra forma de comprobarlo: regenerarlos con `--overwrite --yes` (receta de abajo) y ver que `git status` no muestre cambios.
@@ -463,11 +459,24 @@ Eso crea `src/components/ui/dialog.tsx` y agrega las librerías que necesite. Se
 
 ```powershell
 cd C:\dev\AIC\automatizaciones\sitio-web\app
-npx.cmd shadcn add alert badge button button-group card collapsible input kbd native-select radio-group separator table tooltip --overwrite --yes
+npx.cmd shadcn add alert badge button button-group card collapsible input kbd native-select radio-group separator table --overwrite --yes
 git diff src/components/ui
 ```
 
 `--overwrite` reemplaza los archivos por los que genera la herramienta (por eso no se les hacen cambios a mano: se perderían). Revisar con `git diff` qué cambió, ajustar **la app** si hace falta (nunca los componentes) y correr todas las pruebas.
+
+### 8.3 Base UI + diseño de rutas con React Router *(16/10/2026)*
+
+- **shadcn/ui sobre Base UI:** `components.json` pasó de `radix-vega` a `base-vega` y los componentes se regeneraron con `npx.cmd shadcn add … --overwrite --yes` (siguen **sin cambios a mano**). El paquete `radix-ui` se quitó; se usa `@base-ui/react`. En la app, `asChild` pasó a ser la prop `render` de Base UI (`CollapsibleTrigger render={<Button …/>}`, `Radio.Root render={<Button …/>}`, `TooltipTrigger render={…}`). Los enlaces con forma de botón ("Volver a la lista", "Ir al buscador") usan `buttonVariants()` sobre el `<Link>`: con `Button render` Base UI les pondría `role="button"` y dejarían de ser enlaces.
+- **Diferencias de Base UI que se notan en las pruebas:** el Collapsible marca el disparador con `data-panel-open`; el orden de los atributos del `<button>` cambió.
+- **index.html sin HTML de la app:** solo `<div id="raiz">`. El diseño común (cabecera, "Saltar al …", `<main>`, aviso flotante) es la ruta "layout" `DisenoApp` (React Router, `<Outlet />`): con la sesión iniciada, el `<Outlet>` muestra las rutas y les pasa configuración, sesión y aviso por su contexto (`useContextoSesion`); antes, muestra "Cargando…", el inicio de sesión o el mensaje que toque. Las pruebas abren las rutas sin el arranque con `rutasConSesion()` (`tests/unit/ayuda-rutas.tsx`).
+
+### 8.4 Modo oscuro nativo de shadcn/ui y logo de AIC *(16/10/2026)*
+
+- **Modo claro / oscuro como lo indica shadcn/ui para Vite:** `src/components/theme-provider.tsx` es el `ThemeProvider` de la guía de shadcn/ui (copiado tal cual) y envuelve la app en `App.tsx`. Pone la clase `light` o `dark` en `<html>` y guarda la elección en `localStorage` (`vite-ui-theme`); sin elección sigue el modo del sistema (al cargar la página; si el sistema cambia con la página abierta, se ve al recargar, como en la guía). El CSS usa la variante de shadcn/ui (`@custom-variant dark (&:is(.dark *))`) y un solo bloque `.dark { … }`. `public/tema-inicial.js` pone esa misma clase antes de pintar, para que no haya destello blanco. Se quitaron `useTema.ts`, `logica/tema.ts`, `BotonTema.tsx`, `AyudaFlotante.tsx` y el `Tooltip` (ya no se usaba).
+- **Botón de tema** (`src/components/mode-toggle.tsx`, `ModeToggle`): un solo botón; **cada clic pasa al siguiente** modo: claro → oscuro → sistema → claro. Muestra el ícono del modo actual (sol, luna o pantalla) y su nombre lo dice: "Tema claro. Cambiar a tema oscuro". La elección anterior (`buscador-cn.tema`) no se migra: la primera vez se usa el modo del sistema.
+- **Diferencia que se nota:** con la variante nativa (`.dark`), en oscuro `dark:border-input` gana a `focus-visible:border-ring` en los botones `outline`: el foco con teclado lo marca el anillo (`--ring` al 50 %, ≥ 3:1), el borde sigue en `--input`. Así es shadcn/ui.
+- **Logo de AIC** (pedido de Gustavo: "en modo oscuro no hay mucho contraste en el logo y está muy simple"): el ícono genérico se cambió por el logo oficial de www.aic.pe ("AIC" con la señal wifi naranja y "Embracing the future"), recortado en `public/marca/`: azul marino en claro y blanco en oscuro (`LogoAic` en `Iconos.tsx`). Va en la cabecera (enlaza a www.aic.pe), separado del título por un `Separator`, y en la pantalla "Bienvenido". Bajo la cabecera, una línea de marca de 3 px del azul principal al **naranja del logo** (`--marca-naranja: #FF9000`, solo decorativo, nunca texto).
 
 ## 9. Qué falta / (por confirmar)
 
@@ -486,7 +495,7 @@ git diff src/components/ui
 - [x] **SheetJS actualizada a 0.20.3** (13/10/2026). Pendiente recomendado: dejar el permiso de edición del Excel solo a la cuenta del bot.
 - [ ] **Publicar los cambios del 15/10/2026** (órdenes una por línea, más margen, guía de estilo de AIC, React Router 8.4 y shadcn/ui; rama `ui-aic-shadcn`): `npm.cmd ci` → `npm.cmd run preparar-publicacion` → arrastrar `publicar/` y revisar la sección 7 del plan de pruebas. *(por confirmar cuándo se publica y si Gustavo lo revisa antes)*
 - [ ] **Componentes de shadcn/ui "naturales" (rama `shadcn-natural`)**: que Gustavo lo vea (`npm.cmd run dev:demo`) y, si le parece bien, publicarlo (`npm.cmd run preparar-publicacion` → arrastrar `publicar/`; repetir 1.19 del plan de pruebas). *(por confirmar con Gustavo)*
-- [ ] **Modo oscuro con la guía de AIC**: la guía no lo define; se armó con el tema oscuro de shadcn/ui y la paleta (fondo negro, encabezados de tabla y botón principal Light Blue con texto Primary Blue, filas alternas Primary Blue, bordes blanco al 10 %, foco Light Blue). Al abrir una lista desplegable, las opciones salen casi negras (color del sistema, `rgb(18, 18, 18)`), no Black. *(por confirmar con Gustavo)*
+- [ ] **Tema suave (claro y oscuro) con tonos derivados de la paleta** *(16/10/2026)*: la guía no los define (ver 8.3). Oscuro: azul pizarra `#0F1729`, tarjetas `#152038`, texto `#E6EBF2`, principal `#9DB8E0`. Al abrir una lista desplegable, las opciones salen casi negras (color del sistema, `rgb(18, 18, 18)`), no Black. *(por confirmar con Gustavo)*
 - [ ] **Anillo de foco en modo claro**: el de shadcn/ui va al 50 % y sobre blanco se ve tenue (2,1:1); lo que cumple WCAG es el borde Medium Blue de 1 px (5,4:1). ¿Le parece suficiente o se refuerza (ej. `--ring` más oscuro)? (sección 8.1) *(por confirmar con Gustavo)*
 - [ ] **Letra de 14 px en tablas, botones, desplegables y cajas** (la de shadcn/ui; antes 16 px, 15 px en el celular): Calibri se ve más chica que otras letras del mismo tamaño. ¿Se deja así? (sección 8.1) *(por confirmar con Gustavo)*
 - [ ] **Centro abierto en "Por centro"**: ahora usa el fondo de fila "seleccionada" de shadcn/ui (Light Gray; en oscuro, Primary Blue), el mismo de las filas alternas; antes era Light Blue con una raya de 4 px. ¿Cuenta como parte de las "filas de marca" o se prefiere el Light Blue de antes? (sección 8.1) *(por confirmar con Gustavo)*

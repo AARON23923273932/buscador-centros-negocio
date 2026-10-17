@@ -1,5 +1,3 @@
-// El resaltado de la búsqueda se dibuja con <mark> de React: el texto del Excel siempre se "escapa".
-// renderToStaticMarkup = el HTML que React pondría en la página (sin abrir un navegador).
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Resaltado, ResaltadoOrdenes } from '../../src/componentes/Resaltado.tsx';
@@ -27,13 +25,12 @@ describe('escapado y resaltado (componente Resaltado)', () => {
     expect(html('CN-0005', ['cn0005'])).toBe('<mark>CN-0005</mark>');
     expect(html('CN-1', ['cn1'])).toBe('<mark>CN-1</mark>');
     expect(html('Orden OS-2026-0001', ['os20260001'])).toBe('Orden <mark>OS-2026-0001</mark>');
-    // Si el término aparece tal cual, se marca solo eso.
     expect(html('CN-0001 y CN0001', ['cn0001'])).toBe('CN-0001 y <mark>CN0001</mark>');
     expect(html('<b>CN-1</b>', ['cn1'])).toBe('&lt;b&gt;<mark>CN-1</mark>&lt;/b&gt;');
   });
   it('sin términos solo escapa', () => {
     expect(html('a & b', [])).toBe('a &amp; b');
-    expect(html('', ['x'])).toBe(''); // (segmentosResaltado con null/undefined: filtros.test.ts)
+    expect(html('', ['x'])).toBe('');
   });
 });
 

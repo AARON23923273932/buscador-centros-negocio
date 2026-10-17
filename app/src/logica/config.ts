@@ -1,23 +1,7 @@
-// =============================================================================
-// config.ts — Lee config.json al abrir la página (cambiarlo no requiere tocar el código).
-// El que se edita es app/public/config.json; "npm run build" lo copia a dist/.
-//
-// Si en config.json falta algún dato, se usa el valor "por defecto" de abajo.
-// Las claves que empiezan con "_" (ej. "_ayuda") son comentarios y se ignoran.
-// validarConfig() revisa que cada dato tenga la forma correcta y explica en
-// español qué arreglar (se muestra en la pantalla "Falta configurar la aplicación").
-//
-// Ojo: config.json lo escribe una persona, así que puede traer cualquier cosa. Por eso hay dos tipos:
-//   ConfigSinValidar = lo que devuelve cargarConfig(): las claves de Config, pero cada valor "unknown"
-//   Config           = la forma CORRECTA; solo la entrega revisarConfig() cuando no hay errores.
-// Así TypeScript no deja usar la configuración antes de revisarla.
-// =============================================================================
-
 import { CAMPOS } from './filtros.ts';
 import { TAMANOS_PAGINA } from './estado-url.ts';
 import type { Campo, FetchFn } from './tipos.ts';
 
-/** Sección "microsoft": inicio de sesión con Entra ID. */
 export interface ConfigMicrosoft {
   clientId: string;
   tenantId: string;
@@ -29,7 +13,6 @@ export interface ConfigMicrosoft {
   guardarSesion: 'localStorage' | 'sessionStorage';
 }
 
-/** Sección "datos": de dónde y cómo se lee el Excel. */
 export interface ConfigDatos {
   fuente: 'archivo-local' | 'graph';
   rutaLocal: string;
@@ -41,7 +24,6 @@ export interface ConfigDatos {
   rellenarHaciaAbajo: Campo[];
 }
 
-/** Configuración completa (ya mezclada con los valores por defecto y revisada con revisarConfig). */
 export interface Config {
   modo: 'demo' | 'microsoft';
   titulo: string;
@@ -56,40 +38,32 @@ export interface Config {
 }
 
 export const CONFIG_POR_DEFECTO: Config = {
-  // "demo" = sin login, lee el Excel de ejemplo. "microsoft" = login con cuenta de la empresa.
   modo: 'demo',
   titulo: 'Buscador de centros de negocio',
   subtitulo: 'Centros de negocio y sus órdenes de compra / servicio',
 
   microsoft: {
-    clientId: '', // "Id. de aplicación (cliente)" de Entra ID (por confirmar)
-    tenantId: '', // "Id. de directorio (inquilino)" de AIC (por confirmar). OBLIGATORIO en modo "microsoft".
-    tenantsPermitidos: [], // vacío = no se revisa el tenant (lo limita el tipo de registro de la app)
-    redirectUri: '', // vacío = <dirección de la app>/redirect.html
-    postLogoutRedirectUri: '', // vacío = <dirección de la app>/
-    dominiosPermitidos: ['aic.pe', 'jaicoscorp.com'], // confirmados el 12/10/2026
+    clientId: '',
+    tenantId: '',
+    tenantsPermitidos: [],
+    redirectUri: '',
+    postLogoutRedirectUri: '',
+    dominiosPermitidos: ['aic.pe', 'jaicoscorp.com'],
     scopes: ['User.Read', 'Files.Read.All'],
-    guardarSesion: 'localStorage', // "localStorage" (recuerda la sesión) o "sessionStorage" (solo esta pestaña)
+    guardarSesion: 'localStorage',
   },
 
   datos: {
-    // "archivo-local" = un .xlsx publicado junto a la app (solo para demo).
-    // "graph" = el Excel real en SharePoint/OneDrive, leído con la cuenta del usuario.
     fuente: 'archivo-local',
     rutaLocal: 'datos/centros-ejemplo.xlsx',
-    // Enlace del Excel: el de "Compartir → Copiar vínculo" o la dirección del navegador al abrirlo en
-    // Excel Online (…/_layouts/15/Doc.aspx?sourcedoc=…&file=…). Ver graph.ts.
     urlCompartida: '',
-    driveId: '', // alternativa al enlace: driveId + itemId
+    driveId: '',
     itemId: '',
-    hoja: '', // nombre de la hoja; vacío = la primera
-    filaEncabezado: null, // número de fila de los títulos (1, 2, …); vacío = detectar sola
-    // Si una fila tiene orden pero NO tiene código ni descripción del centro (el centro se escribió
-    // una sola vez, más arriba), se copian estos campos de la fila de arriba. [] = no copiar nada.
+    hoja: '',
+    filaEncabezado: null,
     rellenarHaciaAbajo: ['codigoCentro', 'descripcionCentro', 'cliente'],
   },
 
-  // Campo lógico -> posibles nombres del encabezado en el Excel (sin importar tildes/mayúsculas).
   columnas: {
     codigoCentro: [
       'codigo',
@@ -157,34 +131,22 @@ export const CONFIG_POR_DEFECTO: Config = {
     ],
   },
 
-  // Si alguno de estos campos no se encuentra en el Excel, se muestra un aviso.
-  // (Tipo de orden y Estado no son obligatorios: si faltan, su filtro simplemente no aparece.)
   camposObligatorios: ['codigoCentro', 'descripcionCentro', 'cliente', 'ordenCompra'],
 
-  // Columnas del Excel que la app NO muestra, NO busca y NO exporta. Se ocultan las que tengan una de estas
-  // palabras en el título (ej. "Monto", "Monto total", "Moneda", "Monto (S/)"), salvo las que la app usa
-  // como código, descripción, cliente, orden, tipo o estado. [] = no ocultar ninguna.
   columnasOcultas: ['moneda', 'monto'],
 
-  autoActualizarMinutos: 10, // 0 = no actualizar solo
+  autoActualizarMinutos: 10,
   filasPorPagina: 50,
 };
 
-/** Mismas claves que T, pero cada valor puede ser cualquier cosa (todavía no se revisó). */
 export type SinValidar<T> = { [K in keyof T]: unknown };
 
-/** config.json mezclado con los valores por defecto, TODAVÍA SIN REVISAR (ver revisarConfig). */
 export type ConfigSinValidar = SinValidar<Config>;
 
 const esObjeto = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 
-/**
- * Mezcla "profunda": toma la base y la sobreescribe con lo que venga en "extra".
- * Las listas se reemplazan completas. Las claves que empiezan con "_" se ignoran.
- * El resultado tiene las claves de la base, pero sus valores pueden venir mal escritos (por eso SinValidar).
- */
 export function mezclarConfig<T extends object>(base: T, extra: unknown): SinValidar<T> {
-  const resultado = structuredClone(base) as Record<string, unknown>; // (la copia vista como "clave → valor")
+  const resultado = structuredClone(base) as Record<string, unknown>;
   if (!esObjeto(extra)) return resultado as SinValidar<T>;
   for (const [clave, valor] of Object.entries(extra)) {
     if (clave.startsWith('_')) continue;
@@ -195,7 +157,6 @@ export function mezclarConfig<T extends object>(base: T, extra: unknown): SinVal
       resultado[clave] = structuredClone(valor);
     }
   }
-  // Tiene todas las claves de la base (es una copia de ella) y valores "unknown": la forma de SinValidar<T>.
   return resultado as SinValidar<T>;
 }
 
@@ -207,9 +168,7 @@ const esListaDeCampos = (v: unknown): v is Campo[] => Array.isArray(v) && v.ever
 const mostrar = (v: unknown): string => (v === undefined ? 'nada' : JSON.stringify(v));
 const LISTA_CAMPOS = CAMPOS.join(', ');
 
-/** Revisa la configuración y devuelve una lista de problemas (en español). Vacía = todo bien. */
 export function validarConfig(config: ConfigSinValidar): string[] {
-  // Se revisa como "cualquier cosa": config.json puede traer valores del tipo equivocado.
   const cfg: Record<string, unknown> = { ...config };
   const errores: string[] = [];
   if (!['demo', 'microsoft'].includes(cfg.modo as string)) {
@@ -257,21 +216,13 @@ export function validarConfig(config: ConfigSinValidar): string[] {
   return errores;
 }
 
-/** Resultado de revisarConfig: la configuración ya con su tipo correcto, o la lista de problemas. */
 export type RevisionConfig = { valida: true; config: Config } | { valida: false; errores: string[] };
 
-/**
- * Revisa la configuración: si no tiene problemas, la devuelve como Config (la forma correcta).
- * Es el ÚNICO lugar donde una ConfigSinValidar pasa a ser Config.
- * (En modo "demo" la sección "microsoft" no se revisa porque no se usa.)
- */
 export function revisarConfig(config: ConfigSinValidar): RevisionConfig {
   const errores = validarConfig(config);
-  // Sin errores, cada valor tiene la forma que exige Config: es justo lo que comprueba validarConfig().
   return errores.length ? { valida: false, errores } : { valida: true, config: config as Config };
 }
 
-/** Revisión de la sección "microsoft" (solo en modo "microsoft"). */
 function validarMicrosoft(ms: unknown): string[] {
   if (!esObjeto(ms)) return ['"microsoft" debe ser un grupo de valores entre llaves { … }.'];
   const errores: string[] = [];
@@ -286,7 +237,6 @@ function validarMicrosoft(ms: unknown): string[] {
         'este dato Microsoft rechaza el inicio de sesión (error AADSTS50194).',
     );
   } else if (tenant.toLowerCase() === 'organizations') {
-    // Multiinquilino a propósito (no recomendado): entonces la lista de tenants es obligatoria.
     if (tenants.length === 0) {
       errores.push(
         'Con "microsoft.tenantId": "organizations" hay que poner los Id. de directorio aceptados en "microsoft.tenantsPermitidos".',
@@ -317,7 +267,6 @@ function validarMicrosoft(ms: unknown): string[] {
   return errores;
 }
 
-/** Revisión de la sección "datos". */
 function validarDatos(d: Record<string, unknown>, modo: unknown): string[] {
   const errores: string[] = [];
   if (!['archivo-local', 'graph'].includes(d.fuente as string)) {
@@ -354,10 +303,6 @@ function validarDatos(d: Record<string, unknown>, modo: unknown): string[] {
   return errores;
 }
 
-/**
- * Descarga y mezcla config.json (todavía sin revisar: ver revisarConfig).
- * Lanza un Error con mensaje claro si no se puede leer.
- */
 export async function cargarConfig(url = 'config.json', fetchFn: FetchFn = globalThis.fetch): Promise<ConfigSinValidar> {
   let respuesta: Response;
   try {

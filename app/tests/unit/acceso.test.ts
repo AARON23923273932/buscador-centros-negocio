@@ -71,7 +71,6 @@ describe('construirAuthority y mensajes', () => {
   it('explica errores comunes de Entra ID', () => {
     expect(explicarErrorLogin({ errorMessage: 'AADSTS50105: The signed in user is not assigned' })).toMatch(/no está asignado/);
     expect(explicarErrorLogin({ errorCode: 'user_cancelled' })).toMatch(/canceló/);
-    // App de inquilino único usada sin tenantId (autoridad /organizations).
     expect(
       explicarErrorLogin({ errorMessage: "AADSTS50194: Application is not configured as a multi-tenant application." }),
     ).toMatch(/microsoft\.tenantId/);
@@ -82,7 +81,6 @@ describe('construirAuthority y mensajes', () => {
     [{ errorMessage: 'AADSTS90094: The grant requires admin permission.' }, 'AADSTS90094'],
     [{ errorCode: 'consent_required', errorMessage: 'consent required' }, 'consent_required'],
     [{ errorCode: 'access_denied', errorMessage: 'Need admin approval' }, 'consent_required'],
-    // Una directiva de la empresa impide que el usuario apruebe permisos (llega como access_denied).
     [
       {
         errorCode: 'access_denied',
@@ -90,7 +88,6 @@ describe('construirAuthority y mensajes', () => {
       },
       'AADSTS90093',
     ],
-    // "AADSTS900941" (app considerada riesgosa) no se confunde con "AADSTS90094".
     [{ errorMessage: 'AADSTS900941: Administrator consent is required. App is considered risky.' }, 'AADSTS900941'],
   ])('falta el consentimiento de un administrador %j: explica qué hacer en Entra ID', (error: object, codigo: string) => {
     expect(esErrorConsentimiento(error)).toBe(true);
@@ -98,7 +95,6 @@ describe('construirAuthority y mensajes', () => {
     expect(texto).toMatch(/un administrador apruebe el permiso de lectura de archivos/);
     expect(texto).toMatch(/"Automatizacion de procesos Aaron"/);
     expect(texto).toMatch(/Entra ID → Registros de aplicaciones → Automatizacion de procesos Aaron → Permisos de API/);
-    // "Conceder consentimiento" solo aprueba lo que está en la lista: primero hay que revisar que Files.Read.All esté.
     expect(texto).toMatch(/revisar que "Files\.Read\.All" \(delegado\) esté en la lista/);
     expect(texto).toMatch(/Conceder consentimiento de administrador/);
     expect(texto).toContain(`(${codigo})`);

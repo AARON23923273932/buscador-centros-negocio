@@ -1,4 +1,3 @@
-// Rutas de la app (logica/rutas.ts) y detalle de un centro (logica/centro.ts): funciones puras.
 import { describe, expect, it } from 'vitest';
 import { buscarCentro, estadosDeCentro, mismoCodigo } from '../../src/logica/centro.ts';
 import { prepararFila } from '../../src/logica/filtros.ts';
@@ -37,11 +36,10 @@ describe('rutas', () => {
     for (const codigo of ['A2338PY01', 'CN/01 #A?', '50%2F', '100%', 'Ñandú-ó', 'a+b&c', ' . ']) {
       expect(codigoDeRuta(rutaDetalleCentro(codigo)), codigo).toBe(codigo);
     }
-    expect(codigoDeRuta('/centros/50%252F')).toBe('50%2F'); // React Router (useParams) daría "50/"
-    expect(codigoDeRuta('/Centros/CN-0005/')).toBe('CN-0005'); // con "/" final o mayúsculas (React Router la acepta)
-    expect(codigoDeRuta('/centros/%C3%B1and%C3%BA')).toBe('ñandú'); // pegada en el navegador sin codificar
-    expect(codigoDeRuta('/centros/50%')).toBe('50%'); // "%" suelto: tal cual, sin error
-    // No es un detalle.
+    expect(codigoDeRuta('/centros/50%252F')).toBe('50%2F');
+    expect(codigoDeRuta('/Centros/CN-0005/')).toBe('CN-0005');
+    expect(codigoDeRuta('/centros/%C3%B1and%C3%BA')).toBe('ñandú');
+    expect(codigoDeRuta('/centros/50%')).toBe('50%');
     expect(codigoDeRuta('/centros')).toBeNull();
     expect(codigoDeRuta('/centros/')).toBeNull();
     expect(codigoDeRuta('/centros/A/extra')).toBeNull();
@@ -60,7 +58,6 @@ describe('rutas', () => {
     expect(destinoCompatible('/', '?q=cableado&vista=centro&tam=25')).toEqual({ pathname: '/centros', search: '?q=cableado&tam=25' });
     expect(destinoCompatible('/index.html', '?vista=centro')).toEqual({ pathname: '/centros', search: '' });
     expect(destinoCompatible('/ordenes', '?vista=centro&q=x')).toEqual({ pathname: '/centros', search: '?q=x' });
-    // ?vista=orden u otro valor: se quita, la ruta se queda.
     expect(destinoCompatible('/ordenes', '?vista=orden&q=x')).toEqual({ pathname: '/ordenes', search: '?q=x' });
     expect(destinoCompatible('/centros/', '?vista=otra')).toEqual({ pathname: '/centros', search: '' });
   });
@@ -76,17 +73,16 @@ describe('rutas', () => {
     expect(rutaVolver({ desde: '/ordenes' })).toBe('/ordenes');
     expect(rutaVolver({ desde: '/centros/' })).toBe('/centros');
     expect(rutaVolver(null)).toBe('/centros');
-    expect(rutaVolver({ desde: '/centros/A1' })).toBe('/centros'); // no es una lista
+    expect(rutaVolver({ desde: '/centros/A1' })).toBe('/centros');
     expect(rutaVolver({ desde: 'https://otro.sitio/' })).toBe('/centros');
     expect(rutaVolver('cualquier cosa')).toBe('/centros');
   });
 
   it('archivos publicados: siempre desde la carpeta de la app (no desde la ruta actual)', () => {
-    expect(rutaPublica('config.json')).toBe('/config.json'); // base "/" (vite.config.ts)
+    expect(rutaPublica('config.json')).toBe('/config.json');
     expect(rutaPublica('datos/centros-ejemplo.xlsx')).toBe('/datos/centros-ejemplo.xlsx');
     expect(rutaPublica('./config.json', '/app/')).toBe('/app/config.json');
     expect(rutaPublica('config.json', '/app')).toBe('/app/config.json');
-    // Direcciones completas o que ya empiezan con "/": tal cual.
     expect(rutaPublica('/datos/x.xlsx', '/app/')).toBe('/datos/x.xlsx');
     expect(rutaPublica('https://ejemplo.test/x.xlsx')).toBe('https://ejemplo.test/x.xlsx');
   });
@@ -110,8 +106,6 @@ describe('detalle de un centro (buscarCentro)', () => {
     expect(g?.codigo).toBe('A2338PY01');
     expect(g?.filas.map((f) => f.id)).toEqual([2, 4, 5]);
     expect(g?.clientes).toEqual(['Cliente 1', 'Cliente 3']);
-    // Una celda con varias órdenes juntas ("OC N° 45001 OC N° 45002") cuenta cada una (pedido del supervisor,
-    // 15/10/2026; antes contaba como una): 45001, 45002, OS-7 y OS-8 (igual que "Por centro").
     expect(g?.ordenes).toBe(4);
   });
 

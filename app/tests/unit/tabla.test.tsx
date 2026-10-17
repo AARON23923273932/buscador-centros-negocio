@@ -1,5 +1,3 @@
-// Las tablas y la paginación (componentes de React), revisadas con el HTML que dibujan.
-// renderToStaticMarkup = el HTML que React pondría en la página (sin abrir un navegador).
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { ContenidoCelda } from '../../src/componentes/Celdas.tsx';
@@ -47,16 +45,9 @@ describe('TablaOrdenes', () => {
 });
 
 describe('IconoOrden (indicador ▲▼ de los títulos)', () => {
-  /**
-   * Las flechas que dibuja: "arriba" / "abajo" y si van tenues. Desde el pedido de Gustavo del 15/10/2026 (estilos
-   * naturales de shadcn/ui: se permiten las transparencias de los colores de la marca), "tenue" = el ícono va al 60 %
-   * del color del texto del encabezado (opacity-60; antes Border Gray con text-encabezado-icono, una variable propia
-   * que ya no existe). Contraste medido: 5,1:1 en claro y 3,3:1 en oscuro (WCAG pide 3:1 en íconos).
-   */
   const flechas = (aria: 'none' | 'ascending' | 'descending') => {
     const html = renderToStaticMarkup(<IconoOrden aria={aria} />);
     const tenue = /<svg[^>]*class="[^"]*\bopacity-60\b/.test(html);
-    // Ninguna otra transparencia: solo la del ícono tenue.
     expect(html.match(/opacity/g) ?? []).toHaveLength(tenue ? 1 : 0);
     return [...html.matchAll(/<path[^>]*d="M12 (4\.5|19\.5)[^"]*"[^>]*>/g)].map((m) => ({
       flecha: m[1] === '4.5' ? 'arriba' : 'abajo',
@@ -126,10 +117,8 @@ describe('TablaCentros', () => {
     );
     expect(abierto).toContain('aria-expanded="true"');
     expect(abierto).toContain('fila-detalle');
-    // Centro abierto: su fila y la de sus órdenes con el estado "seleccionada" de la TableRow de shadcn/ui
-    // (data-[state=selected]:bg-muted) en vez de una clase de color propia.
     expect((abierto.match(/data-state="selected"/g) || []).length).toBe(2);
-    expect(abierto).not.toMatch(/[\s"]bg-muted\/50[\s"]/); // (sin la clase suelta; la TableRow trae hover:bg-muted/50)
+    expect(abierto).not.toMatch(/[\s"]bg-muted\/50[\s"]/);
     expect((abierto.match(/data-fila=/g) || []).length).toBe(2);
     expect(abierto).not.toContain('<img');
   });
@@ -154,9 +143,9 @@ describe('TablaCentros', () => {
 describe('paginación y contador', () => {
   it('desactiva botones en los extremos', () => {
     const html = renderToStaticMarkup(<Paginacion pagina={paginar([1, 2, 3], 1, 2)} />);
-    expect(html).toMatch(/aria-label="Primera página" disabled=""/);
+    expect(html).toMatch(/<button(?=[^>]*aria-label="Primera página")[^>]* disabled=""/);
     expect(html).toContain('Página 1 de 2');
-    expect(html).not.toMatch(/aria-label="Página siguiente" disabled/);
+    expect(html).not.toMatch(/<button(?=[^>]*aria-label="Página siguiente")[^>]* disabled=/);
   });
   it('texto del contador', () => {
     expect(textoContador(paginar(Array(63).fill(0), 1, 50), 80, 'orden')).toBe('Mostrando 1–50 de 63 resultados (de 80 en total)');

@@ -1,16 +1,3 @@
-// =============================================================================
-// generar-ejemplo.mjs — Crea public/datos/centros-ejemplo.xlsx con DATOS FICTICIOS.
-//
-// Uso:  npm run generar-ejemplo
-//
-// El archivo imita un Excel "desordenado" como el que podría dejar un bot, para
-// probar que la app aguanta: título en la fila 1 y encabezados en la fila 2,
-// filas vacías, celdas combinadas, fechas guardadas como número, números
-// guardados como texto, ceros a la izquierda, espacios de más y tildes.
-// Ningún dato corresponde a clientes ni proyectos reales.
-// (Los tipos van en comentarios JSDoc: "npm run typecheck" también revisa estos scripts.)
-// =============================================================================
-
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,7 +6,6 @@ import * as XLSX from 'xlsx/xlsx.mjs';
 const aqui = dirname(fileURLToPath(import.meta.url));
 const destino = resolve(aqui, '..', 'public', 'datos', 'centros-ejemplo.xlsx');
 
-// Generador de números "al azar" pero siempre igual (para que el archivo no cambie en cada ejecución).
 let semilla = 20261009;
 const azar = () => {
   semilla = (semilla * 1103515245 + 12345) % 2147483648;
@@ -66,7 +52,6 @@ const ENCABEZADOS = [
 ];
 
 /**
- * Fecha de Excel = días desde el 30/12/1899.
  * @param {number} anio
  * @param {number} mes
  * @param {number} dia
@@ -78,15 +63,14 @@ const hoja = {};
 /** @type {import('xlsx/xlsx.mjs').Range[]} */
 const combinadas = [];
 /**
- * @param {number} r  fila (0 = la primera)
- * @param {number} c  columna (0 = A)
+ * @param {number} r
+ * @param {number} c
  * @param {import('xlsx/xlsx.mjs').CellObject} celda
  */
 const poner = (r, c, celda) => {
   hoja[XLSX.utils.encode_cell({ r, c })] = celda;
 };
 
-// Fila 1: título (combinado de A1 a I1). Fila 2: encabezados.
 poner(0, 0, { t: 's', v: 'REPORTE DE CENTROS DE NEGOCIO — DATOS FICTICIOS DE EJEMPLO' });
 combinadas.push({ s: { r: 0, c: 0 }, e: { r: 0, c: ENCABEZADOS.length - 1 } });
 ENCABEZADOS.forEach((t, c) => poner(1, c, { t: 's', v: t }));
@@ -104,7 +88,6 @@ while (filasDatos < TOTAL_FILAS) {
   const codigo = `CN-${String(centro).padStart(4, '0')}`;
   const descripcion = elegir(DESCRIPCIONES).replace('{n}', String(centro));
   const cliente = elegir(CLIENTES);
-  // La mayoría de centros tiene 1 a 3 órdenes; el centro 8 tiene 4 y el 5 tiene 3 combinadas.
   let ordenes = centro === 8 ? 4 : centro === 5 ? 3 : 1 + Math.floor(azar() * 3);
   ordenes = Math.min(ordenes, TOTAL_FILAS - filasDatos);
   const combinar = centro === 5;
@@ -119,21 +102,18 @@ while (filasDatos < TOTAL_FILAS) {
       poner(fila, 0, { t: 's', v: codigo });
       poner(fila, 1, { t: 's', v: descripcion });
     }
-    // Espacios de más en algunos clientes (el bot a veces los deja).
     poner(fila, 2, { t: 's', v: centro % 7 === 3 ? `  ${cliente}  ` : cliente });
 
-    const sinOrden = centro === 12; // centro recién creado: todavía sin orden
+    const sinOrden = centro === 12;
     if (!sinOrden) {
       const esServicio = azar() < 0.35;
       if (esServicio) {
         poner(fila, 3, { t: 's', v: `OS-2026-${String(numeroOS++).padStart(4, '0')}` });
         poner(fila, 4, { t: 's', v: 'Servicio' });
       } else if (centro % 9 === 0) {
-        // Número de OC guardado como TEXTO con ceros a la izquierda.
         poner(fila, 3, { t: 's', v: String(numeroOC++).padStart(10, '0') });
         poner(fila, 4, { t: 's', v: 'Compra' });
       } else {
-        // Número de OC guardado como NÚMERO, con formato que muestra ceros a la izquierda.
         poner(fila, 3, { t: 'n', v: numeroOC++, z: '0000000000' });
         poner(fila, 4, { t: 's', v: 'Compra' });
       }
@@ -150,7 +130,6 @@ while (filasDatos < TOTAL_FILAS) {
     if (!sinOrden) {
       const monto = Math.round((800 + azar() * 95000) * 100) / 100;
       if (filasDatos % 10 === 4) {
-        // Monto guardado como TEXTO (pasa cuando se pega desde otro sistema).
         poner(fila, 6, { t: 's', v: monto.toLocaleString('en-US', { minimumFractionDigits: 2 }) });
       } else {
         poner(fila, 6, { t: 'n', v: monto, z: '#,##0.00' });
@@ -162,7 +141,6 @@ while (filasDatos < TOTAL_FILAS) {
     fila += 1;
     filasDatos += 1;
 
-    // Filas vacías en medio de los datos (y una con solo un espacio).
     if (filasDatos === 18) fila += 1;
     if (filasDatos === 47) {
       poner(fila, 0, { t: 's', v: ' ' });

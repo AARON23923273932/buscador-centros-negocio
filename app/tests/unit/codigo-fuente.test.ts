@@ -1,10 +1,3 @@
-// Revisiones del código fuente (no de la app funcionando): cosas que TypeScript y las demás pruebas no ven.
-//  1. Caracteres invisibles: una tilde "suelta" (U+0300…U+036F) o un espacio de ancho cero pegados tal cual
-//     en el código no se ven en el editor, y un editor o formateador que "normalice" el texto los puede
-//     cambiar sin que nadie lo note (ej. la expresión que quita las tildes en logica/filtros.ts). Se escriben
-//     con su código: \u0300.
-//  2. Los comentarios que nombran un archivo de la app (src/…, scripts/…, tests/…, public/…) apuntan a uno
-//     que existe (ej. tras pasar de .js a .ts no debe quedar un comentario que nombre el antiguo tema.js).
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -26,7 +19,6 @@ const ARCHIVOS = [...CARPETAS.flatMap((c) => archivosDe(join(APP, c))), ...SUELT
 const leer = (ruta: string) => readFileSync(ruta, 'utf8');
 const nombre = (ruta: string) => relative(APP, ruta).replaceAll('\\', '/');
 
-/** Rangos de caracteres invisibles (por código, para que este archivo tampoco los tenga pegados). */
 const INVISIBLES: readonly [desde: number, hasta: number, que: string][] = [
   [0x0300, 0x036f, 'tilde suelta (marca diacrítica)'],
   [0x00ad, 0x00ad, 'guion invisible'],

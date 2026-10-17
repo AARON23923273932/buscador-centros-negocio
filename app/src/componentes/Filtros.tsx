@@ -1,6 +1,3 @@
-// Panel de filtros: desplegables (Cliente, Tipo de orden, Estado: NativeSelect de shadcn/ui) y cajas "contiene"
-// (Código, Descripción, Orden: Input de shadcn/ui). En el celular el panel se abre con el botón "Filtros"
-// (muestra cuántos hay activos).
 import { useState } from 'react';
 import { cn } from 'cn';
 import { Badge } from '@/components/ui/badge';
@@ -16,12 +13,9 @@ interface Props {
   estado: EstadoBusqueda;
   borradores: Borradores;
   controles: Record<ClaveControl, EstadoControl>;
-  /** Opciones de cada desplegable (valores del Excel, sin "Todos"). */
   opciones: Record<ClaveDesplegable, string[]>;
-  /** Tipo de orden y Estado no son obligatorios: si el Excel no los tiene (o están vacíos), no se muestran. */
   mostrarTipo: boolean;
   mostrarEstado: boolean;
-  /** Cuántos filtros activos (null = todavía no se leyó el Excel). */
   activos: number | null;
   limpiarDesactivado: boolean;
   alEscribir: (clave: ClaveTexto, valor: string) => void;
@@ -30,7 +24,6 @@ interface Props {
   alLimpiar: () => void;
 }
 
-/** Caja de un filtro (etiqueta + control). */
 const CAMPO = 'flex min-w-0 flex-col gap-1';
 const ETIQUETA = 'text-sm font-semibold text-muted-foreground';
 
@@ -38,15 +31,8 @@ export function Filtros(props: Props) {
   const { estado, controles, opciones, activos } = props;
   const [abierto, setAbierto] = useState(false);
 
-  /**
-   * Por qué un filtro está desactivado ("No se encontró esta columna en el Excel"…), para el "title" de su caja.
-   * El Input y el NativeSelect de shadcn/ui desactivados no reciben el mouse (disabled:pointer-events-none): el mouse
-   * cae en la caja del campo, así que el motivo va también ahí para que aparezca al pasar el mouse (como antes). El
-   * control conserva su propio "title": es el que leen los lectores de pantalla.
-   */
   const motivoCampo = (clave: ClaveControl) => (controles[clave].disponible ? undefined : controles[clave].motivo || undefined);
 
-  /** Desplegable: "Todos" + los valores del Excel (+ el elegido, si no está en la lista: ej. vino en un enlace). */
   const desplegable = (clave: ClaveDesplegable, id: string) => {
     const valor = estado[clave];
     const lista = valor && !opciones[clave].includes(valor) ? [...opciones[clave], valor] : opciones[clave];
@@ -69,7 +55,6 @@ export function Filtros(props: Props) {
     );
   };
 
-  /** Caja de texto "contiene": filtra 200 ms después de la última tecla (Enter = ya). */
   const texto = (clave: ClaveTexto & ClaveControl, id: string) => (
     <Input
       id={id}

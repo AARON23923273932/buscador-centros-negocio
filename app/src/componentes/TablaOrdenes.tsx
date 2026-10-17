@@ -1,6 +1,3 @@
-// Tabla "Por orden": una fila por cada fila del Excel (Table de shadcn/ui con el encabezado de marca y las filas
-// alternas de la guía de AIC).
-// memo(): no se vuelve a dibujar si sus props no cambian (ej. mientras se escribe en el buscador).
 import { memo } from 'react';
 import { Table, TableBody, TableHeader, TableRow } from '@/components/ui/table';
 import type { Columna, Direccion, Fila } from '../logica/tipos.ts';
@@ -8,12 +5,10 @@ import { EncabezadoOrdenable, FilasDatos, FilaSinResultados, type AlCopiar } fro
 
 interface Props {
   columnas: readonly Columna[];
-  /** Filas de la página actual. */
   filas: readonly Fila[];
   terminosDe: (columna: Columna) => readonly string[];
   ordenarPor: string;
   direccion: Direccion;
-  /** false = el Excel no tiene filas (cambia el mensaje cuando no hay resultados). */
   hayDatos?: boolean;
   alOrdenar?: (clave: string) => void;
   alCopiar?: AlCopiar;

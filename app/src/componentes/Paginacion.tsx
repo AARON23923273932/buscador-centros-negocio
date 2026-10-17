@@ -1,10 +1,3 @@
-// Paginación: « ‹ Anterior · Página X de Y · Siguiente › » (las flechas son íconos SVG, ver Iconos.tsx).
-// Botones de shadcn/ui (Button variant="outline", tal cual). No se usa el componente "Pagination" de shadcn/ui: está
-// hecho con enlaces (<a>), que no se pueden desactivar, y aquí los botones de la primera/última página se desactivan
-// y cuidan el foco.
-//
-// Teclado: si el botón que tenía el foco queda desactivado (ej. "Siguiente" al llegar a la
-// última página), el foco pasa al texto "Página X de Y" para que no se pierda.
 import { memo, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { Button } from '@/components/ui/button';
 import { numero } from '../logica/formato.ts';
@@ -12,18 +5,14 @@ import type { Pagina } from '../logica/tipos.ts';
 import { IconoPagina } from './Iconos.tsx';
 
 interface Props {
-  /** null = todavía no hay datos (no se muestran botones). */
   pagina: Pick<Pagina<unknown>, 'pagina' | 'totalPaginas' | 'total'> | null;
   alIrA?: (pagina: number) => void;
-  /** El <nav> (lo usa el botón "Saltar a la paginación"). */
   navRef?: RefObject<HTMLElement | null>;
 }
 
-/** memo(): no se vuelve a dibujar si no cambia la página (ej. mientras se escribe en el buscador). */
 export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef }: Props) {
   const propio = useRef<HTMLElement | null>(null);
   const nav = navRef ?? propio;
-  /** aria-label del botón pulsado mientras tenía el foco (para cuidar el foco después de cambiar de página). */
   const pulsado = useRef<string | null>(null);
 
   useLayoutEffect(() => {
@@ -40,7 +29,6 @@ export const Paginacion = memo(function Paginacion({ pagina: pag, alIrA, navRef 
       if (document.activeElement !== boton) boton.focus();
       return;
     }
-    // El botón quedó desactivado (ej. llegaste a la última página): el foco pasa al texto "Página X de Y".
     const actual = raiz.querySelector<HTMLElement>('.pagina-actual');
     if (actual) {
       actual.tabIndex = -1;

@@ -1,13 +1,9 @@
-// Flujo completo de "Iniciar sesión con Microsoft" + lectura del Excel por Microsoft Graph,
-// SIMULADO dentro de la prueba: ninguna petición sale a internet. Sirve para comprobar que
-// la app usa bien MSAL v5 (redirect.html, handleRedirectPromise, tokens) y Graph.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import type { Config } from '../../src/logica/config.ts';
 import { CONFIG_PRUEBAS } from './config-pruebas.ts';
 
-// Configuración fija de pruebas (no la de app/public/config.json, que puede tener valores de producción).
 const CONFIG = CONFIG_PRUEBAS;
 const EXCEL = readFileSync(resolve(import.meta.dirname, '../../public/datos/centros-ejemplo.xlsx'));
 
@@ -16,7 +12,6 @@ const TENANT = 'aaaaaaaa-0000-4000-8000-000000000001';
 const OID = 'cccccccc-0000-4000-8000-000000000003';
 const URL_EXCEL = 'https://aic-demo.sharepoint.com/:x:/s/Demo/EjemploFicticio?e=abc';
 const DESCARGA = 'https://aic-demo.sharepoint.com/_layouts/15/download.aspx?temporal=1';
-// La dirección del navegador de Excel Online que dio el usuario (Doc.aspx en el sitio raíz).
 const URL_DOC =
   'https://jaicoscorp.sharepoint.com/:x:/r/_layouts/15/Doc.aspx?sourcedoc=%7BE20FAA1A-1E42-416B-BA9F-A6FCF00E07C8%7D' +
   '&file=centros-negocio-aic.xlsx&action=default&mobileredirect=true&wdwpf=doclib-c';
@@ -49,7 +44,6 @@ function crearIdToken({ correo, nonce }: { correo: string; nonce: string | null 
   return `${b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT', kid: 'prueba' }))}.${b64url(JSON.stringify(datos))}.firma`;
 }
 
-/** Respuesta propia de Graph en una prueba: código HTTP (200 si falta) y el JSON. */
 type RespuestaGraph = { status?: number; json?: unknown } | null | undefined;
 
 interface OpcionesSimulacion {
@@ -62,7 +56,6 @@ interface OpcionesSimulacion {
   respuestaRenovacion?: { status: number; json: unknown } | null;
 }
 
-/** Lo que la app le pidió al "Microsoft falso" (para revisarlo en la prueba). */
 interface Registro {
   autorizacion: URL | null;
   autorizaciones: URL[];
@@ -73,10 +66,6 @@ interface Registro {
   vencidos: number;
 }
 
-/**
- * Prepara un "Microsoft falso": login.microsoftonline.com y graph.microsoft.com responden desde la prueba.
- * Devuelve un objeto con lo que la app pidió (para revisarlo).
- */
 async function simularMicrosoft(
   page: Page,
   {
@@ -85,8 +74,6 @@ async function simularMicrosoft(
     enlacesVencidos = 0,
     urlExcel = URL_EXCEL,
     graph = null,
-    // Permisos que Microsoft dice haber concedido al iniciar sesión, y respuesta propia al renovar el token
-    // (ej. "falta que un administrador apruebe Files.Read.All").
     permisosConcedidos = 'User.Read Files.Read.All openid profile',
     respuestaRenovacion = null,
   }: OpcionesSimulacion,
@@ -149,7 +136,6 @@ async function simularMicrosoft(
     const req = ruta.request();
     if (req.method() === 'OPTIONS') return ruta.fulfill({ status: 204, headers: CORS });
     registro.graph.push({ url: req.url(), auth: req.headers()['authorization'] });
-    // Respuestas propias de la prueba (ej. "no se pudo abrir como enlace", bibliotecas, búsqueda…).
     const propia = graph?.(new URL(req.url()));
     if (propia) return ruta.fulfill({ status: propia.status ?? 200, headers: CORS, json: propia.json });
     return ruta.fulfill({
@@ -168,7 +154,6 @@ async function simularMicrosoft(
 
   await page.route(/^https:\/\/(aic-demo|jaicoscorp)\.sharepoint\.com\//, async (ruta) => {
     if (ruta.request().method() === 'OPTIONS') return ruta.fulfill({ status: 204, headers: CORS });
-    // Enlace temporal vencido: SharePoint responde 403.
     if (registro.vencidos > 0) {
       registro.vencidos--;
       return ruta.fulfill({ status: 403, headers: CORS, body: '' });
@@ -180,10 +165,6 @@ async function simularMicrosoft(
   return { registro, clientInfo };
 }
 
-/**
- * Abre la app en "ruta", pulsa "Iniciar sesión" y simula que Microsoft devuelve al usuario a redirect.html
- * (que lo lleva de vuelta a la dirección desde donde pulsó el botón).
- */
 async function iniciarSesionSimulada(page: Page, sim: Awaited<ReturnType<typeof simularMicrosoft>>, ruta = '/?q=cableado') {
   await page.goto(ruta);
   await page.getByRole('button', { name: 'Iniciar sesión con Microsoft' }).click();
@@ -205,35 +186,28 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     const sim = await simularMicrosoft(page, { correo: 'persona.prueba@aic.pe' });
     await iniciarSesionSimulada(page, sim);
 
-    // Lo que la app le pidió a Microsoft:
     const aut = sim.registro.autorizacion!;
     expect(aut.pathname).toBe(`/${TENANT}/oauth2/v2.0/authorize`);
     expect(aut.searchParams.get('client_id')).toBe(CLIENT_ID);
     expect(aut.searchParams.get('redirect_uri')).toMatch(/\/redirect\.html$/);
-    // Al iniciar sesión solo se pide el permiso básico; Files.Read.All se pide al leer el Excel.
     expect(aut.searchParams.get('scope')).toContain('User.Read');
     expect(aut.searchParams.get('scope')).not.toContain('Files.Read.All');
     expect(aut.searchParams.get('prompt')).toBe('select_account');
     expect(aut.searchParams.get('code_challenge_method')).toBe('S256');
 
-    // Ya dentro de la app:
     await expect(page.locator('#contador')).toContainText('Mostrando', { timeout: 15_000 });
     await expect(page.locator('#correo-usuario')).toHaveText('persona.prueba@aic.pe');
     await expect(page.locator('#nombre-usuario')).toHaveText('Persona de Prueba');
     await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible();
     await expect(page.locator('#aviso-demo')).toBeHidden();
     await expect(page.locator('#texto-actualizado')).toContainText('Excel modificado el 08/10/2026');
-    // La búsqueda del enlace original se conservó tras volver de Microsoft.
     await expect(page.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
-    // Volvió a la dirección del enlace ("/?q=cableado") y la app la llevó a la lista /ordenes con la misma búsqueda.
     await expect(page).toHaveURL(/\/ordenes\?q=cableado$/);
 
-    // Graph se llamó con el token y el enlace codificado; la descarga fue por el enlace temporal.
     expect(sim.registro.graph[0].url).toMatch(/\/v1\.0\/shares\/u!.+\/driveItem$/);
     expect(sim.registro.graph[0].auth).toBe('Bearer token-de-acceso-de-prueba');
     expect(sim.registro.descargas).toBe(1);
 
-    // Cerrar sesión lleva al cierre de sesión de Microsoft.
     await page.getByRole('button', { name: 'Cerrar sesión' }).click();
     await expect.poll(() => sim.registro.cierreSesion !== null).toBe(true);
     expect(sim.registro.cierreSesion?.searchParams.get('post_logout_redirect_uri')).toMatch(/127\.0\.0\.1:\d+\/$/);
@@ -244,21 +218,17 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     const errores: string[] = [];
     page.on('pageerror', (e) => errores.push(e.message));
     const sim = await simularMicrosoft(page, { correo: 'persona.prueba@aic.pe' });
-    // Antes de iniciar sesión, la ruta anidada también muestra la bienvenida (el login protege todas las rutas).
     await iniciarSesionSimulada(page, sim, '/centros/CN-0005?q=cableado');
 
-    // La página puente es la de la raíz de la app (la registrada en Entra ID), no /centros/redirect.html.
     const puente = new URL(sim.registro.autorizacion!.searchParams.get('redirect_uri') ?? '');
     expect(puente.pathname).toBe('/redirect.html');
 
-    // De vuelta en el detalle del centro, con la búsqueda en la dirección.
     await expect(page.getByRole('heading', { level: 2, name: 'Centro de negocio CN-0005' })).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/centros\/CN-0005\?q=cableado$/);
     await expect(page.locator('#correo-usuario')).toHaveText('persona.prueba@aic.pe');
     await expect(page.locator('#tabla-detalle tbody tr')).toHaveCount(3);
     expect(sim.registro.descargas).toBe(1);
 
-    // "Volver a la lista" lleva a la lista con la misma búsqueda (sin volver a descargar el Excel).
     await page.getByRole('link', { name: 'Volver a la lista' }).click();
     await expect(page).toHaveURL(/\/centros\?q=cableado$/);
     await expect(page.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
@@ -272,7 +242,6 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     page.on('pageerror', (e) => errores.push(e.message));
     const sim = await simularMicrosoft(page, {
       correo: 'persona.prueba@aic.pe',
-      // Al entrar, Microsoft solo concede User.Read; al pedir Files.Read.All responde "falta el consentimiento".
       permisosConcedidos: 'User.Read openid profile',
       respuestaRenovacion: {
         status: 400,
@@ -286,11 +255,9 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     });
     await iniciarSesionSimulada(page, sim);
 
-    // La app manda a Microsoft a pedir Files.Read.All (una sola vez)…
     await expect.poll(() => sim.registro.autorizaciones.length, { timeout: 15_000 }).toBe(2);
     const pedido = sim.registro.autorizaciones[1];
     expect(pedido.searchParams.get('scope')).toContain('Files.Read.All');
-    // …y Microsoft la devuelve con "una directiva impide aprobar permisos" (la persona no es administradora).
     const error = new URLSearchParams({
       error: 'access_denied',
       error_description:
@@ -299,7 +266,6 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     });
     await page.goto(`${pedido.searchParams.get('redirect_uri')}#${error}`);
 
-    // Sigue con la sesión iniciada y ve qué falta, sin volver a rebotar a Microsoft.
     await expect(page.locator('#nombre-usuario')).toHaveText('Persona de Prueba', { timeout: 15_000 });
     const aviso = page.locator('#aviso-error');
     await expect(aviso).toContainText('un administrador apruebe el permiso de lectura de archivos (Files.Read.All)');
@@ -307,7 +273,6 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     expect(sim.registro.autorizaciones).toHaveLength(2);
     expect(sim.registro.descargas).toBe(0);
 
-    // "Volver a iniciar sesión" pide ahora todos los permisos de una vez.
     await aviso.getByRole('button', { name: 'Volver a iniciar sesión' }).click();
     await expect.poll(() => sim.registro.autorizaciones.length).toBe(3);
     expect(sim.registro.autorizaciones[2].searchParams.get('scope')).toContain('Files.Read.All');
@@ -324,7 +289,6 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible();
     expect(sim.registro.graph).toHaveLength(0);
     expect(sim.registro.descargas).toBe(0);
-    // La sesión local se borró: al recargar vuelve a pedir inicio de sesión.
     await page.reload();
     await expect(page.getByRole('button', { name: 'Iniciar sesión con Microsoft' })).toBeVisible();
   });
@@ -340,7 +304,6 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
       'https://graph.microsoft.com/v1.0/shares/u!…/driveItem',
       'https://graph.microsoft.com/v1.0/shares/u!…/driveItem',
     ]);
-    // El segundo pedido también llevó el token.
     expect(sim.registro.graph[1].auth).toBe('Bearer token-de-acceso-de-prueba');
     expect(sim.registro.graph.some((g) => g.url.endsWith('/content'))).toBe(false);
     expect(sim.registro.descargas).toBe(1);
@@ -395,19 +358,16 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
     for (const g of sim.registro.graph) expect(g.auth).toBe('Bearer token-de-acceso-de-prueba');
     expect(sim.registro.descargas).toBe(1);
 
-    // Monto y Moneda ocultos; filtro Estado disponible.
     await expect(page.locator('#tabla-resultados thead')).not.toContainText('Monto');
     await expect(page.locator('#tabla-resultados thead')).not.toContainText('Moneda');
     await expect(page.getByLabel('Estado', { exact: true })).toBeVisible();
 
-    // "Columnas detectadas" muestra driveId e itemId (para fijarlos en config.json si hiciera falta).
-    await page.getByRole('button', { name: 'Columnas detectadas en el Excel' }).click(); // Collapsible de shadcn/ui
+    await page.getByRole('button', { name: 'Columnas detectadas en el Excel' }).click();
     const ubicacion = page.locator('#info-columnas .ubicacion-excel');
     await expect(ubicacion).toContainText('búsqueda en SharePoint');
     await expect(ubicacion).toContainText('driveId: b!docs');
     await expect(ubicacion).toContainText('itemId: 01REAL');
 
-    // "Actualizar" ya no repite la búsqueda: va directo al archivo encontrado.
     const antes = sim.registro.graph.length;
     await page.getByRole('button', { name: 'Actualizar' }).click();
     await expect(page.locator('#aviso-flotante')).toContainText('Datos actualizados');
@@ -431,17 +391,14 @@ test.describe('Inicio de sesión con Microsoft (simulado)', () => {
   });
 
   test('auto-actualización: solo vuelve a descargar el Excel si cambió', async ({ page }) => {
-    // Cada 3 segundos (solo para la prueba).
     const sim = await simularMicrosoft(page, { correo: 'persona.prueba@jaicoscorp.com', cambiosConfig: { autoActualizarMinutos: 0.05 } });
     await iniciarSesionSimulada(page, sim);
     await expect(page.locator('#contador')).toContainText('Mostrando', { timeout: 15_000 });
     expect(sim.registro.descargas).toBe(1);
 
-    // El Excel no cambió: se consulta Graph (metadatos) pero NO se descarga de nuevo.
     await expect.poll(() => sim.registro.graph.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(2);
     expect(sim.registro.descargas).toBe(1);
 
-    // El bot guardó el Excel (cambia el eTag): en la siguiente vuelta se descarga.
     sim.registro.eTag = '"{EJEMPLO},2"';
     await expect.poll(() => sim.registro.descargas, { timeout: 10_000 }).toBe(2);
     await expect(page.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');

@@ -1,6 +1,4 @@
 // @vitest-environment jsdom
-// Las rutas de la app (React Router) en una página simulada (jsdom), con el Excel de ejemplo (modo demo):
-// redirecciones, detalle de un centro, "Página no encontrada", el enlace del código y el botón atrás.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
@@ -18,11 +16,9 @@ const CONFIG: Config = { ...structuredClone(CONFIG_POR_DEFECTO), autoActualizarM
 const PROPS = { config: CONFIG, sesion: null, avisar: () => {} };
 
 let pedidos: string[] = [];
-/** window.scrollTo (el detalle sube al inicio de la página): jsdom no lo implementa y lo avisa en la consola. */
 let subirAlInicio: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   pedidos = [];
-  // Sin silenciar console.error: si React o React Router reportan un error, la prueba falla (ver afterEach).
   vi.spyOn(console, 'error');
   subirAlInicio = vi.fn();
   vi.stubGlobal('scrollTo', subirAlInicio);
@@ -55,7 +51,6 @@ describe('rutas de la aplicación', () => {
     abrirRutas(PROPS, '/?q=cableado&vista=centro');
     await waitFor(() => expect(location.pathname + location.search).toBe('/centros?q=cableado'));
     await waitFor(() => expect(contador()).toMatch(/^Mostrando .* centros/));
-    // "Por orden / Por centro" es un RadioGroup de shadcn/ui: cada opción es un botón role="radio" con aria-checked.
     expect(screen.getByRole('radio', { name: 'Por centro de negocio' }).getAttribute('aria-checked')).toBe('true');
     expect(screen.getByRole('radio', { name: 'Por orden' }).getAttribute('aria-checked')).toBe('false');
   });
@@ -68,7 +63,6 @@ describe('rutas de la aplicación', () => {
     expect(location.search).toBe('?q=cn0005');
     expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Centro de negocio CN-0005');
     expect(document.querySelectorAll('#tabla-detalle tbody tr')).toHaveLength(3);
-    // Al abrir el detalle se ve desde arriba y el foco va a su título (lo anuncia el lector de pantalla).
     expect(subirAlInicio).toHaveBeenCalledWith(0, 0);
     expect(document.activeElement?.id).toBe('titulo-detalle');
 
@@ -112,7 +106,6 @@ describe('búsqueda en la dirección con React Router (useBusqueda + useEstadoUr
     expect(location.pathname + location.search).toBe('/centros?q=a');
     expect(result.current.estado).toMatchObject({ vista: 'centro', ordenarPor: '' });
 
-    // Algo escrito que todavía no se aplicó (espera de 200 ms) no debe pisar lo que trae la dirección.
     act(() => result.current.escribir('q', 'abc'));
     act(() => history.back());
     await waitFor(() => expect(location.pathname).toBe('/ordenes'));

@@ -1,5 +1,3 @@
-// useMediaQuery — ¿La pantalla cumple esta condición de CSS? (ej. "(max-width: 719px)" = celular).
-// Se actualiza sola si cambia (girar el celular, cambiar el modo oscuro del sistema…).
 import { useCallback, useSyncExternalStore } from 'react';
 
 export function useMediaQuery(consulta: string): boolean {

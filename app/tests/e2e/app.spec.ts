@@ -1,6 +1,3 @@
-// Pruebas de punta a punta en modo demo: abren la app en Chromium y la usan como una persona.
-// Usan su PROPIA configuración (config-pruebas.ts), no app/public/config.json: así siguen
-// funcionando cuando ese archivo ya tiene los valores de producción.
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import * as XLSX from 'xlsx/xlsx.mjs';
@@ -9,7 +6,6 @@ import { usarConfigPruebas, type CambiosConfig } from './config-pruebas.ts';
 
 const TOTAL_FILAS = 80;
 
-// Todas las pestañas de la prueba reciben la configuración de pruebas.
 test.beforeEach(async ({ context }) => {
   await usarConfigPruebas(context);
 });
@@ -20,7 +16,6 @@ const normalizar = (s: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-/** Configuración de pruebas con cambios (sin tocar el archivo real). Tiene prioridad sobre la de beforeEach. */
 const usarConfig = (page: Page, cambios: CambiosConfig) => usarConfigPruebas(page, cambios);
 
 const filas = (page: Page) => page.locator('#tabla-resultados > tbody > tr:not(.fila-vacia)');
@@ -38,38 +33,38 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(filas(page)).toHaveCount(50);
     await expect(page.getByRole('button', { name: /^Código/ })).toBeVisible();
     await expect(page.locator('#aviso-columnas')).toBeHidden();
-    // Los códigos de orden conservan sus ceros a la izquierda.
     expect((await celdasDeColumna(page, 4)).some((t) => /^000\d+$/.test(t))).toBe(true);
-    // La política de seguridad (CSP) está activa en la versión compilada.
     await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(1);
     expect(errores).toEqual([]);
   });
 
-  test('botón ☀️/🌙: cambia entre claro y oscuro y lo recuerda al recargar', async ({ page }) => {
+  test('botón de tema (ModeToggle): cada clic pasa al siguiente (claro → oscuro → sistema) y lo recuerda al recargar', async ({ page }) => {
     const errores = vigilarErrores(page);
-    await page.emulateMedia({ colorScheme: 'light' });
+    await page.emulateMedia({ colorScheme: 'dark' });
     await abrir(page);
     const raiz = page.locator('html');
+    const boton = page.locator('#btn-tema');
     const fondo = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    const boton = page.getByRole('button', { name: 'Cambiar a modo oscuro' });
-    await expect(raiz).toHaveAttribute('data-tema-efectivo', 'claro');
-    const fondoClaro = await fondo();
+    await expect(raiz).toHaveClass(/\bdark\b/);
+    await expect(boton).toHaveAccessibleName('Tema del sistema. Cambiar a tema claro');
+    const fondoOscuro = await fondo();
 
     await boton.click();
-    await expect(raiz).toHaveAttribute('data-tema', 'oscuro');
-    await expect(page.getByRole('button', { name: 'Cambiar a modo claro' })).toBeVisible();
-    expect(await fondo()).not.toBe(fondoClaro);
+    await expect(raiz).toHaveClass(/\blight\b/);
+    await expect(boton).toHaveAccessibleName('Tema claro. Cambiar a tema oscuro');
+    expect(await fondo()).not.toBe(fondoOscuro);
 
-    // Se recuerda al recargar, aunque el sistema esté en claro.
+    await boton.click();
+    await expect(raiz).toHaveClass(/\bdark\b/);
+    await page.emulateMedia({ colorScheme: 'light' });
     await page.reload();
-    await expect(raiz).toHaveAttribute('data-tema', 'oscuro');
-    await expect(raiz).toHaveAttribute('data-tema-efectivo', 'oscuro');
+    await expect(raiz).toHaveClass(/\bdark\b/);
+    await expect(boton).toHaveAccessibleName('Tema oscuro. Cambiar a tema del sistema');
+    expect(await fondo()).toBe(fondoOscuro);
 
-    // Y vuelve a claro aunque el sistema esté en oscuro.
-    await page.emulateMedia({ colorScheme: 'dark' });
-    await page.getByRole('button', { name: 'Cambiar a modo claro' }).click();
-    await expect(raiz).toHaveAttribute('data-tema-efectivo', 'claro');
-    expect(await fondo()).toBe(fondoClaro);
+    await boton.click();
+    await expect(raiz).toHaveClass(/\blight\b/);
+    await expect(boton).toHaveAccessibleName('Tema del sistema. Cambiar a tema claro');
     expect(errores).toEqual([]);
   });
 
@@ -95,7 +90,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
       }
     }).toPass();
 
-    // Código escrito sin guion: lo encuentra Y lo resalta.
     await page.getByLabel('Buscar', { exact: true }).fill('cn0005');
     await expect(page.locator('#contador')).toContainText('de 3 resultados');
     await expect(page.locator('#tabla-resultados mark').first()).toHaveText('CN-0005');
@@ -178,7 +172,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await page.getByLabel('Cliente', { exact: true }).selectOption({ index: 1 });
     await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
     await expect(page).toHaveURL(/q=cableado/);
-    // Con React Router la vista es la ruta (/centros), ya no el parámetro ?vista=centro.
     await expect(page).toHaveURL(/\/centros\?/);
     await expect(page).not.toHaveURL(/vista=/);
     await expect(page).toHaveURL(/cliente=/);
@@ -189,7 +182,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await abrir(otra, enlace);
     await expect(otra.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
     await expect(otra.getByLabel('Cliente', { exact: true })).toHaveValue(valorCliente);
-    // "Por orden / Por centro" es un RadioGroup de shadcn/ui: cada opción es un botón role="radio" (aria-checked).
     await expect(otra.getByRole('radio', { name: 'Por centro de negocio' })).toBeChecked();
     await expect(otra.locator('#contador')).toContainText('centro');
   });
@@ -207,10 +199,8 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(thCodigo).toHaveAttribute('aria-sort', 'descending');
     const desc = await celdasDeColumna(page, 1);
     expect(desc[0] > 'CN-0030').toBe(true);
-    // El foco se queda en el botón para poder seguir con el teclado.
     await expect(page.getByRole('button', { name: /^Código/ })).toBeFocused();
 
-    // Fechas: orden por fecha real (dd/mm/aaaa), no alfabético.
     await page.getByRole('button', { name: /^Fecha de creación/ }).click();
     const fechas = (await celdasDeColumna(page, 6)).filter(Boolean).map((t) => t.split('/').reverse().join(''));
     expect(fechas.length).toBeGreaterThan(0);
@@ -238,7 +228,7 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await page.getByLabel('Filas por página').selectOption('50');
     const siguiente = page.getByRole('button', { name: 'Página siguiente' });
     await siguiente.focus();
-    await page.keyboard.press('Enter'); // página 2 de 2: "Siguiente" queda desactivado
+    await page.keyboard.press('Enter');
     await expect(page.locator('#contador')).toContainText(`Mostrando 51–${TOTAL_FILAS}`);
     const actual = page.locator('.pagina-actual');
     await expect(actual).toBeFocused();
@@ -253,8 +243,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     const saltar = page.getByRole('button', { name: 'Saltar a la paginación' });
     await expect(saltar).toBeFocused();
     await expect(saltar).toBeVisible();
-    // Al aparecer tiene las medidas de un Button de shadcn/ui (como "Exportar a Excel"): "not-sr-only" lo dejaba sin
-    // alto ni espacio interior y el texto tocaba el borde.
     const medidas = (el: Element) => {
       const e = getComputedStyle(el);
       return { alto: e.height, izquierda: e.paddingLeft, derecha: e.paddingRight };
@@ -277,13 +265,11 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(page.locator('.btn-expandir').first()).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('.fila-detalle .tabla-anidada tbody tr')).toHaveCount(cantidad);
 
-    // Ordenar por N° de órdenes (desc): el primero tiene más órdenes.
     await page.getByRole('button', { name: /^N° de órdenes/ }).click();
     await page.getByRole('button', { name: /^N° de órdenes/ }).click();
     const conteos = (await page.locator('.fila-centro .insignia').allInnerTexts()).map(Number);
     expect(conteos).toEqual([...conteos].sort((a, b) => b - a));
 
-    // Teclado: Enter sobre el botón de la fila abre/cierra.
     const clave = await page.locator('.btn-expandir[aria-expanded="false"]').first().getAttribute('data-grupo');
     const boton = page.locator(`.btn-expandir[data-grupo="${clave}"]`);
     await boton.focus();
@@ -314,13 +300,11 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     for (const fila of matriz.slice(1)) expect(fila[iTipo]).toBe('Servicio');
     await expect(page.locator('#aviso-flotante')).toContainText('Se descargó');
 
-    // Monto y Moneda NO se exportan (columnas ocultas); Estado sí.
     expect(matriz[0]).not.toContain('Monto');
     expect(matriz[0]).not.toContain('Moneda');
     expect(matriz[0]).toContain('Estado');
     expect(matriz.flat().some((v) => /^(PEN|USD)$/.test(String(v)))).toBe(false);
 
-    // Fechas como fecha de Excel (se pueden ordenar y filtrar en Excel).
     const hoja = XLSX.read(readFileSync(await descarga.path()), { type: 'buffer', cellNF: true }).Sheets['Órdenes'];
     const datos = XLSX.utils.sheet_to_json<unknown[]>(hoja, { header: 1, raw: true });
     const iFecha = datos[0].indexOf('Fecha de creación');
@@ -330,9 +314,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
   });
 
   test('exportar con la página abierta desde antes de una publicación nueva: avisa que hay que recargar', async ({ page }) => {
-    // La parte que arma el Excel (assets/exportar-….js) se descarga al pulsar el botón. Tras publicar otra versión
-    // ese archivo ya no existe y Netlify responde index.html (código 200, text/html): el botón no debe quedarse
-    // sin hacer nada.
     await abrir(page);
     await page.route(/\/assets\/exportar-[^/]+\.js$/, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Buscador</title>' }));
     let descargas = 0;
@@ -345,7 +326,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
   test('Monto y Moneda no aparecen (ni se buscan); "Columnas detectadas" dice cuáles se ocultaron', async ({ page }) => {
     const errores = vigilarErrores(page);
     await abrir(page);
-    // (Los indicadores ▲▼ son dibujos SVG, no texto: los títulos se leen tal cual.)
     const titulos = await page.locator('#tabla-resultados thead th').allInnerTexts();
     expect(titulos.map((t) => t.trim())).toEqual([
       'Código',
@@ -359,11 +339,9 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(page.locator('#tabla-resultados')).not.toContainText('PEN');
     await expect(page.locator('#tabla-resultados')).not.toContainText('USD');
 
-    // Lo que hay en una columna oculta no se encuentra con el buscador.
     await page.getByLabel('Buscar', { exact: true }).fill('usd');
     await expect(page.locator('.fila-vacia')).toContainText('No hay resultados');
 
-    // Tampoco en la vista por centro.
     await page.getByRole('button', { name: 'Borrar búsqueda' }).click();
     await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
     await page.locator('.btn-expandir').first().click();
@@ -372,11 +350,9 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     expect(anidada).not.toContain('Moneda');
     expect(anidada).toContain('Estado');
 
-    // "Columnas detectadas" se abre con un botón (Collapsible de shadcn/ui; antes era un <details>).
     await page.getByRole('button', { name: 'Columnas detectadas en el Excel' }).click();
     await expect(page.locator('#info-columnas')).toContainText('Columnas ocultas (no se muestran, no se buscan ni se exportan): Monto (G), Moneda (H)');
     await expect(page.locator('#info-columnas')).toContainText('Estado');
-    // En modo demo no hay ubicación de SharePoint que mostrar.
     await expect(page.locator('#info-columnas .ubicacion-excel')).toHaveCount(0);
     expect(errores).toEqual([]);
   });
@@ -387,7 +363,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(estado).toBeVisible();
     expect(await estado.evaluate((el) => el.tagName)).toBe('SELECT');
     expect(await estado.locator('option').allInnerTexts()).toEqual(['Todos', 'Abierta', 'Cerrada', 'En ejecución', 'Sin orden aún']);
-    // "Tipo de orden" también es un desplegable.
     expect(await page.getByLabel('Tipo de orden').evaluate((el) => el.tagName)).toBe('SELECT');
 
     await estado.selectOption('Cerrada');
@@ -395,11 +370,9 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     expect(new Set(await celdasDeColumna(page, 7))).toEqual(new Set(['Cerrada']));
     await expect(page).toHaveURL(/estado=Cerrada/);
 
-    // Se combina con los otros desplegables.
     await page.getByLabel('Tipo de orden').selectOption('Servicio');
     await expect(page.locator('#contador')).toContainText('de 18 resultados');
 
-    // Exportar respeta el filtro.
     const [descarga] = await Promise.all([
       page.waitForEvent('download'),
       page.getByRole('button', { name: 'Exportar a Excel' }).click(),
@@ -410,20 +383,17 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     expect(matriz.length - 1).toBe(18);
     for (const fila of matriz.slice(1)) expect(fila[iEstado]).toBe('Cerrada');
 
-    // El enlace compartido abre con el mismo filtro.
     const otra = await context.newPage();
     await abrir(otra, page.url());
     await expect(otra.getByLabel('Estado', { exact: true })).toHaveValue('Cerrada');
     await expect(otra.locator('#contador')).toContainText('de 18 resultados');
     await otra.close();
 
-    // "Limpiar filtros" también lo borra.
     await page.getByRole('button', { name: 'Limpiar filtros' }).click();
     await expect(estado).toHaveValue('');
     await expect(page.locator('#contador')).toContainText(`de ${TOTAL_FILAS} resultados`);
     await expect(page).not.toHaveURL(/estado=/);
 
-    // Vista por centro: cada orden muestra su estado.
     await estado.selectOption('Abierta');
     await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
     await page.locator('.btn-expandir').first().click();
@@ -440,7 +410,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await abrir(page, '/?estado=Abierta');
     await expect(page.locator('#campo-estado')).toBeHidden();
     await expect(page.locator('#aviso-columnas')).toBeHidden();
-    // Un estado que venía en el enlace no deja la tabla vacía.
     await expect(page.locator('#contador')).toHaveText('Mostrando 1–1 de 1 resultado (de 1 en total)');
   });
 
@@ -452,7 +421,7 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     ]);
     await abrir(page, '/?estado=Abierta');
     await expect(page.locator('#campo-estado')).toBeHidden();
-    await expect(page.locator('#campo-tipo')).toBeVisible(); // Tipo de orden sí tiene valores
+    await expect(page.locator('#campo-tipo')).toBeVisible();
     await expect(page.locator('#contador')).toHaveText('Mostrando 1–2 de 2 resultados (de 2 en total)');
     await expect(page).not.toHaveURL(/estado=/);
   });
@@ -480,7 +449,7 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
   });
 
   test('"Actualizar" y la auto-actualización no pierden los filtros', async ({ page }) => {
-    await usarConfig(page, { autoActualizarMinutos: 0.05 }); // cada 3 segundos (solo para la prueba)
+    await usarConfig(page, { autoActualizarMinutos: 0.05 });
     let descargas = 0;
     page.on('request', (r) => {
       if (r.url().endsWith('centros-ejemplo.xlsx')) descargas++;
@@ -488,8 +457,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await abrir(page);
     await page.getByLabel('Buscar', { exact: true }).fill('cableado');
     await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
-    // Esperar a que la búsqueda se aplique (el buscador espera 200 ms) ANTES de abrir el primer centro;
-    // si no, se podría abrir un centro que después queda fuera de los resultados.
     await expect(page.locator('#contador')).toContainText('centro');
     await expect(page.locator('#contador')).not.toContainText('de 37 centros');
     await page.locator('.btn-expandir').first().click();
@@ -498,7 +465,7 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
 
     await page.getByRole('button', { name: 'Actualizar' }).click();
     await expect(page.locator('#aviso-flotante')).toContainText('Datos actualizados');
-    await expect.poll(() => descargas, { timeout: 10_000 }).toBeGreaterThanOrEqual(3); // inicial + manual + automática
+    await expect.poll(() => descargas, { timeout: 10_000 }).toBeGreaterThanOrEqual(3);
     await expect(page.getByLabel('Buscar', { exact: true })).toHaveValue('cableado');
     await expect(page.locator('#contador')).toHaveText(antes);
     await expect(page.locator('.btn-expandir').first()).toHaveAttribute('aria-expanded', 'true');
@@ -549,9 +516,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(page.getByLabel('Código', { exact: true })).toBeEnabled();
     await expect(page.locator('#tabla-resultados tbody')).toContainText('Algo');
 
-    // El motivo aparece al pasar el mouse por el filtro desactivado. El Input y el NativeSelect de shadcn/ui
-    // desactivados no reciben el mouse (disabled:pointer-events-none): el mouse cae en la caja del campo, que lleva el
-    // mismo "title". El control conserva el suyo (lo leen los lectores de pantalla).
     for (const selector of ['#f-cliente', '#f-descripcion']) {
       const bajoElMouse = await page.locator(selector).evaluate((control) => {
         const caja = control.getBoundingClientRect();
@@ -560,7 +524,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
       });
       expect(bajoElMouse, selector).toEqual({ ayuda: 'No se encontró esta columna en el Excel', propio: 'No se encontró esta columna en el Excel' });
     }
-    // Un filtro que sí se puede usar no lleva ese "title".
     expect(await page.locator('#f-codigo').evaluate((control) => control.closest('[title]')?.getAttribute('title') ?? null)).toBeNull();
   });
 
@@ -600,14 +563,11 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(page.locator('#tabla-resultados thead th').nth(2)).toHaveAttribute('aria-sort', 'ascending');
   });
 
-  // "Por orden / Por centro" es un grupo de opciones (radiogroup): como los botones de opción del sistema, Tab
-  // entra por la opción elegida y las FLECHAS eligen la otra (patrón de WAI-ARIA; antes eran <input type=radio>).
   test('teclado: "Por orden / Por centro" se elige con las flechas; Tab entra por la opción elegida', async ({ page }) => {
     await abrir(page, '/ordenes');
     const grupo = page.getByRole('radiogroup', { name: 'Forma de ver los resultados' });
     const porOrden = grupo.getByRole('radio', { name: 'Por orden' });
     const porCentro = grupo.getByRole('radio', { name: 'Por centro de negocio' });
-    // Con Tab de verdad (desde el control anterior) se llega a la opción elegida.
     await porOrden.focus();
     await page.keyboard.press('Shift+Tab');
     await expect(porOrden).not.toBeFocused();
@@ -615,9 +575,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(porOrden).toBeFocused();
     await expect(porOrden).toHaveAttribute('aria-checked', 'true');
 
-    // Las flechas se pulsan como una persona (la tecla queda abajo unos 50 ms): el RadioGroup de Radix mueve el foco
-    // en un setTimeout y elige la opción solo si la flecha SIGUE pulsada en ese momento. Sin "delay", Playwright
-    // suelta la tecla al instante y, con la computadora ocupada, a veces la soltaba antes (prueba inestable).
     const flecha = (tecla: string) => page.keyboard.press(tecla, { delay: 50 });
     await flecha('ArrowRight');
     await expect(page).toHaveURL(/\/centros$/);
@@ -632,7 +589,6 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
     await expect(porOrden).toHaveAttribute('aria-checked', 'true');
     await expect(porCentro).toHaveAttribute('aria-checked', 'false');
 
-    // Abajo/arriba también (y vuelve a empezar al llegar al final); Tab sale del grupo y Shift+Tab vuelve a la elegida.
     await flecha('ArrowDown');
     await expect(page).toHaveURL(/\/centros$/);
     await page.keyboard.press('Tab');
@@ -677,46 +633,25 @@ test.describe('Buscador de centros de negocio (modo demo)', () => {
   });
 });
 
-// Mientras se descarga el código (con red lenta, sobre todo en el celular) se ve el HTML fijo de index.html.
-// Debe tener la cabecera y ser igual a lo primero que dibuja React: así nada "salta" al cargar.
 const CODIGO_DE_LA_APP = /\/assets\/.+\.js$/;
-for (const [nombre, viewport] of [
-  ['escritorio', { width: 1280, height: 720 }],
-  ['celular', { width: 375, height: 812 }],
-] as const) {
-  test.describe(`Antes de que cargue el código (${nombre})`, () => {
-    test.use({ viewport });
 
-    test('la cabecera y el botón ☀️/🌙 se ven desde el primer momento y la tarjeta "Cargando…" no salta', async ({ page }) => {
-      // 1) Sin el código de la app: solo el HTML de index.html (lo que se ve con una red lenta).
-      await page.route(CODIGO_DE_LA_APP, (ruta) => ruta.abort());
-      await page.goto('/');
-      await expect(page.getByRole('banner')).toBeVisible();
-      await expect(page.getByRole('heading', { level: 1, name: 'Buscador de centros de negocio' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Cambiar a modo oscuro' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Saltar al buscador' })).toBeAttached();
-      const tarjeta = page.locator('.tarjeta-centro');
-      await expect(tarjeta).toContainText('Cargando…');
-      const sinReact = await tarjeta.boundingBox();
-
-      // 2) Con el código, pero config.json todavía no llega: React ya reemplazó el HTML por su primera pantalla.
-      await page.unroute(CODIGO_DE_LA_APP);
-      await page.route('**/config.json', () => {}); // no responde
-      await page.reload();
-      await page.waitForFunction(() => Object.keys(document.querySelector('.cabecera') ?? {}).some((k) => k.startsWith('__react')));
-      await expect(page.getByRole('heading', { level: 1, name: 'Buscador de centros de negocio' })).toBeVisible();
-      expect(await tarjeta.boundingBox()).toEqual(sinReact);
-    });
-  });
-}
-
-test('antes de que cargue el código, el botón de tema ya muestra el ícono del modo del sistema (oscuro)', async ({ page }) => {
+test('antes de que cargue el código: #raiz vacío y fondo del modo del sistema (oscuro), sin destello blanco', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.route(CODIGO_DE_LA_APP, (ruta) => ruta.abort());
   await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('data-tema-efectivo', 'oscuro');
-  await expect(page.locator('#btn-tema .icono-sol')).toBeVisible();
-  await expect(page.locator('#btn-tema .icono-luna')).toBeHidden();
+  await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+  expect(await page.locator('#raiz').evaluate((el) => el.childElementCount)).toBe(0);
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(15, 23, 41)');
+});
+
+test('con el código: React dibuja el diseño (cabecera, ☀️/🌙, "Saltar al buscador") y "Cargando…" mientras llega config.json', async ({ page }) => {
+  await page.route('**/config.json', () => {});
+  await page.goto('/');
+  await expect(page.getByRole('banner')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Buscador de centros de negocio' })).toBeVisible();
+  await expect(page.locator('#btn-tema')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Saltar al buscador' })).toBeAttached();
+  await expect(page.locator('main#principal .tarjeta-centro')).toContainText('Cargando…');
 });
 
 test.describe('Celular (375 px)', () => {
@@ -733,13 +668,11 @@ test.describe('Celular (375 px)', () => {
     expect(medida.pagina).toBeLessThanOrEqual(medida.ventana);
     expect(medida.tabla).toBeGreaterThan(medida.contenedor);
 
-    // Los filtros se abren con un botón.
     await expect(page.getByLabel('Cliente', { exact: true })).toBeHidden();
     await page.getByRole('button', { name: /^Filtros/ }).click();
     await expect(page.getByLabel('Cliente', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Filtros/ })).toHaveAttribute('aria-expanded', 'true');
 
-    // El número junto a "Filtros" cuenta también el Estado.
     await expect(page.locator('#contador-filtros')).toBeHidden();
     await page.getByLabel('Estado', { exact: true }).selectOption('Abierta');
     await expect(page.locator('#contador-filtros')).toHaveText('1');
@@ -756,7 +689,6 @@ test.describe('Celular (375 px)', () => {
 
 test.describe('Modo Microsoft (sin conectarse a Microsoft)', () => {
   test.beforeEach(async ({ page }) => {
-    // Nada sale a internet durante la prueba.
     await page.route(/^https:\/\/(login\.microsoftonline\.com|graph\.microsoft\.com)\//, (r) => r.abort());
   });
 
@@ -768,9 +700,8 @@ test.describe('Modo Microsoft (sin conectarse a Microsoft)', () => {
     });
     await page.goto('/');
     await expect(page.getByRole('button', { name: 'Iniciar sesión con Microsoft' })).toBeVisible();
-    // La bienvenida solo muestra el botón: no lista los dominios permitidos.
     await expect(page.locator('#pantalla-login')).not.toContainText('@aic.pe');
-    await expect(page.locator('#btn-tema')).toBeVisible(); // el botón de tema también está antes de iniciar sesión
+    await expect(page.locator('#btn-tema')).toBeVisible();
     await expect(page.locator('#pantalla-app')).toBeHidden();
     expect(errores).toEqual([]);
   });
@@ -788,9 +719,7 @@ test.describe('Modo Microsoft (sin conectarse a Microsoft)', () => {
       await page.goto(ruta);
       await expect(page.getByRole('button', { name: 'Iniciar sesión con Microsoft' })).toBeVisible();
       await expect(page.locator('#pantalla-app, #detalle-centro, #pantalla-no-encontrada')).toHaveCount(0);
-      // La dirección no se toca antes de iniciar sesión: MSAL vuelve a ESA misma después.
       expect(new URL(page.url()).pathname + new URL(page.url()).search).toBe(ruta);
-      // Cambio de Gustavo: el botón recibe el foco (Enter inicia sesión) pero sin el anillo al cargar la página.
       await expect(page.locator('#btn-login')).toBeFocused();
       expect(await page.locator('#btn-login').evaluate((b) => b.matches(':focus-visible'))).toBe(false);
     }

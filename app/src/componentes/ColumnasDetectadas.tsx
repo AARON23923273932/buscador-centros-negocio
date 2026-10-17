@@ -1,5 +1,3 @@
-// "Columnas detectadas en el Excel": qué columna usó la app para cada cosa, cuáles ocultó y
-// (con el Excel real) dónde está el archivo en SharePoint/OneDrive (para fijarlo en config.json).
 import { memo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,7 +35,6 @@ function UbicacionExcel({ archivo }: { archivo: InfoArchivo | null }) {
   );
 }
 
-/** memo(): solo se vuelve a dibujar al leer otra vez el Excel. */
 export const ColumnasDetectadas = memo(function ColumnasDetectadas({
   datos: d,
   archivo,
@@ -65,8 +62,6 @@ export const ColumnasDetectadas = memo(function ColumnasDetectadas({
         <strong>{d.columnasOcultas?.length ? d.columnasOcultas.map((c) => `${c.titulo} (${c.letra})`).join(', ') : 'ninguna'}</strong>
       </p>
       <UbicacionExcel archivo={archivo} />
-      {/* La tabla va en una Card de shadcn/ui (borde, esquinas y sombra de shadcn); py-0 gap-0: sin el espacio
-          interior de la tarjeta (solo medidas). */}
       <Card className="gap-0 py-0">
         <Table>
           <TableHeader>

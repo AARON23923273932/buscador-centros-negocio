@@ -1,21 +1,6 @@
-// Cambios de diseño pedidos por el supervisor (Gustavo), medidos en Chromium:
-//   1. Más margen a los lados (14/10/2026 y otra vez 15/10/2026: "creo que podría ser un poco más"): el contenido
-//      va en una columna de 1120 px como máximo, con un margen lateral del 6 % del ancho (entre 20 y 96 px).
-//   2. Contornos suaves y foco visible con el teclado. Desde el último pedido del 15/10/2026 ("que use los estilos
-//      naturales de shadcn … sin cambios, solo agregando el estilo de marca") son los de shadcn/ui tal cual: bordes de
-//      1 px y, con el teclado (:focus-visible), el borde pasa al color del anillo (--ring: Medium Blue en claro, Light
-//      Blue en oscuro) más un anillo de 3 px de ese color al 50 % (focus-visible:border-ring ring-3 ring-ring/50).
-//      Se mide tal como se dibuja (con su transparencia) sobre la página, las tarjetas y las filas alternas: el BORDE
-//      contrasta al menos 3:1 en claro y en oscuro (WCAG 1.4.11); el anillo al 50 %, también en oscuro; en claro es
-//      decorativo (2:1: ningún azul de la paleta llega a 3:1 al 50 % sobre blanco). En los botones el anillo aparece
-//      solo con el teclado; en las cajas de texto y desplegables, como en shadcn/ui, también al hacer clic (el
-//      navegador las marca :focus-visible).
-//   4. Tamaño de letra: el de los componentes de shadcn/ui (14 px en tablas, botones y, en escritorio, cajas) y el del
-//      navegador en el resto (16 px).
-//   3. Íconos alineados con su texto (mismo tamaño, desfase vertical de 1 px o menos).
 import { expect, test, type Page } from '@playwright/test';
 import { abrir } from './ayuda.ts';
-import { al, PALETA, prepararColores } from './colores.ts';
+import { al, PALETA, prepararColores, TONOS_SUAVES } from './colores.ts';
 import { usarConfigPruebas } from './config-pruebas.ts';
 
 test.beforeEach(async ({ context }) => {
@@ -23,18 +8,16 @@ test.beforeEach(async ({ context }) => {
   await prepararColores(context);
 });
 
-/** Color del foco (--ring): Medium Blue en claro; Light Blue en oscuro (Medium Blue casi no se veía sobre el negro). */
-const RING = { claro: PALETA.mediumBlue, oscuro: PALETA.lightBlue } as const;
+const RING = { claro: PALETA.mediumBlue, oscuro: TONOS_SUAVES.anilloOscuro } as const;
 
-/** Diferencia en px entre el centro vertical de un ícono y el centro del texto a su lado. */
 async function desfase(page: Page, selectorIcono: string, selectorTexto: string): Promise<{ tamano: number[]; desfase: number }> {
   return page.evaluate(
     ([si, st]) => {
       const icono = document.querySelector(si)!.getBoundingClientRect();
       const el = document.querySelector(st)!;
-      // Solo la caja del texto (no la del botón entero): el primer nodo de texto con letras.
       const recorrido = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
-        acceptNode: (n) => (n.textContent?.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
+        acceptNode: (n) =>
+          n.textContent?.trim() && !n.parentElement?.closest('.sr-only') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
       });
       const nodo = recorrido.nextNode();
       const rango = document.createRange();
@@ -47,7 +30,6 @@ async function desfase(page: Page, selectorIcono: string, selectorTexto: string)
   );
 }
 
-/** Lleva el foco a un control CON EL TECLADO (Shift+Tab y Tab), como lo haría una persona. */
 async function llegarConTeclado(page: Page, selector: string) {
   await page.locator(selector).first().focus();
   await page.keyboard.press('Shift+Tab');
@@ -55,10 +37,6 @@ async function llegarConTeclado(page: Page, selector: string) {
   await expect(page.locator(selector).first()).toBeFocused();
 }
 
-/**
- * Borde, anillo de foco de shadcn/ui (o "ninguno") y :focus-visible del elemento con el foco. Primero termina la
- * transición del componente (transition-all de shadcn/ui: el anillo aparece de a poco).
- */
 const estiloFoco = (page: Page) =>
   page.evaluate(async () => {
     const el = document.activeElement!;
@@ -68,28 +46,21 @@ const estiloFoco = (page: Page) =>
     return { visible: el.matches(':focus-visible'), borde: window.normalizarColor(e.borderTopColor), anillo: anillo?.color ?? 'ninguno' };
   });
 
-/** Estado de foco esperado con el teclado: borde --ring y anillo de shadcn/ui (--ring al 50 %, 3 px alrededor). */
 const conTeclado = (ring: string) => ({ visible: true, borde: ring, anillo: al(ring, 0.5) });
 const CON_TECLADO = conTeclado(RING.claro);
 const CON_TECLADO_OSCURO = conTeclado(RING.oscuro);
+const CON_TECLADO_OSCURO_OUTLINE = { visible: true, borde: TONOS_SUAVES.bordeCajaOscuro, anillo: al(RING.oscuro, 0.5) };
 
-/**
- * Contraste (WCAG) del foco del control que tiene el foco, TAL COMO SE DIBUJA: su borde (1 px, sólido) y el anillo de
- * 3 px (box-shadow, con su transparencia: ring-ring/50), cada uno mezclado sobre los fondos donde puede quedar un
- * control: la página (--background), una tarjeta (--card) y una fila alterna (--muted). Devuelve el menor de cada uno.
- * (Antes se medía la variable --ring opaca, y el anillo al 50 % pasaba la prueba aunque no llegara a 3:1.)
- */
 const contrastesFoco = (page: Page) =>
   page.evaluate(() => {
     const e = getComputedStyle(document.activeElement!);
-    /** "rgb(r, g, b) / alfa" (de normalizarColor) → canales y alfa. */
     const partes = (normalizado: string) => {
       const [rgb, alfa] = normalizado.split(' / ');
       return { canales: (rgb!.match(/\d+/g) ?? []).map(Number), alfa: alfa === undefined ? 1 : Number(alfa) };
     };
     const variable = (nombre: string) => {
       const valor = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
-      if (!valor) throw new Error(`Falta la variable de CSS ${nombre}`); // (si no, se compararía con el color heredado)
+      if (!valor) throw new Error(`Falta la variable de CSS ${nombre}`);
       return partes(window.normalizarColor(valor)).canales;
     };
     const luz = ([r, g, b]: number[]) => {
@@ -120,19 +91,18 @@ test.describe('Diseño (pedido del supervisor)', () => {
         const contenido = document.querySelector('#pantalla-app')!.getBoundingClientRect();
         const logo = document.querySelector('.cabecera .logo')!.getBoundingClientRect();
         const cabecera = document.querySelector('.cabecera')!.getBoundingClientRect();
-        const visible = document.documentElement.clientWidth; // sin la barra de desplazamiento
+        const visible = document.documentElement.clientWidth;
         const margen = parseFloat(getComputedStyle(document.querySelector('#principal')!).paddingLeft);
         return { izq: contenido.left, der: visible - contenido.right, ancho: contenido.width, logo: logo.left, cabecera: cabecera.width, visible, margen };
       });
-      const esperado = Math.min(96, Math.max(20, ancho * 0.06)); // clamp(20px, 6vw, 96px)
+      const esperado = Math.min(96, Math.max(20, ancho * 0.06));
       expect(m.margen, `margen a ${ancho} px`).toBeCloseTo(esperado, 0);
-      expect(Math.round(m.ancho), `ancho a ${ancho} px`).toBeLessThanOrEqual(1120); // antes: 1240
-      expect(m.izq).toBeGreaterThanOrEqual(esperado - 0.5); // a 1280 px: antes 51 px, ahora 80 px
-      expect(Math.abs(m.izq - m.der)).toBeLessThanOrEqual(1); // centrado
-      expect(Math.abs(m.logo - m.izq)).toBeLessThanOrEqual(1); // la cabecera alineada con el contenido…
-      expect(m.cabecera).toBe(m.visible); // …aunque su fondo ocupe todo el ancho
+      expect(Math.round(m.ancho), `ancho a ${ancho} px`).toBeLessThanOrEqual(1120);
+      expect(m.izq).toBeGreaterThanOrEqual(esperado - 0.5);
+      expect(Math.abs(m.izq - m.der)).toBeLessThanOrEqual(1);
+      expect(Math.abs(m.logo - m.izq)).toBeLessThanOrEqual(1);
+      expect(m.cabecera).toBe(m.visible);
     }
-    // En el celular: 16 px a cada lado y sin scroll horizontal de la página.
     await page.setViewportSize({ width: 375, height: 812 });
     await abrir(page, '/ordenes');
     const celular = await page.evaluate(() => ({
@@ -158,15 +128,14 @@ test.describe('Diseño (pedido del supervisor)', () => {
     let anterior = 0;
     for (const ancho of [375, 400, 480, 600, 667, 700, 719]) {
       const m = await medir(ancho);
-      const esperado = Math.max(16, 0.085 * ancho - 18); // max(16px, 8.5vw - 18px)
+      const esperado = Math.max(16, 0.085 * ancho - 18);
       expect(m.margen, `margen a ${ancho} px`).toBeCloseTo(esperado, 0);
       expect(m.margen, `a ${ancho} px no es menor que antes (clamp(16px, 4vw, 56px))`).toBeGreaterThanOrEqual(Math.max(16, ancho * 0.04) - 0.1);
       expect(m.margen, `a ${ancho} px no baja al agrandar la ventana`).toBeGreaterThanOrEqual(anterior);
-      expect(m.buscador).toBeCloseTo(m.margen, 0); // el buscador empieza donde termina el margen
+      expect(m.buscador).toBeCloseTo(m.margen, 0);
       expect(m.pagina, `sin scroll horizontal a ${ancho} px`).toBeLessThanOrEqual(m.ventana);
       anterior = m.margen;
     }
-    // Sin salto al pasar de 719 a 720 px (antes de este ajuste: de 16 px a 43,2 px).
     const a720 = await medir(720);
     expect(a720.margen).toBeCloseTo(43.2, 0);
     expect(a720.margen - anterior).toBeLessThan(1);
@@ -175,36 +144,27 @@ test.describe('Diseño (pedido del supervisor)', () => {
   test('2. contornos suaves: bordes de 1 px; anillo de foco de shadcn/ui solo con el teclado', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
-    // (#panel-filtros: antes se buscaba por su clase "filtros", que ya no existe; es el mismo <fieldset>.)
     for (const selector of ['#buscador', '#f-cliente', '#f-codigo', '#tam-pagina', '#btn-exportar', '#panel-filtros']) {
       expect(await page.locator(selector).evaluate((el) => getComputedStyle(el).borderTopWidth), selector).toBe('1px');
     }
-    // #contenedor-tabla ahora es una Card de shadcn/ui: su contorno de 1 px es un "ring-1" (sombra), no un borde.
     const contornoCaja = await page.locator('#contenedor-tabla').evaluate((el) => window.sombrasDe(getComputedStyle(el).boxShadow));
-    expect(contornoCaja).toContainEqual({ color: al(PALETA.black, 0.1), medidas: '0px 0px 0px 1px' });
+    expect(contornoCaja).toContainEqual({ color: al(TONOS_SUAVES.tinta, 0.1), medidas: '0px 0px 0px 1px' });
 
-    // Con el mouse: sin anillo.
     const actualizar = page.getByRole('button', { name: 'Actualizar' });
     await actualizar.click();
     await expect(actualizar).toBeFocused();
     expect(await estiloFoco(page)).toMatchObject({ visible: false, anillo: 'ninguno' });
 
-    // Con el teclado: el borde pasa al color --ring y aparece el anillo de 3 px (focus-visible:border-ring ring-3 ring-ring/50).
     await page.getByLabel('Filas por página').focus();
     await page.keyboard.press('Tab');
     const exportar = page.getByRole('button', { name: 'Exportar a Excel' });
     await expect(exportar).toBeFocused();
     expect(await estiloFoco(page)).toEqual(CON_TECLADO);
-    // Tal como se dibuja, sobre la página, las tarjetas y las filas alternas: el BORDE de foco (Medium Blue sólido) se
-    // distingue al menos 3:1 (5,0:1 sobre Light Gray). El anillo de 3 px va al 50 % y en claro es decorativo (2,0:1;
-    // ningún azul de la paleta llega a 3:1 al 50 % sobre blanco: por confirmar con Gustavo, README 8.1).
     const contraste = await contrastesFoco(page);
     expect(contraste.alfaAnillo).toBe(0.5);
     expect(contraste.borde).toBeGreaterThanOrEqual(3);
     expect(contraste.anillo).toBeGreaterThanOrEqual(2);
-    // Alto contraste de Windows (forced-colors): ahí no se dibujan sombras; un contorno de 2 px toma el lugar del anillo
-    // (regla de estilos.css que solo se aplica en ese modo).
-    expect(await exportar.evaluate((b) => getComputedStyle(b).outlineStyle)).toBe('none'); // modo normal: el de shadcn/ui
+    expect(await exportar.evaluate((b) => getComputedStyle(b).outlineStyle)).toBe('none');
     await page.emulateMedia({ forcedColors: 'active' });
     expect(await exportar.evaluate((b) => ({ estilo: getComputedStyle(b).outlineStyle, ancho: getComputedStyle(b).outlineWidth }))).toEqual({
       estilo: 'solid',
@@ -212,7 +172,6 @@ test.describe('Diseño (pedido del supervisor)', () => {
     });
     await page.emulateMedia({ forcedColors: 'none' });
 
-    // Enlaces (no son componentes de shadcn/ui, no tienen borde): contorno de 2 px del color --ring.
     await page.getByRole('link', { name: 'CN-0001' }).first().focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
@@ -226,36 +185,29 @@ test.describe('Diseño (pedido del supervisor)', () => {
   test('2. en modo oscuro el anillo de foco también se ve con el teclado (y no con el mouse)', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await abrir(page, '/ordenes');
-    expect(await page.evaluate(() => document.documentElement.dataset.temaEfectivo)).toBe('oscuro');
+    expect(await page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(true);
 
     const actualizar = page.getByRole('button', { name: 'Actualizar' });
     await actualizar.click();
     expect(await estiloFoco(page)).toMatchObject({ visible: false, anillo: 'ninguno' });
 
-    // Con el teclado: borde y anillo Light Blue (--ring del tema oscuro). Con Medium Blue (antes) el anillo al 50 %
-    // daba 1,7:1 sobre el negro y 1,4:1 sobre las filas alternas Primary Blue: casi no se veía.
     await page.getByLabel('Filas por página').focus();
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Exportar a Excel' })).toBeFocused();
-    expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO);
-    // Tal como se dibujan, sobre Black y sobre Primary Blue: borde 18,0:1 y 9,5:1; anillo al 50 %: 4,7:1 y 3,6:1.
+    expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO_OUTLINE);
     let contraste = await contrastesFoco(page);
     expect(contraste.alfaAnillo).toBe(0.5);
     expect(contraste.borde).toBeGreaterThanOrEqual(3);
     expect(contraste.anillo).toBeGreaterThanOrEqual(3);
 
-    // El botón "copiar" de cada fila (también en las filas alternas Primary Blue): lo mismo con el teclado.
     await llegarConTeclado(page, '#tabla-resultados > tbody > tr:nth-child(2) .btn-copiar');
     expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO);
     contraste = await contrastesFoco(page);
     expect(contraste.borde).toBeGreaterThanOrEqual(3);
     expect(contraste.anillo).toBeGreaterThanOrEqual(3);
-    // Cajas de texto (borde Gray sin foco): el foco las pone Light Blue (4,9:1 con ese Gray), no Medium Blue (1,1:1:
-    // casi no cambiaba).
     await llegarConTeclado(page, '#f-codigo');
     expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO);
 
-    // Enlace del código: contorno de 2 px del mismo color que el anillo.
     await page.getByRole('link', { name: 'CN-0001' }).first().focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
@@ -269,18 +221,14 @@ test.describe('Diseño (pedido del supervisor)', () => {
   test('2. el foco se ve en TODOS los controles: "copiar" de cada fila, botón principal y títulos que ordenan', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
-    // "Copiar" (uno por fila: lo que más se recorre con Tab): borde --ring + anillo, como los demás.
     await llegarConTeclado(page, '#tabla-resultados .btn-copiar');
     expect(await estiloFoco(page)).toEqual(CON_TECLADO);
-    // Con el mouse encima de otro "copiar": el fondo Light Gray del Button "ghost" de shadcn/ui, sin anillo.
     const otro = page.locator('#tabla-resultados .btn-copiar').nth(1);
     await otro.hover();
     await expect
       .poll(() => otro.evaluate((b) => ({ fondo: window.normalizarColor(getComputedStyle(b).backgroundColor), sombras: window.sombrasDe(getComputedStyle(b).boxShadow) })))
-      .toEqual({ fondo: PALETA.lightGray, sombras: [] });
+      .toEqual({ fondo: TONOS_SUAVES.filaClara, sombras: [] });
 
-    // Título que ordena (botón propio dentro del encabezado Primary Blue): contorno de 2 px del color de su texto
-    // (blanco: 11,1:1 sobre Primary Blue), por dentro de la celda.
     await llegarConTeclado(page, '[data-orden="codigoCentro"]');
     const titulo = await page.evaluate(() => {
       const e = getComputedStyle(document.activeElement!);
@@ -288,7 +236,6 @@ test.describe('Diseño (pedido del supervisor)', () => {
     });
     expect(titulo).toEqual({ estilo: 'solid', ancho: '2px', color: PALETA.white, separacion: '-4px' });
 
-    // Botón principal ("Ir al buscador", "Iniciar sesión"): el mismo borde y anillo de shadcn/ui.
     await page.goto('/no-existe');
     await llegarConTeclado(page, '#enlace-ir-al-buscador');
     expect(await estiloFoco(page)).toEqual(CON_TECLADO);
@@ -311,24 +258,18 @@ test.describe('Diseño (pedido del supervisor)', () => {
   test('2. el anillo sigue a :focus-visible, como en shadcn/ui: botones solo con Tab; cajas de texto y desplegables también con el clic', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
     await abrir(page, '/ordenes');
-    // Botones (también la opción elegida de "Por orden / Por centro"): al hacer clic no aparece el anillo.
     for (const selector of ['#btn-actualizar', '[role="radio"][aria-checked="true"]', '#btn-exportar']) {
       await page.locator(selector).first().click();
       await expect(page.locator(selector).first()).toBeFocused();
       expect(await estiloFoco(page), selector).toMatchObject({ visible: false, anillo: 'ninguno' });
     }
-    // Cajas de texto y desplegables: Chromium los marca :focus-visible también con el clic (dice dónde se escribe) y
-    // el componente de shadcn/ui muestra su anillo (antes la app lo quitaba con logica/modalidad.ts y una regla propia).
-    // Se mira justo después del clic: en los desplegables, con la lista abierta, ANTES de cerrarla con Escape (una
-    // tecla, que por sí sola también encendería :focus-visible y la prueba ya no comprobaría el clic).
     for (const selector of ['#buscador', '#f-codigo', '#f-cliente', '#tam-pagina']) {
-      await page.locator('h1').click(); // el foco sale del control anterior
+      await page.locator('h1').click();
       await page.locator(selector).click();
       await expect(page.locator(selector)).toBeFocused();
       expect(await estiloFoco(page), selector).toEqual(CON_TECLADO);
-      if (selector === '#f-cliente' || selector === '#tam-pagina') await page.keyboard.press('Escape'); // cierra la lista
+      if (selector === '#f-cliente' || selector === '#tam-pagina') await page.keyboard.press('Escape');
     }
-    // Con Tab, el anillo siempre.
     await page.keyboard.press('Tab');
     expect(await estiloFoco(page)).toEqual(CON_TECLADO);
     await llegarConTeclado(page, '#f-cliente');
@@ -336,7 +277,6 @@ test.describe('Diseño (pedido del supervisor)', () => {
   });
 
   test('3. el logo de Microsoft del botón "Iniciar sesión" va alineado con su texto', async ({ page }) => {
-    // Nada sale a internet durante la prueba.
     await page.route(/^https:\/\/(login\.microsoftonline\.com|graph\.microsoft\.com)\//, (r) => r.abort());
     await usarConfigPruebas(page, {
       modo: 'microsoft',
@@ -345,7 +285,7 @@ test.describe('Diseño (pedido del supervisor)', () => {
     await page.goto('/ordenes');
     await expect(page.locator('#btn-login')).toBeVisible();
     const m = await desfase(page, '#btn-login svg', '#btn-login');
-    expect(m.tamano).toEqual([18, 18]);
+    expect(m.tamano).toEqual([20, 20]);
     expect(m.desfase).toBeLessThanOrEqual(1);
   });
 
@@ -359,7 +299,7 @@ test.describe('Diseño (pedido del supervisor)', () => {
       ['copiar junto al código', '.celda-codigo .btn-copiar svg', '.celda-codigo .codigo'],
       ['lupa del buscador', '.icono-lupa', '#buscador'],
       ['"×" del buscador', '#btn-borrar-busqueda svg', '#buscador'],
-      ['tema ☀️/🌙', '#btn-tema .icono-luna', '#btn-tema'],
+      ['tema', '#btn-tema svg', '#btn-tema'],
     ];
     for (const [nombre, icono, texto] of casos) {
       const m = await desfase(page, icono, texto);
@@ -368,9 +308,6 @@ test.describe('Diseño (pedido del supervisor)', () => {
       expect(m.tamano[1], nombre).toBe(m.tamano[0]);
       expect(m.desfase, nombre).toBeLessThanOrEqual(1);
     }
-    // El código (con su botón copiar) queda en la misma línea que el texto de las demás celdas de la fila. Va en
-    // letra monoespaciada más chica, así que se compara la BASE de las letras (la línea donde se apoyan), no el
-    // centro: un elemento vacío "inline-block" se apoya justo en esa línea.
     const bases = await page.evaluate(() => {
       const base = (el: Element) => {
         const marca = document.createElement('span');
@@ -385,8 +322,6 @@ test.describe('Diseño (pedido del supervisor)', () => {
     });
     expect(bases).toBeLessThanOrEqual(1);
 
-    // Desplegables (NativeSelect de shadcn/ui): flecha propia, igual en todos. Antes era una imagen de fondo del
-    // <select>; ahora es un ícono SVG de 16 px junto al <select>, dentro de la caja y centrado en su altura.
     for (const selector of ['#f-cliente', '#f-tipo', '#f-estado', '#tam-pagina']) {
       const estilo = await page.locator(selector).evaluate((el) => {
         const flecha = el.parentElement!.querySelector('svg[data-slot="native-select-icon"]')!.getBoundingClientRect();
@@ -405,12 +340,10 @@ test.describe('Diseño (pedido del supervisor)', () => {
       expect(estilo.dentro, selector).toBe(true);
     }
 
-    // "Por centro": la flecha para abrir un centro, alineada con el código de su fila.
     await page.getByRole('radio', { name: 'Por centro de negocio' }).check();
     const expandir = await desfase(page, '.fila-centro .btn-expandir svg', '.fila-centro .codigo');
     expect(expandir.tamano).toEqual([16, 16]);
     expect(expandir.desfase).toBeLessThanOrEqual(1);
-    // …y la fila no se hace más alta por el botón (mismo alto que una fila sin él).
     const altos = await page.evaluate(() => {
       const fila = document.querySelector('.fila-centro')!;
       const alto = fila.getBoundingClientRect().height;
@@ -431,10 +364,6 @@ test.describe('Diseño (pedido del supervisor)', () => {
   });
 
   test('4. tamaño de letra: el de shadcn/ui en tablas, botones y cajas (14 px) y el del navegador en el resto (16 px)', async ({ page }) => {
-    // Cambió con los componentes "naturales" (README 8.1, por confirmar con Gustavo): antes la app ponía 16 px en el
-    // escritorio y 15 px en el celular, también en las tablas. Ahora la Table, el Button y el NativeSelect de shadcn/ui
-    // traen text-sm (14 px), el Input text-base md:text-sm (14 px desde 768 px de ancho; 16 px en el celular, así el
-    // iPhone no agranda la página al escribir) y el resto queda con la letra del navegador (16 px).
     const tamanos = () =>
       page.evaluate(() => {
         const t = (selector: string) => getComputedStyle(document.querySelector(selector)!).fontSize;

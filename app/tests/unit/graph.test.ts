@@ -116,7 +116,6 @@ describe('descargarDesdeGraph', () => {
       `${GRAPH_BASE}/shares/u!…/driveItem`,
       'https://descarga.temporal/2',
     ]);
-    // El segundo pedido de metadatos también lleva el encabezado para enlaces compartidos.
     expect(fetchFalso.mock.calls[2][1]?.headers?.Prefer).toBe('redeemSharingLinkIfNecessary');
   });
 
@@ -132,7 +131,7 @@ describe('descargarDesdeGraph', () => {
   it('si falla la descarga del enlace temporal, NO dice "no hay conexión a internet" a secas', async () => {
     const fetchFalso = vi.fn(async (url: string) => {
       if (url.startsWith(GRAPH_BASE)) return json({ name: 'C.xlsx', '@microsoft.graph.downloadUrl': 'https://descarga.temporal/x' });
-      throw new TypeError('Failed to fetch'); // ej. bloqueo CORS o red
+      throw new TypeError('Failed to fetch');
     });
     await expect(descargarDesdeGraph({ driveId: 'd', itemId: 'i' }, async () => 'TOKEN', fetchFalso)).rejects.toMatchObject({
       tipo: 'descarga',

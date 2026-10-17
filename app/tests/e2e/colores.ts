@@ -1,17 +1,5 @@
-// Colores en las pruebas en navegador: la paleta de la guía de AIC y cómo leer un color calculado por el navegador.
-//
-// Desde el pedido de Gustavo del 15/10/2026 (componentes de shadcn/ui "naturales", sin cambios), los componentes usan
-// transparencias de los colores del tema (ej. hover:bg-primary/80, ring-ring/50) y sombras neutras. Tailwind CSS v4
-// las escribe con color-mix() y el navegador las devuelve en otras notaciones (ej. "oklab(0.35 -0.01 -0.08 / 0.8)"),
-// no siempre en rgb(). normalizarColor() (dentro de la página) convierte CUALQUIER notación a sRGB dibujando el color
-// opaco en un lienzo de 1×1 px, y separa la transparencia:
-//   "rgb(30, 58, 110)"          color opaco
-//   "rgb(30, 58, 110) / 0.8"    el mismo color al 80 %
-//   "transparente"              alfa 0 (no se ve)
-// Las diferencias de redondeo al pasar de oklab a sRGB (±2 por canal) se corrigen al color de la paleta.
 import type { BrowserContext, Page } from '@playwright/test';
 
-/** Los 9 colores de la guía de AIC, como los devuelve getComputedStyle. */
 export const PALETA = {
   primaryBlue: 'rgb(30, 58, 110)',
   darkBlue: 'rgb(44, 82, 130)',
@@ -24,10 +12,26 @@ export const PALETA = {
   borderGray: 'rgb(204, 204, 204)',
 } as const;
 
-/** Un color de la paleta con transparencia, como lo devuelve normalizarColor(): ej. al(PALETA.lightGray, 0.5). */
+export const TONOS_SUAVES = {
+  tinta: 'rgb(26, 35, 51)',
+  filaClara: 'rgb(243, 246, 250)',
+  grisAzulado: 'rgb(91, 101, 119)',
+  bordeSuave: 'rgb(227, 232, 239)',
+  bordeCaja: 'rgb(124, 135, 152)',
+  pizarra: 'rgb(15, 23, 41)',
+  pizarraTarjeta: 'rgb(21, 32, 56)',
+  pizarraFila: 'rgb(27, 39, 66)',
+  textoOscuro: 'rgb(230, 235, 242)',
+  azulSuave: 'rgb(157, 184, 224)',
+  anilloOscuro: 'rgb(184, 204, 234)',
+  grisOscuro: 'rgb(163, 176, 196)',
+  bordeCajaOscuro: 'rgb(107, 120, 148)',
+} as const;
+
+export const COLORES_MARCA = [...Object.values(PALETA), ...Object.values(TONOS_SUAVES)];
+
 export const al = (color: string, alfa: number) => `${color} / ${alfa}`;
 
-/** Una sombra de box-shadow: su color (normalizado) y sus medidas (ej. "0px 0px 0px 3px"). */
 export interface Sombra {
   color: string;
   medidas: string;
@@ -35,17 +39,13 @@ export interface Sombra {
 
 declare global {
   interface Window {
-    /** Cualquier color de CSS → "rgb(r, g, b)", "rgb(r, g, b) / alfa" o "transparente" (ver arriba). */
     normalizarColor: (valor: string) => string;
-    /** Las sombras visibles de un box-shadow calculado (sin las transparentes que agrega Tailwind). */
     sombrasDe: (valor: string) => Sombra[];
   }
 }
 
-/** Todas las funciones de color de CSS que puede devolver getComputedStyle. */
 export const FUNCIONES_COLOR = String.raw`(?:rgba?|oklab|oklch|lab|lch|hsla?|hwb|color)\([^()]*\)`;
 
-/** Se ejecuta en la página (antes de cargarla): define window.normalizarColor y window.sombrasDe. */
 function definirColores({ paleta, funciones }: { paleta: string[]; funciones: string }) {
   const lienzo = document.createElement('canvas');
   lienzo.width = 1;
@@ -85,7 +85,6 @@ function definirColores({ paleta, funciones }: { paleta: string[]; funciones: st
 
   window.sombrasDe = (valor: string) => {
     if (!valor || valor === 'none') return [];
-    // Separa las sombras por las comas de afuera (los colores también llevan comas).
     const partes: string[] = [];
     let nivel = 0;
     let actual = '';
@@ -107,7 +106,6 @@ function definirColores({ paleta, funciones }: { paleta: string[]; funciones: st
   };
 }
 
-/** Prepara la página (o todas las de un contexto) para leer colores con normalizarColor() y sombrasDe(). */
 export async function prepararColores(destino: Page | BrowserContext) {
-  await destino.addInitScript(definirColores, { paleta: Object.values(PALETA), funciones: FUNCIONES_COLOR });
+  await destino.addInitScript(definirColores, { paleta: COLORES_MARCA, funciones: FUNCIONES_COLOR });
 }

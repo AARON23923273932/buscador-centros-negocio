@@ -1,5 +1,3 @@
-// Pruebas "de punta a punta" (e2e): abren la app en un navegador real y hacen clic como una persona.
-// Se ejecutan contra la versión compilada (npm run build + vite preview) en modo demo.
 import { defineConfig, devices } from '@playwright/test';
 
 const PUERTO = 4319;
