@@ -12,8 +12,8 @@ function Svg({ children, tamano = 16, clase = '' }: { children: ReactNode; taman
 export function LogoAic({ className }: { className?: string }) {
   return (
     <>
-      <img src="/marca/aic-logo-claro.png" alt="AIC" width={230} height={120} className={`logo-aic block w-auto dark:hidden ${className ?? ''}`} />
-      <img src="/marca/aic-logo-oscuro.png" alt="AIC" width={221} height={120} className={`logo-aic hidden w-auto dark:block ${className ?? ''}`} />
+      <img src="/marca/aic-logo-claro.png" alt="AIC" width={305} height={160} className={`logo-aic block w-auto dark:hidden ${className ?? ''}`} />
+      <img src="/marca/aic-logo-oscuro.png" alt="AIC" width={305} height={160} className={`logo-aic hidden w-auto dark:block ${className ?? ''}`} />
     </>
   );
 }

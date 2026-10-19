@@ -24,7 +24,7 @@ export function Cabecera({ titulo, subtitulo, usuario, demo }: Props) {
       <div className="columna flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 max-escritorio:py-2.5">
         <div className="flex min-w-0 items-center gap-4 max-escritorio:gap-3">
           <a href="https://www.aic.pe/" target="_blank" rel="noopener noreferrer" className="logo flex-none rounded-md" aria-label="AIC (abre www.aic.pe en otra pestaña)">
-            <LogoAic className="h-11 max-escritorio:h-9" />
+            <LogoAic className="h-10 max-escritorio:h-9" />
           </a>
           <Separator orientation="vertical" className="my-1 max-escritorio:hidden" />
           <div className="min-w-0">
