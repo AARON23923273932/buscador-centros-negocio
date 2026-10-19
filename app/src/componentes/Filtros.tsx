@@ -84,7 +84,7 @@ export function Filtros(props: Props) {
       >
         <IconoFiltros />
         Filtros{' '}
-        <Badge id="contador-filtros" hidden={!activos}>
+        <Badge id="contador-filtros" className="bg-marca-naranja text-marca-naranja-foreground" hidden={!activos}>
           {activos ?? ''}
         </Badge>
       </Button>

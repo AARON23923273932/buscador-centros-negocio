@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { numero } from '../logica/formato.ts';
-import { CLASE_ANCHA, CLASE_ENCABEZADO, CLASE_ENCABEZADO_FIJO, CLASE_FILA_ALTERNA, CLASE_NUMERO } from '../logica/tabla.ts';
+import { CLASE_ANCHA, CLASE_ENCABEZADO, CLASE_ENCABEZADO_FIJO, CLASE_FILA, CLASE_FILA_ALTERNA, CLASE_NUMERO } from '../logica/tabla.ts';
 import type { Columna, Direccion, Grupo } from '../logica/tipos.ts';
 import { ContenidoCelda, EncabezadoOrdenable, EncabezadosFijos, FilasDatos, FilaSinResultados, type AlCopiar } from './Celdas.tsx';
 import { IconoFlecha } from './Iconos.tsx';
@@ -73,7 +73,7 @@ export const TablaCentros = memo(function TablaCentros({
           return (
             <Fragment key={g.clave}>
               <TableRow
-                className={cn('fila-centro cursor-pointer', i % 2 === 1 && !abierto && CLASE_FILA_ALTERNA, abierto && 'abierta')}
+                className={cn('fila-centro cursor-pointer', CLASE_FILA, i % 2 === 1 && !abierto && CLASE_FILA_ALTERNA, abierto && 'abierta')}
                 data-state={abierto ? SELECCIONADA : undefined}
                 data-grupo={g.clave}
                 onClick={(ev) => alHacerClic(ev, g.clave)}

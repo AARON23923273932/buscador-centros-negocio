@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { codigoEnlazable, rutaDetalleCentro, type EstadoNavegacion } from '../logica/rutas.ts';
 import type { Celda, Columna, Direccion, Fila } from '../logica/tipos.ts';
-import { CLASE_ENCABEZADO, CLASE_ENCABEZADO_FIJO, CLASE_FILA_ALTERNA, claseColumna, estadoOrden } from '../logica/tabla.ts';
+import { CLASE_ENCABEZADO, CLASE_ENCABEZADO_FIJO, claseColumna, claseFila, estadoOrden } from '../logica/tabla.ts';
 import { IconoCopiar, IconoOrden } from './Iconos.tsx';
 import { Resaltado, ResaltadoOrdenes } from './Resaltado.tsx';
 
@@ -143,7 +143,7 @@ export const FilasDatos = memo(function FilasDatos({
   return (
     <>
       {filas.map((fila, i) => (
-        <TableRow key={fila.id} data-fila={fila.id} className={i % 2 === 1 ? CLASE_FILA_ALTERNA : undefined}>
+        <TableRow key={fila.id} data-fila={fila.id} className={claseFila(i)}>
           {columnas.map((col) => (
             <TableCell key={col.indice} className={claseColumna(col)}>
               <ContenidoCelda

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { abrir } from './ayuda.ts';
-import { al, PALETA, prepararColores, TONOS_SUAVES } from './colores.ts';
+import { al, PALETA, prepararColores, TONOS_OSCURO } from './colores.ts';
 import { usarConfigPruebas } from './config-pruebas.ts';
 
 test.beforeEach(async ({ context }) => {
@@ -8,7 +8,7 @@ test.beforeEach(async ({ context }) => {
   await prepararColores(context);
 });
 
-const RING = { claro: PALETA.mediumBlue, oscuro: TONOS_SUAVES.anilloOscuro } as const;
+const RING = { claro: PALETA.mediumBlue, oscuro: TONOS_OSCURO.anillo } as const;
 
 async function desfase(page: Page, selectorIcono: string, selectorTexto: string): Promise<{ tamano: number[]; desfase: number }> {
   return page.evaluate(
@@ -49,7 +49,7 @@ const estiloFoco = (page: Page) =>
 const conTeclado = (ring: string) => ({ visible: true, borde: ring, anillo: al(ring, 0.5) });
 const CON_TECLADO = conTeclado(RING.claro);
 const CON_TECLADO_OSCURO = conTeclado(RING.oscuro);
-const CON_TECLADO_OSCURO_OUTLINE = { visible: true, borde: TONOS_SUAVES.bordeCajaOscuro, anillo: al(RING.oscuro, 0.5) };
+const CON_TECLADO_OSCURO_OUTLINE = { visible: true, borde: TONOS_OSCURO.bordeCaja, anillo: al(RING.oscuro, 0.5) };
 
 const contrastesFoco = (page: Page) =>
   page.evaluate(() => {
@@ -148,7 +148,7 @@ test.describe('Diseño (pedido del supervisor)', () => {
       expect(await page.locator(selector).evaluate((el) => getComputedStyle(el).borderTopWidth), selector).toBe('1px');
     }
     const contornoCaja = await page.locator('#contenedor-tabla').evaluate((el) => window.sombrasDe(getComputedStyle(el).boxShadow));
-    expect(contornoCaja).toContainEqual({ color: al(TONOS_SUAVES.tinta, 0.1), medidas: '0px 0px 0px 1px' });
+    expect(contornoCaja).toContainEqual({ color: al(PALETA.black, 0.1), medidas: '0px 0px 0px 1px' });
 
     const actualizar = page.getByRole('button', { name: 'Actualizar' });
     await actualizar.click();
@@ -227,7 +227,7 @@ test.describe('Diseño (pedido del supervisor)', () => {
     await otro.hover();
     await expect
       .poll(() => otro.evaluate((b) => ({ fondo: window.normalizarColor(getComputedStyle(b).backgroundColor), sombras: window.sombrasDe(getComputedStyle(b).boxShadow) })))
-      .toEqual({ fondo: TONOS_SUAVES.filaClara, sombras: [] });
+      .toEqual({ fondo: PALETA.lightGray, sombras: [] });
 
     await llegarConTeclado(page, '[data-orden="codigoCentro"]');
     const titulo = await page.evaluate(() => {

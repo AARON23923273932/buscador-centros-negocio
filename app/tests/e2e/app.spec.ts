@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import * as XLSX from 'xlsx/xlsx.mjs';
 import { abrir, usarExcel, vigilarErrores } from './ayuda.ts';
+import { TONOS_OSCURO } from './colores.ts';
 import { usarConfigPruebas, type CambiosConfig } from './config-pruebas.ts';
 
 const TOTAL_FILAS = 80;
@@ -641,7 +642,7 @@ test('antes de que cargue el código: #raiz vacío y fondo del modo del sistema 
   await page.goto('/');
   await expect(page.locator('html')).toHaveClass(/\bdark\b/);
   expect(await page.locator('#raiz').evaluate((el) => el.childElementCount)).toBe(0);
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(15, 23, 41)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(TONOS_OSCURO.fondo);
 });
 
 test('con el código: React dibuja el diseño (cabecera, ☀️/🌙, "Saltar al buscador") y "Cargando…" mientras llega config.json', async ({ page }) => {

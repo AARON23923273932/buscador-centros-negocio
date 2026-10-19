@@ -12,23 +12,27 @@ export const PALETA = {
   borderGray: 'rgb(204, 204, 204)',
 } as const;
 
-export const TONOS_SUAVES = {
-  tinta: 'rgb(26, 35, 51)',
-  filaClara: 'rgb(243, 246, 250)',
-  grisAzulado: 'rgb(91, 101, 119)',
-  bordeSuave: 'rgb(227, 232, 239)',
-  bordeCaja: 'rgb(124, 135, 152)',
-  pizarra: 'rgb(15, 23, 41)',
-  pizarraTarjeta: 'rgb(21, 32, 56)',
-  pizarraFila: 'rgb(27, 39, 66)',
-  textoOscuro: 'rgb(230, 235, 242)',
-  azulSuave: 'rgb(157, 184, 224)',
-  anilloOscuro: 'rgb(184, 204, 234)',
-  grisOscuro: 'rgb(163, 176, 196)',
-  bordeCajaOscuro: 'rgb(107, 120, 148)',
+export const NARANJA = {
+  marca: 'rgb(242, 136, 24)',
+  resaltado: 'rgb(255, 227, 191)',
 } as const;
 
-export const COLORES_MARCA = [...Object.values(PALETA), ...Object.values(TONOS_SUAVES)];
+export const TONOS_OSCURO = {
+  fondo: 'rgb(14, 23, 38)',
+  tarjeta: 'rgb(22, 35, 58)',
+  fila: 'rgb(28, 43, 71)',
+  filaMouse: 'rgb(36, 57, 94)',
+  borde: 'rgb(51, 71, 107)',
+  bordeCaja: 'rgb(107, 128, 166)',
+  textoSecundario: 'rgb(168, 182, 204)',
+  azul: 'rgb(143, 176, 224)',
+  anillo: 'rgb(184, 204, 234)',
+  resaltado: 'rgb(90, 58, 14)',
+} as const;
+
+export const COLORES_CLARO = [...Object.values(PALETA), ...Object.values(NARANJA)];
+export const COLORES_OSCURO = [...COLORES_CLARO, ...Object.values(TONOS_OSCURO)];
+export const COLORES_MARCA = COLORES_OSCURO;
 
 export const al = (color: string, alfa: number) => `${color} / ${alfa}`;
 

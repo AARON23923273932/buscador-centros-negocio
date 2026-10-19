@@ -25,7 +25,7 @@ interface PropsOpcion {
 
 export function OpcionBoton({ value, elegida, disabled, className, children }: PropsOpcion) {
   return (
-    <Radio.Root value={value} disabled={disabled} nativeButton render={<Button type="button" variant={elegida ? 'default' : 'outline'} className={className} />}>
+    <Radio.Root value={value} disabled={disabled} nativeButton render={<Button type="button" variant={elegida ? 'default' : 'outline'} className={cn(elegida && 'shadow-[inset_0_-3px_0_0_var(--marca-naranja)]', className)} />}>
       {children}
     </Radio.Root>
   );

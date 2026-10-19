@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { InfoArchivo } from '../hooks/useExcel.ts';
 import { NOMBRES_CAMPOS } from '../logica/filtros.ts';
-import { CLASE_ENCABEZADO, CLASE_FILA_ALTERNA } from '../logica/tabla.ts';
+import { CLASE_ENCABEZADO, claseFila } from '../logica/tabla.ts';
 import type { OrigenExcel, ResultadoLectura } from '../logica/tipos.ts';
 
 const ORIGENES: Record<OrigenExcel, string> = {
@@ -79,7 +79,7 @@ export const ColumnasDetectadas = memo(function ColumnasDetectadas({
           </TableHeader>
           <TableBody>
             {d.columnas.map((c, i) => (
-              <TableRow key={c.indice} className={i % 2 === 1 ? CLASE_FILA_ALTERNA : undefined}>
+              <TableRow key={c.indice} className={claseFila(i)}>
                 <TableCell>{c.letra}</TableCell>
                 <TableCell>{c.titulo}</TableCell>
                 <TableCell>{c.campo ? NOMBRES_CAMPOS[c.campo] : <span className="text-muted-foreground">(se muestra tal cual)</span>}</TableCell>

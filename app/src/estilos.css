@@ -30,6 +30,11 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-marca-naranja: var(--marca-naranja);
+  --color-marca-naranja-foreground: var(--marca-naranja-foreground);
+  --color-encabezado-tabla: var(--encabezado-tabla);
+  --color-encabezado-tabla-foreground: var(--encabezado-tabla-foreground);
+  --color-resaltado: var(--resaltado);
+  --color-resaltado-foreground: var(--resaltado-foreground);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -43,25 +48,30 @@
 :root {
   color-scheme: light;
   --radius: 0.75rem;
-  --background: #f5f5f5;
-  --foreground: #1a2333;
+  --background: #ffffff;
+  --foreground: #000000;
   --card: #ffffff;
-  --card-foreground: #1a2333;
+  --card-foreground: #000000;
   --popover: #ffffff;
-  --popover-foreground: #1a2333;
+  --popover-foreground: #000000;
   --primary: #1e3a6e;
   --primary-foreground: #ffffff;
   --secondary: #e8eef5;
   --secondary-foreground: #1e3a6e;
-  --muted: #f3f6fa;
-  --muted-foreground: #5b6577;
+  --muted: #f5f5f5;
+  --muted-foreground: #666666;
   --accent: #e8eef5;
   --accent-foreground: #1e3a6e;
   --destructive: #1e3a6e;
-  --border: #e3e8ef;
-  --input: #7c8798;
+  --border: #cccccc;
+  --input: #666666;
   --ring: #3b6baa;
-  --marca-naranja: #ff9000;
+  --marca-naranja: #f28818;
+  --marca-naranja-foreground: #000000;
+  --encabezado-tabla: #1e3a6e;
+  --encabezado-tabla-foreground: #ffffff;
+  --resaltado: #ffe3bf;
+  --resaltado-foreground: #1e3a6e;
 
   --ancho-contenido: 1120px;
   --margen-lateral: clamp(20px, 6vw, 96px);
@@ -69,24 +79,30 @@
 
 .dark {
   color-scheme: dark;
-  --background: #0f1729;
-  --foreground: #e6ebf2;
-  --card: #152038;
-  --card-foreground: #e6ebf2;
-  --popover: #152038;
-  --popover-foreground: #e6ebf2;
-  --primary: #9db8e0;
-  --primary-foreground: #0f1729;
-  --secondary: #1e3a6e;
-  --secondary-foreground: #e8eef5;
-  --muted: #1b2742;
-  --muted-foreground: #a3b0c4;
-  --accent: #1b2742;
-  --accent-foreground: #e6ebf2;
-  --destructive: #9db8e0;
-  --border: rgb(230 235 242 / 10%);
-  --input: #6b7894;
+  --background: #0e1726;
+  --foreground: #e8eef5;
+  --card: #16233a;
+  --card-foreground: #e8eef5;
+  --popover: #16233a;
+  --popover-foreground: #e8eef5;
+  --primary: #8fb0e0;
+  --primary-foreground: #0e1726;
+  --secondary: #2c5282;
+  --secondary-foreground: #ffffff;
+  --muted: #1c2b47;
+  --muted-foreground: #a8b6cc;
+  --accent: #24395e;
+  --accent-foreground: #e8eef5;
+  --destructive: #8fb0e0;
+  --border: #33476b;
+  --input: #6b80a6;
   --ring: #b8ccea;
+  --marca-naranja: #f28818;
+  --marca-naranja-foreground: #0e1726;
+  --encabezado-tabla: #2c5282;
+  --encabezado-tabla-foreground: #ffffff;
+  --resaltado: #5a3a0e;
+  --resaltado-foreground: #ffe3bf;
 }
 
 @media (max-width: 44.9375rem) {
@@ -135,7 +151,7 @@
     @apply rounded-sm border bg-muted px-1 text-[0.95em] text-foreground;
   }
   mark {
-    @apply rounded-[2px] bg-primary px-px text-primary-foreground;
+    @apply rounded-[2px] bg-resaltado px-px text-resaltado-foreground;
   }
   ::selection {
     background-color: var(--primary);

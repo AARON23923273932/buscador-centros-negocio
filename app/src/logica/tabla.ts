@@ -11,9 +11,14 @@ export function estadoOrden(clave: string, ordenarPor: string, direccion: Direcc
   return direccion === 'desc' ? { aria: 'descending', activo: true } : { aria: 'ascending', activo: true };
 }
 
-export const CLASE_ENCABEZADO = 'bg-primary text-center font-bold text-primary-foreground';
+export const CLASE_ENCABEZADO = 'bg-encabezado-tabla text-center font-bold text-encabezado-tabla-foreground';
 export const CLASE_ENCABEZADO_FIJO = 'sticky top-0 z-10';
+export const CLASE_FILA = 'hover:bg-accent';
 export const CLASE_FILA_ALTERNA = 'bg-muted';
+
+export function claseFila(indice: number): string {
+  return indice % 2 === 1 ? `${CLASE_FILA} ${CLASE_FILA_ALTERNA}` : CLASE_FILA;
+}
 
 export const CLASE_NUMERO = 'text-right tabular-nums';
 export const CLASE_ANCHA = 'min-w-[260px] max-w-[480px] whitespace-normal max-escritorio:min-w-[200px]';
