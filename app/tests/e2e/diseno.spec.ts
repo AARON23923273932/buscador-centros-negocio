@@ -51,8 +51,11 @@ const CON_TECLADO = conTeclado(RING.claro);
 const CON_TECLADO_OSCURO = conTeclado(RING.oscuro);
 const CON_TECLADO_OSCURO_OUTLINE = { visible: true, borde: TONOS_OSCURO.bordeCaja, anillo: al(RING.oscuro, 0.5) };
 
-const contrastesFoco = (page: Page) =>
-  page.evaluate(() => {
+const FONDOS = ['--background', '--card', '--muted'];
+const FONDOS_Y_FILA_CON_MOUSE = [...FONDOS, '--accent'];
+
+const contrastesFoco = (page: Page, fondosAlrededor = FONDOS) =>
+  page.evaluate((variables) => {
     const e = getComputedStyle(document.activeElement!);
     const partes = (normalizado: string) => {
       const [rgb, alfa] = normalizado.split(' / ');
@@ -77,10 +80,10 @@ const contrastesFoco = (page: Page) =>
     if (!anillo) throw new Error('El control con el foco no tiene el anillo de 3 px');
     const borde = partes(window.normalizarColor(e.borderTopColor));
     const halo = partes(anillo.color);
-    const fondos = ['--background', '--card', '--muted'].map(variable);
+    const fondos = variables.map(variable);
     const menor = (color: Color) => Math.min(...fondos.map((fondo) => contraste(sobre(color, fondo), fondo)));
     return { borde: menor(borde), anillo: menor(halo), alfaAnillo: halo.alfa };
-  });
+  }, fondosAlrededor);
 
 test.describe('Diseño (pedido del supervisor)', () => {
   test('1. más margen a los lados: el contenido va centrado, con 1120 px como máximo y un margen del 6 % del ancho', async ({ page }) => {
@@ -164,6 +167,7 @@ test.describe('Diseño (pedido del supervisor)', () => {
     expect(contraste.alfaAnillo).toBe(0.5);
     expect(contraste.borde).toBeGreaterThanOrEqual(3);
     expect(contraste.anillo).toBeGreaterThanOrEqual(2);
+    expect((await contrastesFoco(page, FONDOS_Y_FILA_CON_MOUSE)).borde).toBeGreaterThanOrEqual(3);
     expect(await exportar.evaluate((b) => getComputedStyle(b).outlineStyle)).toBe('none');
     await page.emulateMedia({ forcedColors: 'active' });
     expect(await exportar.evaluate((b) => ({ estilo: getComputedStyle(b).outlineStyle, ancho: getComputedStyle(b).outlineWidth }))).toEqual({
@@ -195,14 +199,14 @@ test.describe('Diseño (pedido del supervisor)', () => {
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Exportar a Excel' })).toBeFocused();
     expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO_OUTLINE);
-    let contraste = await contrastesFoco(page);
+    let contraste = await contrastesFoco(page, FONDOS_Y_FILA_CON_MOUSE);
     expect(contraste.alfaAnillo).toBe(0.5);
     expect(contraste.borde).toBeGreaterThanOrEqual(3);
     expect(contraste.anillo).toBeGreaterThanOrEqual(3);
 
     await llegarConTeclado(page, '#tabla-resultados > tbody > tr:nth-child(2) .btn-copiar');
     expect(await estiloFoco(page)).toEqual(CON_TECLADO_OSCURO);
-    contraste = await contrastesFoco(page);
+    contraste = await contrastesFoco(page, FONDOS_Y_FILA_CON_MOUSE);
     expect(contraste.borde).toBeGreaterThanOrEqual(3);
     expect(contraste.anillo).toBeGreaterThanOrEqual(3);
     await llegarConTeclado(page, '#f-codigo');
@@ -216,6 +220,50 @@ test.describe('Diseño (pedido del supervisor)', () => {
       return { ancho: e.outlineWidth, estilo: e.outlineStyle, color: window.normalizarColor(e.outlineColor) };
     });
     expect(enlace).toEqual({ ancho: '2px', estilo: 'solid', color: RING.oscuro });
+  });
+
+  test('2. en modo oscuro, sobre la fila con el mouse encima, el borde del botón de expandir y su anillo de foco llegan a 3:1', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await abrir(page, '/centros');
+    const fila = page.locator('.fila-centro').first();
+    await llegarConTeclado(page, '.fila-centro .btn-expandir');
+    await fila.locator('td').nth(2).hover();
+    await expect.poll(() => fila.evaluate((el) => el.matches(':hover'))).toBe(true);
+    const medida = await fila.evaluate(async (el) => {
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => {})),
+      );
+      const partes = (normalizado: string) => {
+        const [rgb, alfa] = normalizado.split(' / ');
+        return { canales: (rgb!.match(/\d+/g) ?? []).map(Number), alfa: alfa === undefined ? 1 : Number(alfa) };
+      };
+      const luz = ([r, g, b]: number[]) => {
+        const lineal = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+        return 0.2126 * lineal(r!) + 0.7152 * lineal(g!) + 0.0722 * lineal(b!);
+      };
+      const contraste = (a: number[], b: number[]) => {
+        const [x, y] = [luz(a), luz(b)].sort((m, n) => n - m);
+        return (x! + 0.05) / (y! + 0.05);
+      };
+      const sobre = ({ canales, alfa }: { canales: number[]; alfa: number }, fondo: number[]) => canales.map((v, i) => alfa * v + (1 - alfa) * fondo[i]!);
+      const boton = el.querySelector('.btn-expandir')!;
+      const e = getComputedStyle(boton);
+      const fondo = window.normalizarColor(getComputedStyle(el).backgroundColor);
+      const debajo = partes(fondo).canales;
+      const anillo = window.sombrasDe(e.boxShadow).find((s) => s.medidas === '0px 0px 0px 3px');
+      return {
+        fondo,
+        conFoco: boton === document.activeElement && boton.matches(':focus-visible'),
+        borde: contraste(sobre(partes(window.normalizarColor(e.borderTopColor)), debajo), debajo),
+        anillo: anillo ? contraste(sobre(partes(anillo.color), debajo), debajo) : 0,
+      };
+    });
+    expect(medida).toMatchObject({ fondo: TONOS_OSCURO.filaMouse, conFoco: true });
+    expect(medida.borde).toBeGreaterThanOrEqual(3);
+    expect(medida.anillo).toBeGreaterThanOrEqual(3);
   });
 
   test('2. el foco se ve en TODOS los controles: "copiar" de cada fila, botón principal y títulos que ordenan', async ({ page }) => {

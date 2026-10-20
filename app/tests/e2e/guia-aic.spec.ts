@@ -238,6 +238,25 @@ test.describe('Paleta propia del modo oscuro (parecida a la de AIC) y marca en l
     expect(await estilo(page, '#tabla-resultados .insignia')).toMatchObject({ fondo: PALETA.darkBlue, texto: PALETA.white });
   });
 
+  test('botones "outline" con su borde de 1 px (Border Gray en claro, el de las cajas en oscuro), también "Volver a la lista", que es un enlace', async ({ page }) => {
+    for (const [tema, borde] of [
+      ['light', PALETA.borderGray],
+      ['dark', TONOS_OSCURO.bordeCaja],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: tema });
+      for (const [ruta, botones] of [
+        ['/ordenes', ['#btn-actualizar', '#btn-tema', '#btn-exportar']],
+        ['/centros/CN-0003', ['#btn-volver', '#btn-actualizar', '#btn-tema']],
+      ] as const) {
+        await abrir(page, ruta);
+        if (ruta.startsWith('/centros/')) await expect(page.locator('#ficha-centro')).toBeVisible();
+        for (const boton of botones) {
+          expect(await estilo(page, boton), `${tema} ${ruta} ${boton}`).toMatchObject({ bordeArriba: borde, anchoBorde: '1px', bordeAbajo: borde });
+        }
+      }
+    }
+  });
+
   test('acentos con el naranja del logo (claro y oscuro): línea de la cabecera, vista elegida, contador de filtros y búsqueda resaltada', async ({ page }) => {
     for (const [tema, azul, resaltado, textoContador] of [
       ['light', PALETA.primaryBlue, { fondo: NARANJA.resaltado, texto: PALETA.primaryBlue }, PALETA.black],

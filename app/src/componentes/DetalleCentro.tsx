@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { CircleAlertIcon, TriangleAlertIcon } from 'lucide-react';
+import { cn } from 'cn';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -29,7 +30,7 @@ function VolverALista() {
     }
   };
   return (
-    <Link id="btn-volver" to={destino} onClick={alHacerClic} className={buttonVariants({ variant: 'outline' })}>
+    <Link id="btn-volver" to={destino} onClick={alHacerClic} className={cn(buttonVariants({ variant: 'outline' }))}>
       <IconoVolver />
       Volver a la lista
     </Link>

@@ -23,10 +23,10 @@ export const TONOS_OSCURO = {
   fila: 'rgb(28, 43, 71)',
   filaMouse: 'rgb(36, 57, 94)',
   borde: 'rgb(51, 71, 107)',
-  bordeCaja: 'rgb(107, 128, 166)',
+  bordeCaja: 'rgb(112, 134, 172)',
   textoSecundario: 'rgb(168, 182, 204)',
   azul: 'rgb(143, 176, 224)',
-  anillo: 'rgb(184, 204, 234)',
+  anillo: 'rgb(189, 208, 236)',
   resaltado: 'rgb(90, 58, 14)',
 } as const;
 
