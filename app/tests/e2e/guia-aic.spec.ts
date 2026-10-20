@@ -130,6 +130,16 @@ const estilo = (page: Page, selector: string) =>
 
 const fondoFila = async (page: Page, selector: string) => (await estilo(page, selector)).fondo;
 
+const sinTransiciones = (page: Page) =>
+  page.evaluate(async () => {
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => {})),
+    );
+  });
+
 test.describe('Paleta de AIC en modo claro (guía oficial + naranja del logo, sobre shadcn/ui sin cambios)', () => {
   test('tablas: encabezado de marca (Primary Blue, texto blanco en negrita y centrado), filas alternas Light Gray y bordes Border Gray', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' });
@@ -407,7 +417,9 @@ test.describe('Paleta propia del modo oscuro (parecida a la de AIC) y marca en l
       expect(encabezadoAnidado).toBe(encabezado);
       expect(encabezadoAnidado).not.toBe(abierta);
       await centro.locator('td').nth(2).hover();
-      await expect.poll(() => fondoFila(page, '.fila-centro.abierta'), { message: tema }).toBe(abierta);
+      await expect.poll(() => centro.evaluate((el) => el.matches(':hover')), { message: tema }).toBe(true);
+      await sinTransiciones(page);
+      expect(await fondoFila(page, '.fila-centro.abierta'), `${tema}, con el mouse encima`).toBe(abierta);
       await page.locator('.fila-centro').first().locator('.btn-expandir').click();
       await page.locator('h1').hover();
       await expect.poll(() => fondoFila(page, '.fila-centro.abierta'), { message: `${tema}, primer centro` }).toBe(abierta);
