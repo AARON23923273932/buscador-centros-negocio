@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { copiarSinTemporales, esArchivoTemporal, quitarTemporales } from '../../scripts/archivos-temporales.mjs';
 import { configParaDemo, pluginConfigDemo } from '../../scripts/config-demo.mjs';
+import { quitarDatosDeEjemplo, revisarRedirecciones } from '../../scripts/limpiar-dist.mjs';
 import { CONFIG_POR_DEFECTO, mezclarConfig, validarConfig } from '../../src/logica/config.ts';
 
 const CONFIG_REAL = resolve(import.meta.dirname, '../../public/config.json');
@@ -103,5 +104,40 @@ describe('modo demo en la computadora (npm run dev:demo)', () => {
     let paso = false;
     responder({ url: '/datos/centros-ejemplo.xlsx' }, respuesta, () => (paso = true));
     expect(paso).toBe(true);
+  });
+});
+
+describe('limpiar dist para Netlify (npm run build:netlify)', () => {
+  function distCon(fuente: string, conRedirects = true) {
+    const dist = carpetaTemporal();
+    mkdirSync(join(dist, 'datos'));
+    writeFileSync(join(dist, 'datos', 'centros-ejemplo.xlsx'), 'excel');
+    writeFileSync(join(dist, 'config.json'), JSON.stringify({ modo: 'microsoft', datos: { fuente } }));
+    if (conRedirects) writeFileSync(join(dist, '_redirects'), '/*    /index.html    200');
+    return dist;
+  }
+
+  it('con el Excel real (graph) quita el Excel de ejemplo', () => {
+    const dist = distCon('graph');
+    expect(quitarDatosDeEjemplo(dist)).toBe(true);
+    expect(existsSync(join(dist, 'datos'))).toBe(false);
+  });
+
+  it('en modo demo (archivo-local) mantiene el Excel de ejemplo', () => {
+    const dist = distCon('archivo-local');
+    expect(quitarDatosDeEjemplo(dist)).toBe(false);
+    expect(existsSync(join(dist, 'datos', 'centros-ejemplo.xlsx'))).toBe(true);
+  });
+
+  it('falla si falta _redirects (las rutas no cargarían en Netlify)', () => {
+    expect(() => revisarRedirecciones(distCon('graph', false))).toThrow(/_redirects/);
+    expect(() => revisarRedirecciones(distCon('graph'))).not.toThrow();
+  });
+
+  it('netlify.toml compila con build:netlify, publica dist y fija Node 24', () => {
+    const toml = readFileSync(resolve(import.meta.dirname, '../../netlify.toml'), 'utf8');
+    expect(toml).toMatch(/command = "npm run build:netlify"/);
+    expect(toml).toMatch(/publish = "dist"/);
+    expect(toml).toMatch(/NODE_VERSION = "24"/);
   });
 });

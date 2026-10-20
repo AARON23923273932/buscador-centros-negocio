@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
     "lint": "oxlint --deny-warnings src tests scripts vite.config.ts vitest.config.ts playwright.config.ts",
     "build": "npm run typecheck && npm run lint && vite build",
+    "build:netlify": "npm run build && node scripts/limpiar-dist.mjs",
     "preview": "vite preview",
     "preview:demo": "vite preview --mode demo",
     "test": "vitest run",

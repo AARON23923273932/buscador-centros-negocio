@@ -1,7 +1,8 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { copiarSinTemporales } from './archivos-temporales.mjs';
+import { quitarDatosDeEjemplo, revisarRedirecciones } from './limpiar-dist.mjs';
 
 const app = resolve(import.meta.dirname, '..');
 const destino = resolve(app, '..', 'publicar');
@@ -10,12 +11,9 @@ execSync('npm run build', { cwd: app, stdio: 'inherit' });
 rmSync(destino, { recursive: true, force: true });
 const omitidos = copiarSinTemporales(resolve(app, 'dist'), destino);
 
-if (!existsSync(resolve(destino, '_redirects'))) {
-  throw new Error('Falta _redirects en la carpeta "publicar" (debe venir de app/public/_redirects).');
-}
-
+revisarRedirecciones(destino);
+quitarDatosDeEjemplo(destino);
 const config = JSON.parse(readFileSync(resolve(destino, 'config.json'), 'utf8'));
-if (config.datos?.fuente === 'graph') rmSync(resolve(destino, 'datos'), { recursive: true, force: true });
 console.log(`\nListo: ${destino}`);
 console.log(`Modo: ${config.modo} · Fuente de datos: ${config.datos.fuente} · Permisos: ${config.microsoft?.scopes?.join(', ')}`);
 if (omitidos.length) {
@@ -24,4 +22,4 @@ if (omitidos.length) {
       'Aparecen cuando el Excel de ejemplo está abierto: ciérralo.',
   );
 }
-console.log('Siguiente paso: Netlify → Deploys → arrastrar la carpeta "publicar".');
+console.log('Netlify publica solo desde GitHub (rama main). Esta carpeta sirve para revisar la compilación o para una publicación manual.');
