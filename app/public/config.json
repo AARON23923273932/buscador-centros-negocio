@@ -56,8 +56,8 @@
   },
   "_camposObligatorios": "Si el Excel no tiene una de estas columnas, la app muestra un aviso. Si el Excel real no tiene, por ejemplo, cliente, quítalo de esta lista para no ver el aviso. tipoOrden y estado no son obligatorios: si faltan, su filtro no aparece.",
   "camposObligatorios": ["codigoCentro", "descripcionCentro", "cliente", "ordenCompra"],
-  "_columnasOcultas": "Columnas del Excel que NO se muestran, NO se buscan y NO se exportan: las que tengan una de estas palabras en el título (ej. Monto, Monto total, Moneda, Monto (S/)). Nunca se ocultan las que la app usa como código, descripción, cliente, orden, tipo o estado. [] = mostrar todas.",
-  "columnasOcultas": ["moneda", "monto"],
+  "_columnasOcultas": "Columnas del Excel que NO se muestran, NO se buscan y NO se exportan: las que tengan una de estas palabras en el título (ej. Moneda, Tipo de moneda). Nunca se ocultan las que la app usa como código, descripción, cliente, orden, tipo o estado. [] = mostrar todas. Desde el 23/10/2026 \"monto\" ya no se oculta: Gustavo pidió mostrar la columna MONTO TOTAL que el ERP agregó al Excel.",
+  "columnasOcultas": ["moneda"],
 
   "_autoActualizarMinutos": "Cada cuántos minutos se vuelve a revisar el Excel solo (0 = nunca).",
   "autoActualizarMinutos": 10,

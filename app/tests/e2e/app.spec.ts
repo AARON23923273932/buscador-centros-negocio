@@ -776,3 +776,39 @@ test.describe('Modo Microsoft (sin conectarse a Microsoft)', () => {
     expect(errores.filter((e) => /Content Security Policy|Refused/i.test(e))).toEqual([]);
   });
 });
+
+test.describe('MONTO TOTAL del Excel real (23/10/2026: se muestra)', () => {
+  const MATRIZ_REAL = [
+    ['CENTROS DE NEGOCIOS AIC TECH S.A.C'],
+    ['CLIENTE INTERNO Y EXTERNO', 'CODIGO', 'DESCRIPCION', 'OC/OS', 'MONTO TOTAL', 'ESTADO'],
+    ['Cliente Demo A', 'A2338PY01', 'Servicio de Recursos Control Documentario', 'OC N° 3519060', 'S/ 15,025.42', 'ACEPTADO'],
+    ['Cliente Demo B', 'B1200PY02', 'Servicio especializado', 'OC N° 8001', 'S/ 75,617.00', 'CERRADO'],
+    ['Cliente Demo C', 'C0450PY03', 'Mantenimiento y ciberseguridad', 'OC 3519155 OC 3519252', 'S/ 1,280.50', 'CERRADO'],
+  ];
+
+  test('con la configuración publicada se ve, se ordena como número, se busca y se exporta', async ({ page }) => {
+    const errores = vigilarErrores(page);
+    const publicada = JSON.parse(readFileSync(new URL('../../public/config.json', import.meta.url), 'utf8'));
+    await usarConfig(page, { columnasOcultas: publicada.columnasOcultas });
+    await usarExcel(page, MATRIZ_REAL);
+    await abrir(page, '/ordenes');
+
+    const titulos = (await page.locator('#tabla-resultados thead th').allInnerTexts()).map((t) => t.trim());
+    expect(titulos).toContain('MONTO TOTAL');
+    await expect(page.locator('#tabla-resultados tbody')).toContainText('S/ 15,025.42');
+
+    await page.getByRole('button', { name: /^MONTO TOTAL/ }).click();
+    const iMonto = titulos.indexOf('MONTO TOTAL') + 1;
+    const montos = await page.locator(`#tabla-resultados > tbody > tr > td:nth-child(${iMonto})`).allInnerTexts();
+    expect(montos.map((m) => m.trim())).toEqual(['S/ 1,280.50', 'S/ 15,025.42', 'S/ 75,617.00']);
+
+    await page.getByLabel('Buscar', { exact: true }).fill('75,617');
+    await expect(page.locator('#contador')).toContainText('Mostrando 1–1 de 1');
+
+    const [descarga] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Exportar a Excel' }).click()]);
+    const libro = XLSX.read(readFileSync(await descarga.path()), { type: 'buffer' });
+    const matriz = XLSX.utils.sheet_to_json<unknown[]>(libro.Sheets[libro.SheetNames[0]], { header: 1 });
+    expect(matriz[0]).toContain('MONTO TOTAL');
+    expect(errores).toEqual([]);
+  });
+});

@@ -28,7 +28,7 @@ describe('validarConfig', () => {
     const json = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../public/config.json'), 'utf8'));
     expect(validarConfig(mezclarConfig(CONFIG_POR_DEFECTO, json))).toEqual([]);
   });
-  it('el config.json publicado lee el Excel real por su enlace, con Files.Read.All, y oculta moneda y monto', () => {
+  it('el config.json publicado lee el Excel real por su enlace, con Files.Read.All, oculta moneda y muestra MONTO TOTAL', () => {
     const json = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../public/config.json'), 'utf8'));
     expect(json.modo).toBe('microsoft');
     expect(json.datos.fuente).toBe('graph');
@@ -36,7 +36,7 @@ describe('validarConfig', () => {
       /^https:\/\/jaicoscorp\.sharepoint\.com\/:x:\/r\/_layouts\/15\/Doc\.aspx\?sourcedoc=%7BE20FAA1A-1E42-416B-BA9F-A6FCF00E07C8%7D&file=centros-negocio-aic\.xlsx/,
     );
     expect(json.microsoft.scopes).toEqual(['User.Read', 'Files.Read.All']);
-    expect(json.columnasOcultas).toEqual(['moneda', 'monto']);
+    expect(json.columnasOcultas).toEqual(['moneda']);
   });
   it('por defecto se ocultan moneda y monto, y "estado" es un campo conocido (no obligatorio)', () => {
     expect(CONFIG_POR_DEFECTO.columnasOcultas).toEqual(['moneda', 'monto']);

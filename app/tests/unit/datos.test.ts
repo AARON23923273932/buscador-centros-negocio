@@ -655,3 +655,32 @@ describe('descargarExcel (archivo local)', () => {
     ).rejects.toBeInstanceOf(ErrorDatos);
   });
 });
+
+describe('MONTO TOTAL del Excel real (23/10/2026: se muestra)', () => {
+  const PRODUCCION = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../public/config.json'), 'utf8')).columnasOcultas as string[];
+  const libroReal = () =>
+    crearExcelDesdeMatriz([
+      ['CENTROS DE NEGOCIOS AIC TECH S.A.C'],
+      ['CODIGO', 'DESCRIPCION', 'OC/OS', 'MONTO TOTAL', 'ESTADO'],
+      ['A2338PY01', 'Servicio de Recursos Control Documentario', 'OC N° 3519060', 'S/ 15,025.42', 'ACEPTADO'],
+      ['B1200PY02', 'Servicio especializado', 'OC N° 8001', 'S/ 75,617.00', 'CERRADO'],
+      ['C0450PY03', 'Mantenimiento y ciberseguridad', 'OC 3519155 OC 3519252', 'S/ 1,280.50', 'CERRADO'],
+    ]);
+
+  it('con la configuración publicada, MONTO TOTAL se muestra y se puede buscar; Moneda sigue oculta', () => {
+    expect(PRODUCCION).toEqual(['moneda']);
+    const r = leerLibro(libroReal(), { ...OPCIONES, columnasOcultas: PRODUCCION });
+    expect(r.columnas.map((c) => c.titulo)).toContain('MONTO TOTAL');
+    expect(r.columnasOcultas).toEqual([]);
+    const monto = r.columnas.find((c) => c.titulo === 'MONTO TOTAL')!;
+    expect(r.filas.map((f) => f.celdas[monto.indice].o)).toEqual([15025.42, 75617, 1280.5]);
+    expect(filtrarFilas(r.filas, { q: '15,025' })).toHaveLength(1);
+  });
+
+  it('el monto se ordena como número (no como texto)', () => {
+    const r = leerLibro(libroReal(), { ...OPCIONES, columnasOcultas: PRODUCCION });
+    const monto = r.columnas.find((c) => c.titulo === 'MONTO TOTAL')!;
+    const orden = ordenarFilas(r.filas, monto.indice, 'asc').map((f) => f.celdas[monto.indice].o);
+    expect(orden).toEqual([1280.5, 15025.42, 75617]);
+  });
+});
